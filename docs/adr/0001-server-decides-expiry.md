@@ -30,7 +30,7 @@ The API hints at the second one. Requote returns 409 `quote-not-expired` when th
    - `expired` from the server shows the expired screen.
    - If the server says the quote is still live, the address comes back, the timer is hidden, and the page says the quote is still valid.
    - If the check fails, the address stays hidden and the page says it cannot confirm.
-3. Once the server reports `detected` or later, there is no countdown.
+3. Once the server reports any money (`underpaid`, `detected` or later), there is no countdown (ADR 0003).
 
 I took the simplest clock because the countdown is information for the shopper and not authoritative data. Whatever it shows, the next poll states the truth.
 

@@ -68,7 +68,7 @@ stateDiagram-v2
     awaiting_payment --> underpaid: less than due
     underpaid --> detected: the rest arrives
     awaiting_payment --> expired: deadline passes
-    underpaid --> expired: deadline passes
+    underpaid --> expired: only if the server ends it
     expired --> awaiting_payment: requote
     expired --> detected: late payment accepted
     awaiting_payment --> failed
@@ -107,7 +107,7 @@ The screen is the output of one pure function. Its inputs are the server's statu
 | `awaiting_payment` | server answered "still live" after zero, and within the last 10 s | Pay, "quote still valid" | shown | hidden | 3 s |
 | `awaiting_payment` | countdown at zero, check failed | Pay, "can't confirm" | hidden | hidden | backing off |
 | `awaiting_payment` | money was already seen for this quote | "We're checking" | hidden | none | 3 s |
-| `underpaid` | same four cases | Pay, remaining amount | as above | as above | as above |
+| `underpaid` | | Pay, remaining amount | shown | none | 3 s |
 | `detected`, `confirming` | | Waiting | hidden | none | 3 s |
 | `paid` | | Complete | hidden | none | off |
 | `overpaid` | | Complete, with a notice about the extra | hidden | none | off |
@@ -297,20 +297,19 @@ Errors are `application/problem+json` with `type`, `title`, `status` and `detail
 | No timer, and the server has not answered for 10 s | Hides the address until a fresh answer arrives. This covers the tab returning from the background and polls that start failing |
 | The check fails | Keeps the address hidden and says it cannot confirm |
 | Server says `expired` while the countdown still shows time | Shows the expired screen. The server wins |
-| Server says `detected` or later | The countdown is gone for good |
+| Server says `underpaid`, `detected` or later | The countdown is gone for good |
 
 Without a timer the page has no local deadline to rely on, which is why the untimed state depends on a recent answer from the server.
 
-The two clock errors behave differently, and I accept both:
+The clock errors behave differently, and I accept all three:
 
 - **Device clock ahead:** the countdown ends early, the check finds the quote still live, and the shopper can still pay. Without the "still live" rule, a shopper whose clock runs far ahead could never pay.
 - **Device clock behind:** the countdown shows more time than the server allows. The page corrects at the first poll after the server expires the quote. This is the real cost of using the device clock, and the late-payment polling on `expired` softens it.
-
 - **Device clock behind, during an outage:** the address stays visible until the device's countdown reaches zero, and the real deadline can pass first. This needs both failures at once, and I accept it rather than hide a valid quote from everyone whose connection drops for a minute.
 
 I considered correcting the clock from the server's `Date` header and chose not to. The reasoning is in [ADR 0001](adr/0001-server-decides-expiry.md).
 
-**Underpaid keeps the deadline.** The countdown keeps running on `underpaid`, against the original `expires_at`. A quote is a price held for a limited time, and a partial payment does not extend it.
+**Any money stops the clock.** The countdown exists only on `awaiting_payment`. Once the server reports money, whether the full amount or part of it, there is no countdown and nothing on this page can expire the payment. A shopper who sent part can always send the rest. The cost is that the rate stays open for the remainder; the reasoning, and how I changed my mind on it, is in [ADR 0003](adr/0003-partial-and-late-payments.md).
 
 ## 6. How I handle decimal precision
 
@@ -352,7 +351,7 @@ I show crypto exactly as sent, not in the shopper's locale, because that number 
 
 | Status | Headline | What it says | Action |
 |---|---|---|---|
-| `underpaid` | Part of your payment arrived | What was received, the exact amount still to send, same address and network, countdown still running | Send the rest |
+| `underpaid` | Part of your payment arrived | What was received, the exact amount still to send, same address and network. No countdown | Send the rest |
 | `expired` | This quote has expired | "Already sent? Do not send again. We are still watching for your payment." The address is hidden | "Get a new quote", enabled only after ticking "I have not sent a payment" |
 | `expired` after `underpaid` | The full amount wasn't reached | What was received and what was missing. "Do not send again. This page can't complete this payment or tell you what happens to the 120.00 USDT you sent. Contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
 | `overpaid` | Payment complete | "You sent 16.31 USDT more than was due. This page can't return the extra amount. Contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
@@ -378,7 +377,7 @@ If the server is down or the shopper is offline, the last status the page knew s
 
 Neither notice says the payment is safe or unaffected. A failed request tells the page nothing about the payment.
 
-While the connection is down and the quote still has time left, the address and QR **stay visible**. The quote is valid until its deadline whether or not this page can reach the server, and the shopper's wallet is usually on another device. Once the countdown reaches zero they are hidden, because the page can no longer confirm the quote is live.
+While the connection is down, the address and QR **stay visible** on `underpaid`, and on `awaiting_payment` while the quote still has time left. The quote is valid until its deadline whether or not this page can reach the server, and the shopper's wallet is usually on another device. Once the countdown reaches zero they are hidden, because the page can no longer confirm the quote is live.
 
 ### 7.4 Shopper safety on the pay screen
 
@@ -396,7 +395,7 @@ The mock is a small Express app mounted inside the dev server, so `npm run dev` 
 - `POST /api/payments` creates a payment with a new reference every time.
 - Quotes come from a hand-written table, one row per currency and network, each with its own rate, fee and address.
 - `GET /api/payments/:reference` returns the whole payment (merchant, order, quote) plus the status fields.
-- `awaiting_payment` and `underpaid` become `expired` when the deadline passes.
+- `awaiting_payment` becomes `expired` when the deadline passes. A payment that has received money never expires by itself.
 - Requote succeeds only from `expired`. Anything else gets the 409.
 
 **How reviewers drive it.** The control lives in the mock, not in the app's requests. The dev panel calls control endpoints under `/__mock`, and the app's own request code never knows a mock exists. The same endpoints work with `curl`.
@@ -425,7 +424,7 @@ These are places where the brief is silent or does not fit together. Each is a q
 | Order details before a payment | Merchant and order amount come only inside a payment | The picker shows the order reference only. I did not invent an order endpoint |
 | What `GET` returns | "Returns the payment with an updated status, plus the fields below" | The whole payment, plus the status fields |
 | Repeated `POST /api/payments` | Not stated | A new payment with a new reference each time |
-| Deadline on `underpaid` | The response has no deadline field | The quote's original `expires_at` still applies |
+| Deadline on `underpaid` | The response has no deadline field | There is none. Once any money has arrived, the mock does not expire the payment and the page shows no countdown. If a server reports `expired` after `underpaid` anyway, the page treats it as a dead end |
 | Funds from a partial payment that expired | Not stated. Requote returns the "same body as `POST /api/payments`", with no word on earlier funds | The page does not guess. It offers no new quote and sends the shopper to the merchant |
 | Money arriving after expiry | No status for it | The server may move `expired` to `detected`, so the page keeps watching |
 | Is `expired` terminal? | "Stop polling on terminal states", without listing them | Only `paid`, `overpaid` and `failed` are terminal. `expired` can return to `awaiting_payment` through requote |

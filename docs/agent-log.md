@@ -30,7 +30,7 @@ The design now leans on the sequence for more than that one screen. The `failed`
 
 - **Hiding the address at zero.** The agent first proposed hiding the address the moment the countdown reached zero. That was fine while the clock was going to be corrected from the server. After I chose the device clock, the same rule would have locked out any shopper whose clock runs ahead: the countdown would sit at zero and the address would never show. The agent caught this itself when the clock decision changed and rewrote the rule so that a "still live" answer from the server brings the address back.
 - **A picker the API cannot fill.** The agent drew the picker with the merchant name and "You pay €149.90", and I approved the drawing. Neither value is available before a payment exists; the API returns them only inside a payment. The agent noticed the gap later, while checking every agreed screen against the API, and the picker was redrawn.
-- **About the payment state machine.** The brief says there are "six more states" beyond the four in its diagram. The API defines four more. I pointed this out before the agent read the brief, so it did not get the chance to miscount; it confirmed eight. It made no factual error about the statuses in this session. The nearest thing was entry 2 above: it wanted to treat `underpaid` like `detected`, as a state where the clock should stop.
+- **About the payment state machine.** The brief says there are "six more states" beyond the four in its diagram. The API defines four more. I pointed this out before the agent read the brief, so it did not get the chance to miscount; it confirmed eight. It made no factual error about the statuses in this session. On entry 2 above, where it wanted the clock to stop on `underpaid` as it does on `detected`, I disagreed at first and came round after the review; see "Where the review changed a decision of mine".
 
 ## 12 Nov 2026: review of the first draft
 
@@ -51,6 +51,8 @@ All of these are fixed in the design doc.
 ### Where the review changed a decision of mine
 
 - **No new quote after a partial payment.** In the design session I had decided that a quote which expired after a partial payment would offer a new quote for the full amount, with a warning that the earlier funds would not count. Codex pointed out that the API says nothing about what happens to those funds, so the warning was a guess told to the shopper as fact, against the design's own wording rule. The agent proposed softening the wording. I went further and removed the new quote: that screen is now a dead end that points to the merchant. See ADR 0003.
+
+- **Any money stops the clock.** This reverses entry 2 in the table above, so that recommendation was not thrown away in the end. Codex read the brief's line, that a payment on its way must never expire under the shopper, as covering a partial payment. Two things made me agree. After the change above, missing the deadline on a partial payment had become a dead end. And the page never expires anything by itself, so it was our own mock that would have stranded the shopper. The countdown now exists only while nothing has arrived. See ADR 0003, which records how the decision moved.
 
 ### What Codex argued that I kept as it was
 
