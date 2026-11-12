@@ -137,7 +137,7 @@ export function PayScreen({
             <button
               type="button"
               onClick={onChange}
-              className="whitespace-nowrap text-[#3b5bdb] underline"
+              className="ml-auto whitespace-nowrap text-[#3b5bdb] underline"
             >
               Change currency or network
             </button>
