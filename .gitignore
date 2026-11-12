@@ -1,0 +1,9 @@
+# The brief and third-party design references stay out of the repo.
+docs/requirements/
+
+node_modules/
+dist/
+coverage/
+*.local
+.DS_Store
+.superpowers/
