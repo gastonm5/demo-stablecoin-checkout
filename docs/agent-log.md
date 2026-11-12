@@ -156,3 +156,9 @@ This is the task ADR 0002 depended on, and the place where the agents were wrong
 
 - **A formatter that could round money.** The picker shows fees through the browser's currency formatter, which rounds to the currency's usual two decimals. None of the brief's fees has more than two, so every test passed and the screen looked right. Codex pointed out that a fee of 0.001 would show as $0.00. The formatter now keeps every decimal place the string has. The implementing agent called it its own mistake; the plan had not asked for it either.
 - **TypeScript did not accept what the browser does.** The design said amounts go to the number formatter as strings, and listed "TypeScript's typings accept this" as unverified. They do not. The plan had prescribed a cast of the formatter's signature only, never of the amount, and that is what the code uses.
+
+### Task 11
+
+- **A dialog that was not a dialog.** The test environment has no modal dialog, so the implementing agent opened the "have you already sent a payment?" dialog a simpler way, and said plainly what that cost: in a real browser the page behind stays clickable and focus is not held. Codex rated it major. It now uses the browser's modal where there is one. The implementing agent then checked in a real browser that clicks behind it reach nothing.
+- **A QR code with no margin.** The code had under half the blank border the QR standard asks for, and a test that pinned exactly that. The implementing agent flagged the border itself. It now has the full four modules.
+- **A bar I had drawn that the data cannot fill.** The agreed pay screen shows a progress bar under the countdown. Writing the task, the planning agent noticed the API gives a quote's deadline but not its lifetime, so there is nothing to draw a proportion from. The bar is gone and the time stays.
