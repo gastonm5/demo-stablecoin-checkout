@@ -173,12 +173,6 @@ export function Picker({
           )}
         </>
       }
-      strip={
-        <>
-          <strong>No clock is running yet.</strong> The rate is fixed only when
-          you continue.
-        </>
-      }
     />
   )
 }

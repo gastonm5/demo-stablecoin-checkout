@@ -58,14 +58,6 @@ test('opens with nothing selected and the button disabled', () => {
   expect(
     screen.getByText('The amount to send and the address are shown next.'),
   ).toBeVisible()
-  expect(screen.getByText('No clock is running yet.')).toBeVisible()
-  expect(
-    screen.getByText(
-      (_, element) =>
-        element?.textContent ===
-        'No clock is running yet. The rate is fixed only when you continue.',
-    ),
-  ).toBeVisible()
 })
 
 test('the network menu is disabled until a currency is chosen', async () => {
