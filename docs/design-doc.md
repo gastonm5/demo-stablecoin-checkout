@@ -111,7 +111,7 @@ The screen is the output of one pure function. Its inputs are the server's statu
 | `detected`, `confirming` | | Waiting | hidden | none | 3 s |
 | `paid` | | Complete | hidden | none | off |
 | `overpaid` | | Complete, with a notice about the extra | hidden | none | off |
-| `expired` | straight after a status that carried money | Expired after money was seen, a dead end | hidden | none | 15 s |
+| `expired` | straight after a status that carried money, skipping any status the page does not know | Expired after money was seen, a dead end | hidden | none | 15 s |
 | `expired` | sequence started from a reload | Expired, cautious wording | hidden | none | 15 s |
 | `expired` | otherwise | Expired | hidden | none | 15 s |
 | `failed` | money seen, not seen, or unknown | Failed, in three wordings | hidden | none | off |
@@ -431,7 +431,7 @@ These are places where the brief is silent or does not fit together. Each is a q
 | Funds from a partial payment that expired | Not stated. Requote returns the "same body as `POST /api/payments`", with no word on earlier funds | The page does not guess. It offers no new quote and sends the shopper to the merchant |
 | Money arriving after expiry | No status for it | The server may move `expired` to `detected`, so the page keeps watching |
 | Is `expired` terminal? | "Stop polling on terminal states", without listing them | Only `paid`, `overpaid` and `failed` are terminal. `expired` can return to `awaiting_payment` through requote |
-| Money sent to an earlier quote after a requote | Not stated | The page cannot attribute it. It offers a new quote only when it has seen no money, and it shows whatever the server reports |
+| Money sent to an earlier quote after a requote | Not stated | The page cannot attribute it. It offers a new quote only when it has seen no money for the current quote, and it shows whatever the server reports |
 | An unknown reference | Not stated | The mock returns 404 in the same problem format |
 | `failed` reasons | One example, `settlement_rejected` | Known codes get plain words. Any other code gets generic wording with the code in small print |
 

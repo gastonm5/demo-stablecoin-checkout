@@ -249,6 +249,52 @@ test.each([
     'reload',
     { variant: 'dead_end', after: 'partial' },
   ],
+  ...(['detected', 'confirming', 'paid', 'overpaid'] as const).map(
+    (money) =>
+      [
+        `dead end straight after ${money}`,
+        [money, 'expired'],
+        'creation',
+        { variant: 'dead_end', after: 'payment' },
+      ] as const,
+  ),
+  [
+    'dead end straight after underpaid',
+    ['underpaid', 'expired'],
+    'creation',
+    { variant: 'dead_end', after: 'partial' },
+  ],
+  // settling is a status the page does not know, so it parses as unknown.
+  [
+    'an unknown status after a partial payment does not reopen a new quote',
+    ['awaiting_payment', 'underpaid', 'settling', 'expired'],
+    'creation',
+    { variant: 'dead_end', after: 'partial' },
+  ],
+  [
+    'an unknown status after a full payment does not reopen a new quote',
+    ['awaiting_payment', 'detected', 'settling', 'expired'],
+    'creation',
+    { variant: 'dead_end', after: 'payment' },
+  ],
+  [
+    'plain when only an unknown status came before',
+    ['awaiting_payment', 'settling', 'expired'],
+    'creation',
+    { variant: 'plain', after: null },
+  ],
+  [
+    'cautious when only an unknown status came before a reload',
+    ['settling', 'expired'],
+    'reload',
+    { variant: 'cautious', after: null },
+  ],
+  [
+    'plain when the server said awaiting_payment after the money',
+    ['awaiting_payment', 'detected', 'awaiting_payment', 'settling', 'expired'],
+    'creation',
+    { variant: 'plain', after: null },
+  ],
 ] as const)('expired: %s', (_name, list, startedFrom, expected) => {
   // The default clock still shows time left: the server's expired wins over it.
   expect(statuses([...list], startedFrom)).toEqual({

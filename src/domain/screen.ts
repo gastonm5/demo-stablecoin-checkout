@@ -57,7 +57,10 @@ export function deriveScreen(input: ScreenInput): Screen {
       return { kind: 'failed', moneySeen: unknown ? 'unknown' : 'no' }
     }
     case 'expired': {
-      const before = currentQuote(sequence).at(-2)
+      // An unknown status says nothing about the money; only a known one can reopen a new quote.
+      const before = currentQuote(sequence)
+        .slice(0, -1)
+        .findLast((entry) => entry.status !== 'unknown')
       // No new quote once part or all of the money was seen: the API does not say what happens to it.
       if (before && carriesMoney(before.status)) {
         const after = before.status === 'underpaid' ? 'partial' : 'payment'
