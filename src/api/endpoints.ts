@@ -7,6 +7,28 @@ export type Choice = { currency: string; network: string }
 const paymentPath = (reference: string) =>
   `/api/payments/${encodeURIComponent(reference)}`
 
+// An answer about another payment or another pair would show the shopper an address they did not ask for.
+function parsePaymentAbout(asked: {
+  reference?: string
+  order_id?: string
+  choice?: Choice
+}) {
+  return (json: unknown): Payment => {
+    const payment = parsePayment(json)
+    const { reference, order_id, choice } = asked
+    if (
+      (reference !== undefined && payment.payment_reference !== reference) ||
+      (order_id !== undefined && payment.order_id !== order_id) ||
+      (choice !== undefined &&
+        (payment.quote.crypto_currency !== choice.currency ||
+          payment.quote.network !== choice.network))
+    ) {
+      throw new Error('The answer is not about what was asked')
+    }
+    return payment
+  }
+}
+
 export function getCurrencies(signal?: AbortSignal): Promise<Currency[]> {
   return request('/api/currencies', { signal, parse: parseCurrencies })
 }
@@ -19,7 +41,7 @@ export function createPayment(
     method: 'POST',
     body,
     signal,
-    parse: parsePayment,
+    parse: parsePaymentAbout({ order_id: body.order_id, choice: body }),
   })
 }
 
@@ -27,7 +49,10 @@ export function getPayment(
   reference: string,
   signal?: AbortSignal,
 ): Promise<Payment> {
-  return request(paymentPath(reference), { signal, parse: parsePayment })
+  return request(paymentPath(reference), {
+    signal,
+    parse: parsePaymentAbout({ reference }),
+  })
 }
 
 export function requotePayment(
@@ -39,7 +64,7 @@ export function requotePayment(
     method: 'POST',
     body,
     signal,
-    parse: parsePayment,
+    parse: parsePaymentAbout({ reference, choice: body }),
   })
 }
 

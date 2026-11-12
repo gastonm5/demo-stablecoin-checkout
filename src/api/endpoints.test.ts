@@ -59,10 +59,54 @@ test('requotePayment posts the choice to the requote path', async () => {
 })
 
 test('getPayment encodes the reference', async () => {
-  respond(paymentJson())
+  respond(paymentJson({ payment_reference: 'a/b c?' }))
   await getPayment('a/b c?')
   expect(sent()).toEqual({ url: '/api/payments/a%2Fb%20c%3F', method: 'GET' })
 })
+
+const ORDER = { order_id: 'ORD-88213', ...CHOICE }
+
+test.each<[string, Record<string, unknown>, () => Promise<unknown>]>([
+  ['getPayment, another reference', {}, () => getPayment('AQH-999999-PMT')],
+  [
+    'requotePayment, another reference',
+    {},
+    () => requotePayment('AQH-999999-PMT', CHOICE),
+  ],
+  [
+    'createPayment, another order',
+    {},
+    () => createPayment({ ...ORDER, order_id: 'ORD-99999' }),
+  ],
+  [
+    'createPayment, another currency',
+    { crypto_currency: 'USDC' },
+    () => createPayment(ORDER),
+  ],
+  [
+    'createPayment, another network',
+    { network: 'ethereum' },
+    () => createPayment(ORDER),
+  ],
+  [
+    'requotePayment, another currency',
+    { crypto_currency: 'USDC' },
+    () => requotePayment('AQH-100306-PMT', CHOICE),
+  ],
+  [
+    'requotePayment, another network',
+    { network: 'ethereum' },
+    () => requotePayment('AQH-100306-PMT', CHOICE),
+  ],
+])(
+  'an answer about something other than what was asked is invalid: %s',
+  async (_name, quote, call) => {
+    respond(paymentJson({}, quote))
+    const error = await call().catch((caught: unknown) => caught)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ kind: 'invalid' })
+  },
+)
 
 test.each<[string, (signal: AbortSignal) => Promise<unknown>]>([
   ['getCurrencies', (signal) => getCurrencies(signal)],
