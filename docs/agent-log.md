@@ -127,3 +127,9 @@ Codex raised fourteen points and all of them held up. The four that mattered mos
 ### Task 6
 
 - Nothing was rejected. Codex had no findings. The implementing agent raised a risk in a later task on its own: a poll already in flight that comes back after a requote would be taken for a new quote. The plan already cancels that poll first, and the warning now travels with Task 8.
+
+### Task 7
+
+- **A rule with a hole the implementer found.** The design said a quote that expires "straight after" a status with money is a dead end. The implementing agent built it as written, then pointed out what that lets through: money, then a status the page does not know, then expiry, gives the plain expired screen with its new-quote button. An unknown status says nothing about the money, so the rule now skips it when looking back. This tightens a rule I had approved, on the safer side.
+- **Two sentences of mine that disagreed.** The implementer also noticed that one line of the design doc said a new quote is offered "only when the page has seen no money", while another said only the current quote's history counts. The code follows the second. The first is reworded.
+- **A list nobody tested in full.** Codex found that the expired tests did not cover every status that carries money, so dropping `paid` from that list would have gone unnoticed. Each one now has a case.

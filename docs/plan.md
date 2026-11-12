@@ -875,7 +875,7 @@ export function withClient(client: QueryClient): React.FC<{ children: React.Reac
 
 - One query per reference, key `paymentKey(reference)`, disabled when `reference` is null. Its function calls `getPayment(reference, signal)` and returns `mergePayment(client.getQueryData(key), payment, Date.now())`.
 - Options: `retry: false`, `staleTime: 0`, `refetchIntervalInBackground: false`, `refetchOnWindowFocus: 'always'`, `refetchOnReconnect: 'always'`, and `refetchInterval` returning `pollInterval(status, failures)`.
-- Count consecutive failures in the hook: a ref set to 0 when the query function succeeds and incremented when it throws. Do not use the library's `fetchFailureCount`, which resets at the start of each fetch.
+- Count consecutive failures in the hook, in React state set from the query function: 0 when it succeeds, plus one when it fails. A cancelled request is not a failure and must not be counted. Do not keep the count in a ref that is read during render, which this project's lint rules forbid, and do not use the library's `fetchFailureCount`, which resets at the start of each fetch.
 - After a not-found error (`isNotFound`), `refetchInterval` returns `false`.
 - `lastSuccessAt` is the query's `dataUpdatedAt`. `lastFailureAt` is its `errorUpdatedAt`, or `null` when that is 0.
 - `checkNow` calls `refetch({ cancelRefetch: false })`, so it joins a request in flight.
