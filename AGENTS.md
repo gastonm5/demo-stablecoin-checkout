@@ -69,3 +69,9 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 ## Comments
 
 - A comment explains why, never what. No issue or PR numbers in code.
+
+## Commands
+
+- `npm run dev`: the page and the mock, on one port.
+- `npm run check`: lint, typecheck and tests. Run before every commit.
+- `npm test -- path/to/file.test.ts`: one test file.
