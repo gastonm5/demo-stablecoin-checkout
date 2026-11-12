@@ -125,9 +125,6 @@ test('expired: says what it shows and what it hides', () => {
     ),
   ).toBeInTheDocument()
   expect(
-    screen.getByText('Hidden, so nothing more is sent to it'),
-  ).toBeInTheDocument()
-  expect(
     fullText(
       'Already sent? Do not send again. We are still watching for your payment.',
     ),

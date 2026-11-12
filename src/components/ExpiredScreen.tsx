@@ -86,14 +86,7 @@ export function ExpiredScreen({
       amount={sum(quote.total_due)}
       muted
       timeRows={
-        <>
-          {expiredAt && (
-            <Row label="Expired at">{formatDateTime(expiredAt)}</Row>
-          )}
-          <Row label="Address" className="font-medium text-gray-500">
-            Hidden, so nothing more is sent to it
-          </Row>
-        </>
+        expiredAt && <Row label="Expired at">{formatDateTime(expiredAt)}</Row>
       }
       icon="clock"
       link={
