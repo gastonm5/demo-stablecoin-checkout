@@ -12,7 +12,12 @@ import {
 } from '../api/endpoints'
 import { parseCurrencies } from '../api/schemas'
 import type { Payment } from '../api/schemas'
-import { CURRENCIES_JSON, makePayment, STATE_FIXTURES } from '../test/fixtures'
+import {
+  CURRENCIES_JSON,
+  makePayment,
+  OTHER_ORDER,
+  STATE_FIXTURES,
+} from '../test/fixtures'
 import { createTestClient, withClient } from '../test/query'
 import { resetVisibility, setVisibility } from '../test/visibility'
 import { paymentKey } from './paymentCache'
@@ -150,6 +155,25 @@ test('submit creates a payment for the order and the choice', async () => {
   })
 })
 
+test("the order shown is the URL's until a payment exists, then the payment's", async () => {
+  const other = makePayment(OTHER_ORDER)
+  vi.mocked(createPayment).mockResolvedValue(other)
+  vi.mocked(getPayment).mockResolvedValue(other)
+  const { result } = await mount('?order_id=ORD-1')
+  const fromUrl = { ...ASSUMED_ORDER, order_id: 'ORD-1' }
+  expect(result.current.order).toEqual(fromUrl)
+
+  await fire(() => result.current.submit(CHOICE))
+  expect(createPayment).toHaveBeenCalledWith({ order_id: 'ORD-1', ...CHOICE })
+  expect(result.current.order).toMatchObject(OTHER_ORDER)
+
+  // A payment the server no longer knows takes its order with it.
+  vi.mocked(getPayment).mockRejectedValue(notFound)
+  await advance(3_000)
+  expect(result.current.reference).toBeNull()
+  expect(result.current.order).toEqual(fromUrl)
+})
+
 test('a second submit before any re-render is ignored', async () => {
   const create = held<Payment>()
   vi.mocked(createPayment).mockReturnValue(create.promise)
@@ -268,7 +292,7 @@ test('a reference in the URL resumes the payment', async () => {
   const { result } = await mount(`?order_id=ORD-1&payment=${REFERENCE}`)
   expect(getPayment).toHaveBeenCalledWith(REFERENCE, expect.anything())
   expect(result.current).toMatchObject({
-    order: { ...ASSUMED_ORDER, order_id: 'ORD-1' },
+    order: { order_id: 'ORD-88213' }, // the payment's, not the URL's
     reference: REFERENCE,
     view: { kind: 'payment' },
   })

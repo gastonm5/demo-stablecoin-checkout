@@ -78,6 +78,13 @@ export function makePayment(
   return parsePayment(paymentJson(state, quote))
 }
 
+// Unlike the assumed order in every shown value, so a header showing the wrong one is caught.
+export const OTHER_ORDER = {
+  order_id: 'ORD-7',
+  merchant: { name: 'Kupfer & Sohn', logo_url: null },
+  order: { currency: 'GBP', amount: '10.00' },
+}
+
 export const CURRENCIES_JSON: unknown = {
   currencies: [
     {

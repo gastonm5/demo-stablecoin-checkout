@@ -18,7 +18,7 @@ export type CheckoutView =
   | { kind: 'payment' }
 
 export type UseCheckoutResult = {
-  order: OrderSummary // for display; only its order_id is sent
+  order: OrderSummary // to show: the payment's once one exists, the URL's until then
   reference: string | null
   view: CheckoutView
   payment: UsePaymentResult
@@ -100,7 +100,7 @@ export function useCheckout(): UseCheckoutResult {
   }
 
   return {
-    order: url.order,
+    order: entry?.payment ?? url.order,
     reference,
     view:
       reference === null

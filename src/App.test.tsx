@@ -6,7 +6,12 @@ import { createPayment, getCurrencies, getPayment } from './api/endpoints'
 import { parseCurrencies } from './api/schemas'
 import App from './App'
 import { getMockSettings } from './dev/mockControl'
-import { CURRENCIES_JSON, makePayment } from './test/fixtures'
+import {
+  CURRENCIES_JSON,
+  makePayment,
+  OTHER_ORDER,
+  STATE_FIXTURES,
+} from './test/fixtures'
 
 vi.mock('./api/endpoints', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./api/endpoints')>()),
@@ -118,4 +123,56 @@ test('offers Try again when the options cannot be loaded', async () => {
   expect(
     screen.getByRole('heading', { name: 'Choose how to pay' }),
   ).toBeInTheDocument()
+})
+
+function expectOtherOrder() {
+  const main = screen.getByRole('main')
+  expect(main).toHaveTextContent('Kupfer & Sohn')
+  expect(main).toHaveTextContent('Order ORD-7')
+  expect(main).toHaveTextContent('£10.00')
+  for (const assumed of ['Nordwind', 'ORD-88213', '€149.90']) {
+    expect(main).not.toHaveTextContent(assumed)
+  }
+}
+
+test("the picker reopened from an expired payment shows that payment's order", async () => {
+  window.history.replaceState(null, '', '/?payment=AQH-100306-PMT')
+  let loadCurrencies: (value: typeof currencies) => void = () => {}
+  vi.mocked(getCurrencies).mockReturnValue(
+    new Promise((resolve) => {
+      loadCurrencies = resolve
+    }),
+  )
+  vi.mocked(getPayment).mockResolvedValue(
+    makePayment({
+      status: 'expired',
+      ...STATE_FIXTURES.expired,
+      ...OTHER_ORDER,
+    }),
+  )
+  render(<App />)
+  const user = userEvent.setup()
+  await user.click(
+    await screen.findByRole('checkbox', { name: 'I have not sent a payment' }),
+  )
+  await user.click(
+    screen.getByRole('button', { name: 'Change currency or network' }),
+  )
+  expect(screen.getByText('Loading payment options…')).toBeInTheDocument()
+  expectOtherOrder()
+
+  loadCurrencies(currencies)
+  expect(
+    await screen.findByRole('heading', { name: 'Choose how to pay' }),
+  ).toBeInTheDocument()
+  expectOtherOrder()
+})
+
+test("the pay screen shows the payment's order", async () => {
+  window.history.replaceState(null, '', '/?payment=AQH-100306-PMT')
+  vi.mocked(getCurrencies).mockResolvedValue(currencies)
+  vi.mocked(getPayment).mockResolvedValue(makePayment(OTHER_ORDER))
+  render(<App />)
+  await screen.findByText('Send exactly')
+  expectOtherOrder()
 })
