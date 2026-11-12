@@ -1,0 +1,393 @@
+# Stablecoin Checkout: design doc
+
+**Status:** agreed design, written before the build on 12 Nov 2026. I will revise it when the build is done so it describes what exists. The decisions with a real trade-off are in [`adr/`](adr/).
+
+## 1. What this is
+
+A hosted payment page. A shopper who chose "Pay with crypto" picks a currency and a network, gets a quote (an exact amount, an address, a QR code and a countdown), sends the money from their own wallet, and the page follows the payment until the server reports a final result.
+
+The page cannot see the blockchain and does not control the outcome. It reports what the server says. That shapes most of the design: the page holds very little state of its own, and every screen is derived from the server's last answer.
+
+**What I optimised for, in this order:**
+
+1. The shopper cannot send on the wrong network by mistake.
+2. The page never expires or hides a payment that is on its way.
+3. Every screen tells the truth, including the uncomfortable ones (overpaid, failed).
+4. No digit of an amount is lost or invented.
+
+**Not in scope:** auth, real wallets or chains, a merchant dashboard, translations, pixel-perfect design, dark mode. Browser end-to-end tests are a follow-up (section 10).
+
+**What would make this a failure even if it works:** a quote that expires while money is on its way, an address shown without its network, a promise the API does not back (a refund), float maths on money, or code I cannot explain a week later.
+
+## 2. The flow
+
+The page has three screens inside one card. The card keeps the same shape throughout: the payment's facts on the left, what is happening and what to do on the right, and a strip along the bottom for notices.
+
+| Screen | When | Agreed design |
+|---|---|---|
+| Picker | No payment exists yet | [`design/picker-proposal.png`](design/picker-proposal.png) |
+| Pay | `awaiting_payment`, `underpaid` | [`design/pay-screen-proposal.png`](design/pay-screen-proposal.png) |
+| Status | Every other status | [`design/status-screens-proposal.png`](design/status-screens-proposal.png) |
+
+![Pay screen](design/pay-screen-proposal.png)
+
+**Choose first, then quote.** The page opens on the picker with nothing selected. No payment exists and no clock runs. Only when the shopper presses "Continue with USDT on Tron" does the page call `POST /api/payments` and show an address.
+
+I chose this over creating a quote on landing with a default currency, for two reasons. A default puts an address on screen for a network the shopper never chose, which is the mistake the brief warns about. And a clock that starts before the shopper has decided adds pressure to the one choice that can lose their money.
+
+The API forces part of this. `POST /api/payments/:reference/requote` returns 409 unless the quote has already expired, so a change of network while a quote is live cannot be a requote. It has to be a new `POST /api/payments`, which creates a new payment with a new reference and leaves the old address live.
+
+**Changing the choice:**
+
+- **While the quote is live** (`awaiting_payment` only): "Change currency or network" asks for confirmation first, because a payment sent to the old address after the change would not be tracked on this page. If the shopper confirms they have not sent anything, the page returns to the picker and the next choice creates a new payment.
+- **After the quote expired:** the same link returns to the picker, and the next choice calls requote on the same reference. No payment is abandoned.
+- **Once any money was seen** (`underpaid`, `detected` and later): there is no way to change. The remainder has to go to the same address on the same network.
+
+**What the picker can show.** The API returns the merchant name and the order amount only inside a payment. On the picker no payment exists, so it shows the order reference and the choices, and the merchant name and fiat amount appear from the pay screen onwards. I did not add an order endpoint to the mock to fill this in; see section 9.
+
+**Refresh.** After a payment is created, its reference goes in the URL (`?payment=AQH-100306-PMT`). On load, a reference in the URL makes the page fetch that payment and resume on the right screen. This departs from the brief, which lists persistence as out of scope; the reasoning is in [ADR 0005](adr/0005-resume-from-url-reference.md).
+
+## 3. The payment lifecycle state model
+
+### 3.1 Eight statuses
+
+`GET /api/payments/:reference` defines eight statuses: `awaiting_payment`, `detected`, `confirming`, `paid`, `underpaid`, `overpaid`, `expired`, `failed`.
+
+The brief's lifecycle diagram shows four and says "there are six more". The API section defines four more, not six, so I built for eight and listed this as an open question (section 9).
+
+### 3.2 State chart
+
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting_payment: POST /api/payments
+    awaiting_payment --> detected: money seen, 0 confirmations
+    detected --> confirming
+    confirming --> paid
+    confirming --> overpaid: more than due
+    awaiting_payment --> underpaid: less than due
+    underpaid --> detected: the rest arrives
+    awaiting_payment --> expired: deadline passes
+    underpaid --> expired: deadline passes
+    expired --> awaiting_payment: requote
+    expired --> detected: late payment accepted
+    awaiting_payment --> failed
+    underpaid --> failed
+    detected --> failed
+    confirming --> failed
+    paid --> [*]
+    overpaid --> [*]
+    failed --> [*]
+```
+
+These are the transitions I expect from a real server. **The page does not enforce them.** It renders whatever status the server reports, in any order, because the server is the only party that knows what happened on chain. The dev panel can set any status at any time, and the page has to cope with every order.
+
+### 3.3 Three groups: what the shopper can do
+
+The brief asks which states the shopper can still fix. I sort the statuses by what the shopper can do, and each group looks different.
+
+| Group | Statuses | What the shopper sees | Action |
+|---|---|---|---|
+| **Your move** | `awaiting_payment`, `underpaid`, `expired` | Something to do, stated once | One main action |
+| **Wait** | `detected`, `confirming` | Progress, and "nothing more to send" | None. The address and QR are gone so nobody sends twice |
+| **Final** | `paid`, `overpaid`, `failed` | The result | None |
+
+Fixable problems are `underpaid` (send the rest) and `expired` (get a new quote). They carry one clear action each. The problems the shopper cannot fix are `failed` and the extra money in `overpaid`. Those screens have no button at all, so nothing looks like a fix that is not one. They give the shopper the reference, the amounts and the merchant's name to take away.
+
+### 3.4 From status to screen
+
+The screen is the output of one pure function. Its inputs are the server's status, the sequence of statuses seen (3.5), the device clock and the connection state.
+
+| Server status | Condition | Screen | Address and QR | Countdown | Poll |
+|---|---|---|---|---|---|
+| `awaiting_payment` | time left | Pay | shown | shown | 3 s |
+| `awaiting_payment` | countdown at zero, check in flight | Pay, "Time's up, checking" | hidden | at zero | at once |
+| `awaiting_payment` | server answered "still live" after zero | Pay, "quote still valid" | shown | hidden | 3 s |
+| `awaiting_payment` | countdown at zero, check failed | Pay, "can't confirm" | hidden | hidden | backing off |
+| `underpaid` | same four cases | Pay, remaining amount | as above | as above | as above |
+| `detected`, `confirming` | | Waiting | hidden | none | 3 s |
+| `paid` | | Complete | hidden | none | off |
+| `overpaid` | | Complete, with a notice about the extra | hidden | none | off |
+| `expired` | no money seen for this quote | Expired | hidden | none | 15 s |
+| `expired` | `underpaid` seen for this quote | Expired after a partial payment | hidden | none | 15 s |
+| `expired` | sequence started from a reload | Expired, cautious wording | hidden | none | 15 s |
+| `failed` | money seen, not seen, or unknown | Failed, in three wordings | hidden | none | off |
+| anything else | | "We're checking" | hidden | none | 3 s |
+
+Connection trouble is not a row in this table. It is a notice in the strip, laid over whichever row applies (section 7).
+
+### 3.5 The status sequence
+
+Some screens depend on what happened before. `expired` after `underpaid` must not offer a plain "get a new quote", because the shopper already sent part of the money. The `expired` response itself carries only `expired_at`.
+
+So the page keeps the sequence of statuses it has seen for a payment, each with the fields that came with it (amount received, amount outstanding, transaction hash). It is stored beside the payment in the query cache and appended in the one function where a server response becomes cached data. Polls and requotes both pass through that function, so there is no effect to keep in sync and no second store.
+
+Three rules:
+
+- A repeated status updates the last entry instead of adding one.
+- "For this quote" means the entries since the last creation or requote. A partial payment on an earlier quote does not change the wording for a later one.
+- The sequence records whether it started at creation or from a reload. After a reload the page cannot know whether money arrived earlier, so `expired` and `failed` use cautious wording: "if you already sent funds, they won't count toward a new quote".
+
+### 3.6 Unknown statuses
+
+A status the page does not know is not a validation error. The schema accepts any status string, and an unknown one maps to a safe screen: "We're checking your payment. Don't send again." Polling continues.
+
+In code, the known statuses are one discriminated union and the screen function switches over it exhaustively. Adding a ninth status fails to compile until every place handles it.
+
+### 3.7 When polling stops
+
+Polling stops on `paid`, `overpaid` and `failed`.
+
+It does **not** stop on `expired`, which the brief might count as terminal. A shopper who sent in the last seconds can be told "expired" before the server sees their money. If the page stopped there, it would invite a second payment while the first is in flight. So `expired` keeps polling, more slowly, until the shopper gets a new quote, and the screen says "Already sent? Do not send again. We are still watching for your payment." The trade-off is in [ADR 0003](adr/0003-partial-and-late-payments.md).
+
+## 4. Component structure and data flow
+
+```mermaid
+flowchart LR
+    URL["URL: order_id, payment"] --> UC["useCheckout"]
+    UC --> PK["Picker"]
+    UC --> PV["PaymentView"]
+    PV --> UP["usePayment: poll + status sequence"]
+    UP --> DS["deriveScreen (pure)"]
+    CD["useCountdown: device clock"] --> DS
+    CN["connection state"] --> DS
+    DS --> SC["Pay / status screens + notice strip"]
+    PK -- "create payment" --> API
+    SC -- "requote" --> API
+    UP <--> API["src/api: fetch, timeout, zod"]
+    API <--> MOCK["Express mock: /api"]
+    DP["DevPanel"] <--> CTRL["Express mock: /__mock"]
+```
+
+Data moves one way. A server response is validated, stored in the query cache with the status sequence, turned into a screen by a pure function, and rendered. Shopper actions go back out as two writes, create and requote, whose responses re-enter by the same path.
+
+### 4.1 Layers
+
+| Folder | Holds | Rule |
+|---|---|---|
+| `src/api` | Request functions, timeouts, zod schemas | The only code that talks to the server or validates a response |
+| `src/domain` | Status groups, `deriveScreen`, the status sequence, countdown maths, the amount guard | Pure functions, no React, no I/O |
+| `src/hooks` | `useCheckout`, `usePayment`, `useCurrencies`, `useCountdown` | Own all behaviour and timing |
+| `src/components` | The card, picker, pay screen, status screens, strip | Render only |
+| `src/dev` | The dev panel | The only code that knows the mock exists |
+| `mock/` | The Express app, fixtures, control endpoints | |
+
+### 4.2 State
+
+| State | Lives in | Why |
+|---|---|---|
+| Payment, currencies, status sequence | TanStack Query cache | It is server data, or derived from it at the boundary |
+| Selected currency and network, which screen | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
+| Payment reference, order id | The URL | So a refresh resumes |
+| Which screen to show, connection notice, time left | Not stored | Derived on every render |
+
+There is no state library and no state machine library. A client state machine would model transitions the page does not own: the server drives every one of them, and the page only maps the latest answer to a screen.
+
+### 4.3 Requests
+
+Reads retry themselves. Writes ask the shopper. The API has no idempotency key, so a retried create makes a second payment. That is harmless to the shopper, who never saw its address, but creating payments silently would hide a failing server.
+
+| Request | Slow response | Failure | Retry |
+|---|---|---|---|
+| `GET /api/currencies` | Loading state, give up at 10 s | Full-card error | Automatic, two more tries with backoff, then "Try again" |
+| `POST /api/payments` | Progress on the button, "still working" after 4 s, give up at 10 s | Error beside the button, choices intact | Manual only |
+| `GET /api/payments/:ref` | Give up at 10 s, counts as a failed poll | Last status stays, notice after two failures in a row | The next poll is the retry |
+| `POST …/requote` | As for create | Error on the expired screen | Manual only, then re-read the payment in case it went through |
+
+Further rules:
+
+- One create is in flight at a time, and the menus are disabled while it is.
+- A 4xx with a problem body is an answer, not an outage. It is not retried.
+- A requote that returns 409 `quote-not-expired` makes the page re-read the payment and show what the server says.
+- A response that fails validation counts as a failed request.
+
+### 4.4 Polling
+
+Polling uses TanStack Query's own interval on one query per payment reference. The interval is a function of the last result: 3 s while active, 15 s on `expired`, off on final statuses, and doubling up to 30 s after consecutive failures.
+
+- The library's built-in retries are off for this query, because the next poll is the retry.
+- A hidden tab pauses polling. One poll fires as the tab returns.
+- Starting a requote cancels the poll in flight, and the requote's response replaces the cached payment, so an older "expired" answer cannot overwrite a fresh quote.
+- Unmounting, or switching to another payment, aborts the request in flight and clears the timer.
+
+The guarantee that two polls never overlap comes from the library: a query has at most one request in flight, and an interval tick that lands during a request joins it. I rely on that and prove it with a test where the response is slower than the interval. The alternative, a hand-written loop, is weighed in [ADR 0002](adr/0002-polling-with-tanstack-query-interval.md).
+
+## 5. How the countdown stays correct
+
+**It is never a counter.** The page does not subtract one each second. Every tick recomputes `expires_at` minus the device clock. A browser throttles or suspends timers in a hidden tab, so a counter would fall behind by however many ticks it missed. A recomputed value cannot drift: the first tick after the tab returns shows the right time, whether the tab was hidden for two minutes or the laptop slept for an hour.
+
+**The tab returning is an event.** When the tab becomes visible again, the page recomputes at once and polls at once, so the shopper never acts on a stale screen.
+
+**The countdown is information, not authority.** It uses the device clock, which can be wrong. Only the server's status can end a quote:
+
+| What happens | What the page does |
+|---|---|
+| Countdown reaches zero | Hides the address and QR, shows "Time's up, checking", polls at once |
+| Server says `expired` | Shows the expired screen and the new-quote action |
+| Server says the quote is still live | Brings the address back, hides the timer, shows "this quote is still valid". The device clock is known to be wrong, so the page stops showing a number it cannot trust |
+| The check fails | Keeps the address hidden and says it cannot confirm |
+| Server says `expired` while the countdown still shows time | Shows the expired screen. The server wins |
+| Server says `detected` or later | The countdown is gone for good |
+
+The two clock errors behave differently, and I accept both:
+
+- **Device clock ahead:** the countdown ends early, the check finds the quote still live, and the shopper can still pay. Without the "still live" rule, a shopper whose clock runs far ahead could never pay.
+- **Device clock behind:** the countdown shows more time than the server allows. The page corrects at the first poll after the server expires the quote. This is the real cost of using the device clock, and the late-payment polling on `expired` softens it.
+
+I considered correcting the clock from the server's `Date` header and chose not to. The reasoning is in [ADR 0001](adr/0001-server-decides-expiry.md).
+
+**Underpaid keeps the deadline.** The countdown keeps running on `underpaid`, against the original `expires_at`. A quote is a price held for a limited time, and a partial payment does not extend it.
+
+## 6. How I handle decimal precision
+
+The rule is that no digit of an amount is lost or invented between the API and the shopper's wallet. USDT has 6 decimal places and ETH has 18, and a JavaScript `number` holds only about 15 to 17 significant digits.
+
+A real example from the mock's ETH quote, checked in Node:
+
+| | Value |
+|---|---|
+| Server sends | `0.054229071702481731` |
+| Through `Number` | `0.05422907170248173`, the last digit is gone |
+
+**What the page does:**
+
+- **Amounts are strings end to end.** The API sends decimal strings. They get their own string type, created only where a response is validated, so passing one to ordinary maths is a compile error.
+- **No maths on money.** The page shows `total_due`, `amount_outstanding` and `amount_excess` as the server sends them. It never adds the fee, subtracts what was received, or rounds.
+- **Validation at the boundary.** A response is rejected if an amount arrives as a JSON number, is malformed, or has more decimal places than its currency's `decimals` allows. A JSON number has already been through a float by the time the page sees it.
+- **Crypto is shown exactly as sent.** Dot decimal, no thousands separators, never rounded or shortened, including all eighteen ETH places. The copy button copies that exact string with no unit.
+- **Only fiat follows the locale.** The order amount goes to the browser's number formatter as a string, which formats it exactly, so a German shopper sees `149,90 €`.
+- **No decimal library.** A library would earn its place if the page did arithmetic. It does not.
+- **No floats in the mock either.** Its amounts are literal strings in a hand-written table.
+
+I show crypto exactly as sent, not in the shopper's locale, because that number gets retyped or pasted into a wallet. A wallet that expects a dot may reject `163,69`, or read `1.234,56` wrongly. A locale-formatted crypto amount is the one way this page could cause a wrong amount.
+
+**Where `decimals` is used.** `GET /api/currencies` returns each currency's `decimals`. The page uses it for the guard above and nowhere else. It would also be needed to build wallet payment links, which the page does not do; see [ADR 0004](adr/0004-qr-holds-address-only.md).
+
+## 7. How I show failure states
+
+![Status screens](design/status-screens-proposal.png)
+
+### 7.1 Four rules for wording
+
+1. **Say only what the API says.** No promised refunds, and no outcomes the response does not state.
+2. **A dead end gives the shopper something to take away:** the reference with a copy button, the amounts, the transaction hash, and the merchant's name as who to contact.
+3. **A fixable screen has one main action. A dead end has none.**
+4. **The page never tells anyone to send again** unless the status calls for it.
+
+### 7.2 The screens
+
+| Status | Headline | What it says | Action |
+|---|---|---|---|
+| `underpaid` | Part of your payment arrived | What was received, the exact amount still to send, same address and network, countdown still running | Send the rest |
+| `expired` | This quote has expired | "Already sent? Do not send again. We are still watching for your payment." The address is hidden | "Get a new quote", enabled only after ticking "I have not sent a payment" |
+| `expired` after `underpaid` | The full amount wasn't reached | What was received and what was missing. A new quote is for the full amount, and the earlier funds will not count toward it | "Get a new quote for the full amount" |
+| `overpaid` | Payment complete | "You sent 16.31 USDT more than was due. This page can't return the extra amount. Contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
+| `failed` | This payment could not be completed | The reason in plain words, the server's reason code in small print, "do not send anything more", contact the merchant | None |
+| unknown | We're checking your payment | "Don't send again." | None |
+
+Notes on three of them:
+
+- **`overpaid`** is shown as a success with a clear notice, not as plain green and not as an error. The response has a settlement time, so "complete" is true. It says nothing about a refund, so neither does the page.
+- **`failed`** is a dead end on purpose. I do not know what a reason such as `settlement_rejected` means for a second attempt, and a retry could leave more money stuck. If the sequence shows money was seen, the screen says so: "We saw your payment of 163.69 USDT, but it could not be completed."
+- **`detected`** says "We've seen your payment on the network", not "received" or "complete". Zero confirmations is not settled.
+
+### 7.3 Connection trouble is a layer, not a status
+
+If the server is down or the shopper is offline, the last status the page knew stays on screen with a notice in the strip. A connection problem never shows as `failed` or `expired`.
+
+| Notice | When |
+|---|---|
+| "You're offline. We'll pick up as soon as your connection returns." | The browser reports no connection. Polling pauses and resumes when it returns |
+| "We can't reach the payment service. Your payment is unaffected. Retrying." with "Try now" | Everything else: 500s, timeouts, invalid responses, network errors while the browser says it is online |
+
+While the connection is down and the quote still has time left, the address and QR **stay visible**. The quote is valid until its deadline whether or not this page can reach the server, and the shopper's wallet is usually on another device. Once the countdown reaches zero they are hidden, because the page can no longer confirm the quote is live.
+
+### 7.4 Shopper safety on the pay screen
+
+- **The network is named five times:** in the banner at the top, in the address label, on the copy button ("Copy Tron address"), on the frame around the QR, and in the picker's button before any of that ("Continue with USDT on Tron").
+- **The QR holds the address only.** An Ethereum address and a Polygon address look identical, so the QR itself carries no network information. That is why its frame names the network.
+- **A hint for the commonest cause of underpayment:** "Sending from an exchange? Make sure 163.69 USDT arrives after its withdrawal fee."
+- **Nothing is preselected in the picker,** and changing the currency clears the network, so the network is always chosen on purpose.
+
+## 8. The mock and the dev panel
+
+The mock is a small Express app mounted inside the dev server, so `npm run dev` starts one process on one port. It keeps payments in memory.
+
+**What it does:**
+
+- `POST /api/payments` creates a payment with a new reference every time.
+- Quotes come from a hand-written table, one row per currency and network, each with its own rate, fee and address.
+- `GET /api/payments/:reference` returns the whole payment (merchant, order, quote) plus the status fields.
+- `awaiting_payment` and `underpaid` become `expired` when the deadline passes.
+- Requote succeeds only from `expired`. Anything else gets the 409.
+
+**How reviewers drive it.** The control lives in the mock, not in the app's requests. The dev panel calls control endpoints under `/__mock`, and the app's own request code never knows a mock exists. The same endpoints work with `curl`.
+
+![Dev panel](design/dev-panel-proposal.png)
+
+| Control | Options |
+|---|---|
+| Set status | Eight buttons, usable in any order, plus a confirmations stepper |
+| Quote lifetime | 30 s, 2 min, 15 min, applied to new quotes |
+| Faults, on every API request | Delay of 3 s or 15 s; HTTP 500; dropped connection. The control endpoints are exempt |
+| Server clock offset | −5 min, 0, +5 min, to see the clock-difference handling without changing the system clock |
+
+"You're offline" is tested with the browser's own offline switch.
+
+The panel is docked on the right and pushes the card aside instead of covering it, so a reviewer can change a status and watch the page react. It starts collapsed.
+
+## 9. Assumptions and open questions
+
+These are places where the brief is silent or does not fit together. Each is a question I would ask the backend team.
+
+| Topic | What the brief says | What I assumed |
+|---|---|---|
+| Number of statuses | "There are six more states" beyond the four in the diagram | The API defines four more. I built for eight in total |
+| Fee unit | The catalogue lists a `network_fee` of `3.20` for ETH; the example quote adds the fee in the crypto's own units | Catalogue fees are in USD. Each quote carries the fee converted into the crypto's units, one to one for USDT and USDC. An ETH quote's fee is `0.001066666666666667` ETH |
+| Order details before a payment | Merchant and order amount come only inside a payment | The picker shows the order reference only. I did not invent an order endpoint |
+| What `GET` returns | "Returns the payment with an updated status, plus the fields below" | The whole payment, plus the status fields |
+| Repeated `POST /api/payments` | Not stated | A new payment with a new reference each time |
+| Deadline on `underpaid` | The response has no deadline field | The quote's original `expires_at` still applies |
+| Requote after a partial payment | "Same body as `POST /api/payments`" | The new quote is for the full amount. Funds already sent do not count toward it |
+| Money arriving after expiry | No status for it | The server may move `expired` to `detected`, so the page keeps watching |
+
+## 10. Follow-ups
+
+Things I left out on purpose, and what each would need:
+
+- **Wallet payment links in the QR.** A standard link would prefill the amount in the shopper's wallet. Token links need each token's contract address, which the API does not return. ([ADR 0004](adr/0004-qr-holds-address-only.md))
+- **Merchant name and amount on the picker.** Needs an endpoint that returns the order before a payment exists.
+- **Fees in the order's currency.** The picker shows catalogue fees in USD while the order is in EUR.
+- **A server time source for the countdown.** A time field in the response body would remove the device-clock error. ([ADR 0001](adr/0001-server-decides-expiry.md))
+- **Full resume after a reload.** The status sequence restarts on reload. Keeping it in session storage would restore the exact wording. ([ADR 0005](adr/0005-resume-from-url-reference.md))
+- **Browser end-to-end tests.**
+- **A mock script that advances a payment by itself.** The dev panel's status buttons already reach every state.
+
+## 11. Details set by default
+
+These were not discussed one by one. I set them while writing this document, and each is easy to change.
+
+- **Timings:** poll every 3 s, 15 s on `expired`, backoff doubling to 30 s, request timeout 10 s, "still working" hint at 4 s, connection notice after two failed polls in a row.
+- **Order id:** read from `?order_id=` in the URL, falling back to `ORD-88213` so the page runs with no setup.
+- **Exchange rate:** shown under the amount, exactly as sent ("1 USDT = 0.9214 EUR").
+- **Going back from a live quote:** a native dialog. "Have you already sent a payment? Only change if you have not sent anything."
+- **`expired` tick box:** it enables both "Get a new quote" and "Change currency or network".
+- **Picker menus:** the browser's own, with the fee and usual time in each option's text. A currency with one network (ETH) has it filled in.
+- **Payment not found on resume:** back to the picker with a notice.
+- **Copy buttons:** show "Copied" for two seconds, announced to screen readers.
+- **Dates and times:** formatted for the shopper's locale and time zone.
+- **Accessibility:** status changes are announced, the countdown is not read out every second, focus moves to the new screen's heading, and colour is never the only signal.
+- **Mock control endpoints:** `GET /__mock/state`, `POST /__mock/payments/:reference/status`, `POST /__mock/settings`.
+
+Three things I still have to verify during the build:
+
+- That a dropped connection from a mock mounted in the dev server reaches the browser as a network error and not as a 500.
+- That TanStack Query's interval never overlaps requests, which the polling tests will prove or disprove.
+- That TypeScript's typings accept a string in the number formatter. Node formats it exactly; I checked that.
+
+## 12. One thing I would defend
+
+**The page never declares a quote expired by itself.**
+
+The brief says: "When it reaches zero, show an expired state and a way to get a new quote." I do something different. When the countdown reaches zero, the page hides the address, says "Time's up, checking", and asks the server. Only the server's `expired` shows the expired screen. If the server says the quote is still live, the address comes back and the timer goes away.
+
+The countdown runs on the shopper's device clock, and that clock can be wrong in either direction. If the page trusted it, a shopper whose clock runs ahead would be told "expired" on a live quote and sent to requote, which the API refuses with a 409. Worse, in the seconds around the deadline the page would be showing "expired, get a new quote" to someone whose money is already on its way. The brief's own last line is that a simple page is better than one that expires the quote while the shopper's money is on the way. Asking the server first costs one request and, in the normal case, a fraction of a second of "checking". I think that is the right price for never being wrong about it.
