@@ -5,11 +5,11 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { parseCurrencies } from '../api/schemas'
 import { ASSUMED_ORDER } from '../hooks/url'
 import { CURRENCIES_JSON } from '../test/fixtures'
-import { Picker } from './Picker'
+import { PickerScreen } from './PickerScreen'
 
 const currencies = parseCurrencies(CURRENCIES_JSON)
 
-type Props = ComponentProps<typeof Picker>
+type Props = ComponentProps<typeof PickerScreen>
 
 afterEach(() => {
   vi.useRealTimers()
@@ -26,12 +26,12 @@ function renderPicker(overrides: Partial<Props> = {}) {
     onSubmit: vi.fn(),
     ...overrides,
   }
-  const view = render(<Picker {...props} />)
+  const view = render(<PickerScreen {...props} />)
   return {
     ...view,
     props,
     rerenderWith: (more: Partial<Props>) =>
-      view.rerender(<Picker {...props} {...more} />),
+      view.rerender(<PickerScreen {...props} {...more} />),
   }
 }
 

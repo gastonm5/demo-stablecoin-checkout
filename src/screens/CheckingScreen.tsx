@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react'
 import type { Payment } from '../api/schemas'
 import type { SequenceEntry } from '../domain/sequence'
-import { BODY, StatusCard } from './StatusCard'
+import { BODY, StatusCard } from '../components/StatusCard'
 import { headline } from './statusText'
 
 // A status the page does not know, or one that went backwards: keep polling, and leave a way forward.

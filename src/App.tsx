@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 import { CheckoutCard } from './components/CheckoutCard'
 import { OrderHeader } from './components/OrderHeader'
-import { PaymentView } from './components/PaymentView'
-import { Picker } from './components/Picker'
+import { PaymentView } from './screens/PaymentView'
+import { PickerScreen } from './screens/PickerScreen'
 import { DevPanel } from './dev/DevPanel'
 import { useCheckout } from './hooks/useCheckout'
 import type { UseCheckoutResult } from './hooks/useCheckout'
@@ -19,7 +19,7 @@ function Checkout({ checkout }: { checkout: UseCheckoutResult }) {
 
   if (catalogue.currencies) {
     return (
-      <Picker
+      <PickerScreen
         order={checkout.order}
         currencies={catalogue.currencies}
         mode={view.mode}

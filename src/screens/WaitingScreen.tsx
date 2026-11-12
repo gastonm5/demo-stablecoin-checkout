@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react'
 import type { Payment } from '../api/schemas'
 import { formatDateTime, networkShortName, usualTime } from '../domain/format'
-import { BODY, Row, StatusCard } from './StatusCard'
+import { BODY, Row, StatusCard } from '../components/StatusCard'
 import { headline } from './statusText'
 
 // detected or confirming: money seen, not settled, so nothing here says "received".

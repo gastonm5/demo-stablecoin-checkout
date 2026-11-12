@@ -9,9 +9,9 @@ import {
 } from '../domain/format'
 import { useDelayedFlag } from '../hooks/useDelayedFlag'
 import { usePickerChoice } from '../hooks/usePickerChoice'
-import { CheckoutCard } from './CheckoutCard'
-import { NetworkChip } from './NetworkChip'
-import { OrderHeader } from './OrderHeader'
+import { CheckoutCard } from '../components/CheckoutCard'
+import { NetworkChip } from '../components/NetworkChip'
+import { OrderHeader } from '../components/OrderHeader'
 
 const STILL_WORKING_AFTER_MS = 4_000
 
@@ -32,7 +32,7 @@ const chevron = (
   </svg>
 )
 
-export function Picker({
+export function PickerScreen({
   order,
   currencies,
   mode,

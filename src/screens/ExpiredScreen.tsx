@@ -4,7 +4,7 @@ import type { Payment } from '../api/schemas'
 import { formatDateTime } from '../domain/format'
 import type { Screen } from '../domain/screen'
 import type { SequenceEntry } from '../domain/sequence'
-import { BODY, NOTICE, Row, StatusCard, WARN } from './StatusCard'
+import { BODY, NOTICE, Row, StatusCard, WARN } from '../components/StatusCard'
 import { headline } from './statusText'
 
 export function ExpiredScreen({

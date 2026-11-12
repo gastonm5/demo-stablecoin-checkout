@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from 'react'
 import type { Payment } from '../api/schemas'
 import type { Screen } from '../domain/screen'
 import type { SequenceEntry } from '../domain/sequence'
-import { BODY, StatusCard } from './StatusCard'
+import { BODY, StatusCard } from '../components/StatusCard'
 import { headline, reasonText } from './statusText'
 
 // A dead end on purpose: a retry could leave more money stuck, so there is nothing to press.

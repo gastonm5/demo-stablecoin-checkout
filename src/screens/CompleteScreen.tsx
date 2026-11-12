@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react'
 import type { Payment } from '../api/schemas'
 import { formatDateTime } from '../domain/format'
-import { BODY, NOTICE, Row, StatusCard, WARN } from './StatusCard'
+import { BODY, NOTICE, Row, StatusCard, WARN } from '../components/StatusCard'
 import { headline } from './statusText'
 
 // paid or overpaid. The API says nothing about returning the extra, so neither does this page.
