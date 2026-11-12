@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CURRENCIES_JSON, paymentJson } from '../test/fixtures'
 import { ApiError } from './client'
+import type { ApiErrorKind } from './client'
 import {
   createPayment,
   getCurrencies,
@@ -81,11 +82,19 @@ test.each<[string, (signal: AbortSignal) => Promise<unknown>]>([
   expect(fetchMock).not.toHaveBeenCalled()
 })
 
-const http = (status: number, problem?: { type: string }) =>
-  new ApiError('http', `answered ${status}`, {
+const problemOf = (status: number, problem?: { type: string }) =>
+  problem && { title: 'Problem', status, ...problem }
+const apiError = (
+  kind: ApiErrorKind,
+  status: number,
+  problem?: { type: string },
+) =>
+  new ApiError(kind, `answered ${status}`, {
     status,
-    problem: problem && { title: 'Problem', status, ...problem },
+    problem: problemOf(status, problem),
   })
+const http = (status: number, problem?: { type: string }) =>
+  apiError('http', status, problem)
 const QUOTE_NOT_EXPIRED = {
   type: 'https://developers.triple-a.io/errors/quote-not-expired',
 }
@@ -103,8 +112,28 @@ test.each<[string, unknown, boolean, boolean]>([
   ['a 404', http(404), false, true],
   ['a 500', http(500), false, false],
   ['a network error', new ApiError('network', 'down'), false, false],
+  [
+    'an invalid error with a 409 quote-not-expired',
+    apiError('invalid', 409, QUOTE_NOT_EXPIRED),
+    false,
+    false,
+  ],
+  [
+    'a network error with a 409 quote-not-expired',
+    apiError('network', 409, QUOTE_NOT_EXPIRED),
+    false,
+    false,
+  ],
+  ['an invalid error with a 404', apiError('invalid', 404), false, false],
+  ['a network error with a 404', apiError('network', 404), false, false],
   ['a plain error', new Error('404'), false, false],
-  ['a lookalike object', { kind: 'http', status: 404 }, false, false],
+  [
+    'a lookalike 409 quote-not-expired',
+    { kind: 'http', status: 409, problem: problemOf(409, QUOTE_NOT_EXPIRED) },
+    false,
+    false,
+  ],
+  ['a lookalike 404', { kind: 'http', status: 404 }, false, false],
 ])(
   'isQuoteNotExpired and isNotFound recognise their errors and nothing else: %s',
   (_name, error, quoteNotExpired, notFound) => {

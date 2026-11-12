@@ -26,6 +26,17 @@ function hangUntilAborted(_url: unknown, init?: RequestInit) {
   })
 }
 
+// The response has arrived; reading its body fails once the request's signal aborts, as a real fetch does.
+function bodyHangsUntilAborted(status: number) {
+  const readBody = vi.fn(hangUntilAborted)
+  fetchMock.mockImplementation(async (url, init) =>
+    Object.assign(new Response(null, { status }), {
+      json: () => readBody(url, init),
+    }),
+  )
+  return readBody
+}
+
 const sentSignal = () => fetchMock.mock.calls[0]?.[1]?.signal
 
 const QUOTE_NOT_EXPIRED = {
@@ -61,11 +72,10 @@ test('a GET sends no body', async () => {
 
 test('returns the parsed body on 200', async () => {
   fetchMock.mockResolvedValue(json(paymentJson()))
-  const payment = await request('/api/x', { parse: parsePayment })
-  expect(payment).toMatchObject({
-    status: 'awaiting_payment',
-    quote: { total_due: '163.69' },
-  })
+  const parsed = { parsed: true }
+  const parse = vi.fn(() => parsed)
+  await expect(request('/api/x', { parse })).resolves.toBe(parsed)
+  expect(parse).toHaveBeenCalledWith(paymentJson())
 })
 
 test('a 500 is an http error with the status', async () => {
@@ -122,6 +132,31 @@ test('a caller abort is not an ApiError', async () => {
   fetchMock.mockImplementation(hangUntilAborted)
   const caller = new AbortController()
   const p = request('/api/x', { signal: caller.signal, parse: (j) => j })
+  caller.abort()
+  const error = await p.catch((e: unknown) => e)
+  expect(error).toBe(caller.signal.reason)
+  expect(error).toHaveProperty('name', 'AbortError')
+})
+
+test.each([200, 500])(
+  'gives up after ten seconds while a %i body is being read',
+  async (status) => {
+    vi.useFakeTimers()
+    const readBody = bodyHangsUntilAborted(status)
+    const p = request('/api/x', { parse: (j) => j })
+    const assertion = expect(p).rejects.toMatchObject({ kind: 'timeout' })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(readBody).toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS)
+    await assertion
+  },
+)
+
+test('a caller abort while the body is being read is not an ApiError', async () => {
+  const readBody = bodyHangsUntilAborted(200)
+  const caller = new AbortController()
+  const p = request('/api/x', { signal: caller.signal, parse: (j) => j })
+  await vi.waitFor(() => expect(readBody).toHaveBeenCalled())
   caller.abort()
   const error = await p.catch((e: unknown) => e)
   expect(error).toBe(caller.signal.reason)
