@@ -1197,7 +1197,7 @@ export function PayScreen(props: {
 - Amount, `mode: 'remaining'`: above the banner, a notice "**Part of your payment arrived.** We received {amount_received} of {total_due} {currency}." Label "Send the remaining", then `{amount_outstanding} {currency}`, and "Copy amount" copies `amount_outstanding`. No breakdown line.
 - Amounts are rendered exactly as received, in one text node, with `break-all` so eighteen places wrap instead of overflowing.
 - Address box: label "{networkName} address", the full address in a monospaced font, and a `CopyButton` labelled "Copy {short} address".
-- Countdown, only when `clock` is `'running'`: "Rate held for" and `formatRemaining(remainingMs)` in an element with `role="timer"`, plus a bar. It is not a live region.
+- Countdown, only when `clock` is `'running'`: "Rate held for" and `formatRemaining(remainingMs)` in an element with `role="timer"`. It is not a live region. There is no progress bar: a bar needs the quote's full lifetime, and the API gives only its deadline.
 - Right column: `QrFrame`. Its cap reads "{NETWORK NAME IN CAPITALS} ONLY". The QR is `<QRCodeSVG value={address} title="QR code for the {networkName} address" />`. Under it "Scan with your wallet app" and the `note`: "The code holds the address only. Enter the amount yourself." in full mode, "Same address as before. The code holds the address only." in remaining mode.
 - When `showAddress` is false, the address box, both address controls and the whole `QrFrame` are not rendered. The right column says "The address is hidden until we can confirm this quote."
 - Strip, by `clock`:
@@ -1270,7 +1270,7 @@ test('says copying failed when there is no clipboard', ...) // navigator.clipboa
 ```
 
 - [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/hooks/useCopy.test.ts src/components/PayScreen.test.tsx src/components/CopyButton.test.tsx`. Expected: FAIL.
-- [ ] **Step 3: Implement `useCopy` and the five components.**
+- [ ] **Step 3: Implement `useCopy` and the five components.** Put the network chip (first letter on the network's colour) in one small `NetworkChip` component, and use it in the banner, the QR frame and the picker's pill, replacing the colour table in `Picker.tsx`.
 - [ ] **Step 4: Run and see them pass**, then gate and commit
 
 ```bash
