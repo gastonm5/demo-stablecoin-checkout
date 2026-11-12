@@ -398,7 +398,6 @@ While the connection is down, the address and QR **stay visible** on `underpaid`
 
 - **The network is named in six places:** on the picker's button before any address appears ("Continue with USDT on Tron"), in the pay screen's heading, in the banner under it, in the address label, on the copy button ("Copy Tron address"), and on the frame around the QR.
 - **The QR holds the address only.** An Ethereum address and a Polygon address look identical, so the QR itself carries no network information, and a wallet that scans it learns nothing about the network. That is a real limit of this design. The frame around the QR names the network, and the step that stands in for a machine-readable network is the picker's button, which the shopper presses with the network named on it immediately before the address appears.
-- **A hint for the commonest cause of underpayment:** "Sending from an exchange? Make sure 163.69 USDT arrives after its withdrawal fee."
 - **Nothing is preselected in the picker,** and changing the currency clears the network, so the network is always chosen on purpose.
 
 ## 8. The mock and the dev panel

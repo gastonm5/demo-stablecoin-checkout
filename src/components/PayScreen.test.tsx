@@ -243,11 +243,6 @@ test('underpaid shows the address its own status gives', async () => {
 })
 
 test.each([
-  [
-    'running',
-    running,
-    'Sending from an exchange? Make sure 163.69 USDT arrives after its withdrawal fee.',
-  ],
   ['none', remaining, 'Send the rest in one transfer to the same address.'],
   [
     'checking',
@@ -271,12 +266,14 @@ test.each([
 })
 
 test('a connection notice replaces the strip text', () => {
-  renderPay({ notice: <span>You appear to be offline.</span> })
+  renderPay({
+    screen: timedOut('still_valid', true),
+    notice: <span>You appear to be offline.</span>,
+  })
   expect(screen.getByText('You appear to be offline.')).toBeInTheDocument()
   expect(
-    screen.queryByText('Sending from an exchange?'),
+    screen.queryByText('This quote is still valid.'),
   ).not.toBeInTheDocument()
-  expect(screen.queryByText(/withdrawal fee/)).not.toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Change currency or network' }),
   ).toBeInTheDocument()

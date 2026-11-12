@@ -33,12 +33,9 @@ export function PayScreen({
   // The underpaid status carries its own address: the server's latest word on where the rest goes.
   const address = remaining ? remaining.crypto_address : quote.crypto_address
 
-  const [lead, rest] = (
+  const clockText = (
     {
-      running: [
-        'Sending from an exchange?',
-        `Make sure ${quote.total_due} ${currency} arrives after its withdrawal fee.`,
-      ],
+      running: null,
       none: ['Send the rest in one transfer', 'to the same address.'],
       checking: ["Time's up.", 'Checking with the payment service.'],
       still_valid: [
@@ -49,7 +46,7 @@ export function PayScreen({
         "We can't confirm this quote is still live.",
         "Don't send until this page reconnects.",
       ],
-    } satisfies Record<ClockState, [string, string]>
+    } satisfies Record<ClockState, [string, string] | null>
   )[screen.clock]
 
   return (
@@ -130,11 +127,12 @@ export function PayScreen({
       }
       strip={
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          {notice ?? (
-            <span>
-              <strong>{lead}</strong> {rest}
-            </span>
-          )}
+          {notice ??
+            (clockText && (
+              <span>
+                <strong>{clockText[0]}</strong> {clockText[1]}
+              </span>
+            ))}
           {onChange && (
             <button
               type="button"
