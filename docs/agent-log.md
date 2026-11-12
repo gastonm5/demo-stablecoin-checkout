@@ -168,6 +168,7 @@ This is the task ADR 0002 depended on, and the place where the agents were wrong
 
 - **The page runs end to end.** After this task I started the app from a clean dependency cache and looked at it myself: no console errors, and the pay screen, underpaid, overpaid and expired screens match the agreed drawings, at desktop width and inside real 390 and 320 pixel frames. The eighteen-place ETH amount wraps inside the card.
 - **Two tests that proved nothing, found by their author.** Checking its own tests by breaking the code, the implementing agent found two that passed for the wrong reason: one "mutation" was a syntax error, so the test failed without testing anything, and a test that the check at zero fires once per quote reused one mock across quotes. It reported both and fixed them.
+- **A diagnosis from the planning agent that was wrong.** When the dialog closed, keyboard focus went to the page body instead of back to the link. The planning agent told the implementer the likely cause and the fix, a layout effect. The implementing agent tried it, measured in a real browser that focus still landed on the body, said so, and fixed it another way: the hook remembers what had focus and returns it. It did not ship the suggested fix just because it was suggested.
 - **Nothing rejected from Codex but one point.** Codex's only finding was that an empty transaction hash shows no Transaction row. I kept that: an empty hash has nothing to show or copy.
 
 ### Task 13, before it was built
