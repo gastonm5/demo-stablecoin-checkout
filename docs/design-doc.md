@@ -119,7 +119,9 @@ The screen is the output of one pure function. Its inputs are the server's statu
 
 Connection trouble is not a row in this table. It is a notice in the strip, laid over whichever row applies (section 7).
 
-**A status that goes backwards.** If `awaiting_payment` follows `detected`, `confirming` or `underpaid` on the same quote, the page cannot tell which of two things happened. Either the answer is stale and the money is there, or the transaction was dropped and the shopper does need to pay again. Showing the address would be right in the second case and would invite a double payment in the first. So the page shows "We're checking your payment. Don't send again." and keeps polling, and only a new quote brings an address back. In the dropped-transaction case the shopper waits for the quote to expire and then gets a new one: `expired` straight after `awaiting_payment` is the plain expired screen. A delay can be recovered from, and a double payment cannot.
+**A status that goes backwards.** If `awaiting_payment` follows `detected`, `confirming` or `underpaid` on the same quote, the page cannot tell which of two things happened. Either the answer is stale and the money is there, or the transaction was dropped and the shopper does need to pay again. Showing the address would be right in the second case and would invite a double payment in the first. So the page shows "We're checking your payment. Don't send again." and keeps polling, and only a new quote brings an address back. In the dropped-transaction case the shopper waits for the quote to expire and then gets a new one: `expired` straight after `awaiting_payment` is the plain expired screen, where a new quote sits behind the "I have not sent a payment" tick box. A delay can be recovered from, and a double payment cannot.
+
+A review argued that this last step should be a dead end too, because the page did see money for that quote. I kept the new quote so that a dropped transaction can be recovered on this page. It is a known limit, and making "money was seen" permanent for a quote is a follow-up (section 10).
 
 ### 3.5 The status sequence
 
@@ -441,7 +443,8 @@ Things I left out on purpose, and what each would need:
 - **Merchant name and amount on the picker.** Needs an endpoint that returns the order before a payment exists.
 - **Fees in the order's currency.** The picker shows catalogue fees in USD while the order is in EUR.
 - **A server time source for the countdown.** A time field in the response body would remove the device-clock error. ([ADR 0001](adr/0001-server-decides-expiry.md))
-- **Full resume after a reload.** The status sequence restarts on reload. Keeping it in session storage would restore the exact wording. ([ADR 0005](adr/0005-resume-from-url-reference.md))
+- **Full resume after a reload.** The status sequence restarts on reload, so the page forgets that money was seen. Keeping the sequence in session storage would restore the exact wording, and even a single stored "money was seen" flag per payment would close the gap on the same device. ([ADR 0005](adr/0005-resume-from-url-reference.md))
+- **Making "money was seen" permanent for a quote.** Today a quote that goes `detected`, back to `awaiting_payment`, then `expired` offers a new quote behind the tick box. Treating it as a dead end would be stricter, at the cost of the dropped-transaction path.
 - **A new quote after a partial payment.** Needs the backend to define what happens to funds already sent.
 - **Browser end-to-end tests.**
 - **A mock script that advances a payment by itself.** The dev panel's status buttons already reach every state.

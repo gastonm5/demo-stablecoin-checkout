@@ -74,3 +74,7 @@ Codex read the revised documents once more. This was the second and last pass on
 ### What Codex argued that I kept as it was
 
 - **Changing currency while a quote is live.** Codex wanted no change allowed once an address has been shown, because the confirmation cannot rule out a transfer started on another device. I kept the confirmation. A shopper who picked the wrong network should not have to wait for the quote to expire before they can correct it.
+
+### What Codex raised that I deferred
+
+- **Money seen, then forgotten.** Two paths still lead to a new quote after the page has seen money: a status that goes backwards and then expires, and a reload, which restarts the status sequence. Both sit behind the "I have not sent a payment" tick box. I approved the design with these as known limits and listed the fixes as follow-ups in the design doc.
