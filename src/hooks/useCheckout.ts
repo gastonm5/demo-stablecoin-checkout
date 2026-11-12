@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { createPayment, isNotFound, isQuoteNotExpired } from '../api/endpoints'
 import type { Choice } from '../api/endpoints'
+import { currentQuote, moneySeen } from '../domain/sequence'
 import { runRequote, seedCreatedPayment } from './paymentCache'
 import { readUrl, writeReference } from './url'
 import { usePayment } from './usePayment'
@@ -37,14 +38,19 @@ export function useCheckout(): UseCheckoutResult {
   const [submitError, setSubmitError] = useState<unknown>(null)
   // State reaches the next render only; two clicks before it would both see no write in flight.
   const writing = useRef(false)
+  // Changes on every settled write, even when React batches submitting's true and false away.
+  const [settled, setSettled] = useState(0)
   const payment = usePayment(reference)
-  const status = payment.entry?.payment.status
+  const entry = payment.entry
+  const status = entry?.payment.status
 
   // Adjusted while rendering, so no frame offers a payment the server does not know.
   if (reference !== null && isNotFound(payment.error)) {
     setReference(null)
     setRequoting(false)
     setNotice('payment_not_found')
+    // A requote that met the same 404 has nothing left to retry; the notice says what happened.
+    setSubmitError(null)
   }
   // Closed for good: if a late partial payment then expires, a requote must not be offered again.
   if (requoting && status !== 'expired') setRequoting(false)
@@ -52,6 +58,11 @@ export function useCheckout(): UseCheckoutResult {
   useEffect(() => {
     writeReference(reference)
   }, [reference])
+
+  // Until the render showing the result commits, a click still reaches a submit holding the old reference.
+  useEffect(() => {
+    writing.current = false
+  }, [settled])
 
   async function submit(choice: Choice) {
     if (writing.current) return
@@ -80,8 +91,8 @@ export function useCheckout(): UseCheckoutResult {
     } catch (error) {
       setSubmitError(error)
     } finally {
-      writing.current = false
       setSubmitting(false)
+      setSettled((count) => count + 1)
     }
   }
 
@@ -100,7 +111,12 @@ export function useCheckout(): UseCheckoutResult {
     submitError,
     changeChoice: () => {
       if (status === 'expired') setRequoting(true)
-      else setReference(null)
+      // Once money was seen on this quote, dropping the payment would stop tracking it.
+      else if (
+        entry?.payment.status === 'awaiting_payment' &&
+        !moneySeen(currentQuote(entry.sequence))
+      )
+        setReference(null)
     },
     cancelChange: () => setRequoting(false),
   }

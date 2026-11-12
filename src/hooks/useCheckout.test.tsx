@@ -13,6 +13,8 @@ import { parseCurrencies } from '../api/schemas'
 import type { Payment } from '../api/schemas'
 import { CURRENCIES_JSON, makePayment, STATE_FIXTURES } from '../test/fixtures'
 import { createTestClient, withClient } from '../test/query'
+import { paymentKey } from './paymentCache'
+import type { PaymentEntry } from './paymentCache'
 import { useCheckout } from './useCheckout'
 import { useCurrencies } from './useCurrencies'
 
@@ -62,6 +64,18 @@ const fire = (trigger: () => void) =>
   act(async () => {
     trigger()
     await vi.advanceTimersByTimeAsync(0)
+  })
+
+// Waits one real task, so every promise chain runs first. The library's notifications wait on fake
+// timers, so nothing reaches React and it does not render.
+const drainPromises = () =>
+  new Promise<void>((resolve) => {
+    const channel = new MessageChannel()
+    channel.port1.onmessage = () => {
+      channel.port1.close()
+      resolve()
+    }
+    channel.port2.postMessage(null)
   })
 
 async function advance(ms: number) {
@@ -145,6 +159,43 @@ test('a second submit before any re-render is ignored', async () => {
   await fire(() => create.answer(awaiting))
   expect(result.current.submitting).toBe(false)
   expect(createPayment).toHaveBeenCalledTimes(1)
+})
+
+test('a submit after the create answered but before it rendered is ignored', async () => {
+  const create = held<Payment>()
+  vi.mocked(createPayment).mockReturnValue(create.promise)
+  const { result } = await mount()
+  // The handler a click still reaches until React commits the payment view.
+  const { submit } = result.current
+  await act(async () => {
+    submit(CHOICE)
+    create.answer(awaiting)
+    await drainPromises()
+    expect(client.getQueryData(paymentKey(REFERENCE))).toBeDefined()
+    expect(result.current.reference).toBeNull()
+    submit(CHOICE)
+    await vi.advanceTimersByTimeAsync(0)
+  })
+  expect(createPayment).toHaveBeenCalledTimes(1)
+  expect(requotePayment).not.toHaveBeenCalled()
+  expect(result.current.reference).toBe(REFERENCE)
+})
+
+// A write that settles at once batches submitting's true and false into one render.
+test('after a create that settles at once, the next submit goes through', async () => {
+  vi.mocked(createPayment).mockRejectedValueOnce(timedOut)
+  const { result } = await mount()
+  await fire(() => result.current.submit(CHOICE))
+  expect(result.current.submitError).toBe(timedOut)
+
+  await fire(() => result.current.submit(CHOICE))
+  expect(createPayment).toHaveBeenCalledTimes(2)
+  expect(result.current.reference).toBe(REFERENCE)
+
+  // The next write follows the payment that now exists.
+  await fire(() => result.current.submit(CHOICE))
+  expect(createPayment).toHaveBeenCalledTimes(2)
+  expect(requotePayment).toHaveBeenCalledTimes(1)
 })
 
 test('after creation it shows the payment and puts the reference in the URL', async () => {
@@ -248,6 +299,35 @@ test('changing a live quote drops the payment', async () => {
   expect(getPayment).toHaveBeenCalledTimes(1)
 })
 
+test.each(['underpaid', 'detected', 'confirming', 'paid'])(
+  'changeChoice on %s keeps the payment',
+  async (status) => {
+    vi.mocked(getPayment).mockResolvedValue(withStatus(status))
+    const { result } = await mount(`?payment=${REFERENCE}`)
+    await fire(() => result.current.changeChoice())
+    expect(result.current).toMatchObject({
+      reference: REFERENCE,
+      view: { kind: 'payment' },
+    })
+    expect(window.location.search).toBe(`?payment=${REFERENCE}`)
+  },
+)
+
+test('changeChoice keeps a payment that is awaiting again after money was seen on this quote', async () => {
+  vi.mocked(getPayment)
+    .mockResolvedValueOnce(withStatus('detected'))
+    .mockResolvedValue(awaiting)
+  const { result } = await mount(`?payment=${REFERENCE}`)
+  await advance(3_000)
+  expect(result.current.payment.entry?.payment.status).toBe('awaiting_payment')
+
+  await fire(() => result.current.changeChoice())
+  expect(result.current).toMatchObject({
+    reference: REFERENCE,
+    view: { kind: 'payment' },
+  })
+})
+
 test('changing an expired quote keeps the payment and requotes', async () => {
   const { result } = await onRequotePicker()
   expect(result.current.reference).toBe(REFERENCE)
@@ -320,6 +400,36 @@ test('a second requote before any re-render is ignored', async () => {
   expect(result.current.submitting).toBe(false)
 })
 
+test('a submit after the requote answered but before it rendered is ignored', async () => {
+  const { result } = await onRequotePicker()
+  const requote = held<Payment>()
+  vi.mocked(requotePayment).mockReturnValue(requote.promise)
+  const { submit } = result.current
+  await act(async () => {
+    submit(OTHER_CHOICE)
+    // The requote is sent only after the poll in flight is cancelled.
+    await drainPromises()
+    requote.answer(newQuote)
+    await drainPromises()
+    expect(
+      client.getQueryData<PaymentEntry>(paymentKey(REFERENCE))?.payment,
+    ).toEqual(newQuote)
+    expect(result.current.view).toMatchObject({ mode: 'requote' })
+    submit(OTHER_CHOICE)
+    await vi.advanceTimersByTimeAsync(0)
+  })
+  expect(requotePayment).toHaveBeenCalledTimes(1)
+  expect(result.current.view).toEqual({ kind: 'payment' })
+})
+
+test('after a requote that settles at once, the next submit goes through', async () => {
+  const { result } = await onRequotePicker()
+  await fire(() => result.current.submit(OTHER_CHOICE))
+  expect(result.current.view).toEqual({ kind: 'payment' })
+  await fire(() => result.current.submit(OTHER_CHOICE))
+  expect(requotePayment).toHaveBeenCalledTimes(2)
+})
+
 test('submit from the payment view requotes the expired payment', async () => {
   vi.mocked(getPayment).mockResolvedValue(expired)
   const { result } = await mount(`?payment=${REFERENCE}`)
@@ -339,6 +449,19 @@ test('a requote that fails reports the error and stays on the picker', async () 
     view: { kind: 'picker', mode: 'requote', notice: null },
     submitting: false,
     submitError: timedOut,
+  })
+})
+
+test('a requote the server answers with 404 shows the notice without an error', async () => {
+  const { result } = await onRequotePicker()
+  vi.mocked(requotePayment).mockRejectedValue(notFound)
+  vi.mocked(getPayment).mockRejectedValue(notFound)
+  await fire(() => result.current.submit(OTHER_CHOICE))
+  expect(result.current).toMatchObject({
+    reference: null,
+    view: { kind: 'picker', mode: 'create', notice: 'payment_not_found' },
+    submitting: false,
+    submitError: null,
   })
 })
 
