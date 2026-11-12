@@ -472,9 +472,7 @@ Checked during the build: a dropped connection from the mock mounted in the dev 
 
 Checked during the build: TanStack Query never starts a second request for a payment while one is in flight. The polling test holds a request open and fires every trigger at it: ten seconds of interval ticks, "Check now" twice, the tab hidden and shown, and the browser going offline and back. The seven fetches those triggers made all joined the open request, and no more than one request was ever in flight.
 
-One thing I still have to verify during the build:
-
-- That TypeScript's typings accept a string in the number formatter. Node formats it exactly; I checked that.
+Checked during the build: TypeScript's typings do not accept the amount string in the number formatter without a cast. TypeScript 6.0 types `Intl.NumberFormat.format` as taking a number, a bigint or a `${number}` literal type, and a validated decimal string is a branded `string`, so it is rejected. `formatFiat` casts the method's signature and nothing else, and passes the string unchanged. Node formats it exactly, and a test checks that `1234567890123456.78` comes through with every digit.
 
 ## 12. One thing I would defend
 
