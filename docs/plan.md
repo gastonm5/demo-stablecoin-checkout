@@ -1611,6 +1611,98 @@ git add -A && git commit -m "Add the README and bring the design doc in line wit
 
 ---
 
+### Task 15: The order summary on the picker, and the merchant's logo
+
+Added on 12 Nov 2026, after the build and the walk-through, at my request.
+
+**Why.** The picker showed only the order reference, because the API returns the merchant and the amount only inside a payment. The page already assumed it is handed an order id by whatever sent the shopper here. It now assumes the rest of the order summary arrives with it, so the picker has the same header as every later screen. Separately, the header ignored `merchant.logo_url`.
+
+**Files:**
+
+- Modify: `src/api/schemas.ts`, `src/api/schemas.test.ts`
+- Modify: `src/hooks/url.ts` and its test
+- Modify: `src/hooks/useCheckout.ts` and its test
+- Modify: `src/components/OrderHeader.tsx` and its test (create the test file if there is none)
+- Modify the callers and their tests: `src/components/Picker.tsx`, `src/App.tsx`, `src/components/PaymentView.tsx`, `src/components/PayScreen.tsx`, `src/components/StatusCard.tsx`
+- Modify: `docs/design-doc.md`
+
+**Interfaces:**
+
+- Consumes: the `merchant` and `order` schemas inside `paymentBase` in `src/api/schemas.ts`; `formatFiat` from `src/domain/format.ts`.
+- Produces:
+
+```ts
+// src/api/schemas.ts — built from the same merchant and order schemas a payment uses
+export type OrderSummary = {
+  order_id: string
+  merchant: { name: string; logo_url: string | null }
+  order: { currency: string; amount: DecimalString }
+}
+export function parseOrderSummary(json: unknown): OrderSummary
+
+// src/hooks/url.ts
+export const ASSUMED_ORDER: OrderSummary // parseOrderSummary of the literal below
+export function readUrl(search: string): {
+  order: OrderSummary // ?order_id= replaces order.order_id and nothing else
+  reference: string | null
+}
+
+// src/hooks/useCheckout.ts
+// UseCheckoutResult.order: OrderSummary replaces orderId: string
+
+// src/components/OrderHeader.tsx
+export function OrderHeader(props: { order: OrderSummary }): ReactNode
+```
+
+A `Payment` already carries `order_id`, `merchant` and `order`, so the payment screens pass the payment itself.
+
+The assumed object, verbatim:
+
+```json
+{
+  "order_id": "ORD-88213",
+  "merchant": { "name": "Nordwind Audio", "logo_url": null },
+  "order": { "currency": "EUR", "amount": "149.90" }
+}
+```
+
+**Rules:**
+
+- The summary is for display. The only field sent to the API is `order_id`, as before.
+- The amount gets its `DecimalString` type from `parseOrderSummary`, never from a cast.
+- Once a payment exists, the header shows that payment's own `merchant` and `order`, not the assumed ones.
+- The app does not import from `mock/`.
+- The header has one form. The order-only form is deleted.
+- **Logo.** When `merchant.logo_url` is a non-empty string, the 44 px box holds `<img src={logo_url} alt="" referrerPolicy="no-referrer">`, scaled to fit. The merchant's name beside it is its text, so the image has an empty `alt`. With no logo, or one that fails to load, the box holds the first character of the name, as now. Which URL failed is view state in the component, compared with the current URL, so a new URL gets a new try. No effect is needed.
+
+- [ ] **Step 1: Write the failing tests**
+
+  - `parseOrderSummary` accepts the literal above; rejects `amount` as the JSON number `149.9`; rejects an object with no `merchant`.
+  - `readUrl('')` returns `{ order: ASSUMED_ORDER, reference: null }`. `readUrl('?order_id=ORD-1')` returns the same merchant and order with `order_id: 'ORD-1'`.
+  - `OrderHeader` with the literal shows "Nordwind Audio", "Order ORD-88213" and `formatFiat` of `149.90` EUR; it shows the letter "N" and no image.
+  - `OrderHeader` with `logo_url: 'https://cdn.example/nordwind.png'` shows an image with that `src`, an empty `alt` and `referrerpolicy="no-referrer"`, and no letter. After the image's `error` event it shows the letter and no image.
+  - The picker, and the card shown while the currency list loads or has failed, show the merchant's name and the amount.
+
+- [ ] **Step 2: Run them and see them fail**
+
+Run: `npm test -- src/api/schemas.test.ts src/hooks src/components src/App.test.tsx`
+Expected: the new tests fail; the rest pass.
+
+- [ ] **Step 3: Implement the order summary and commit it**
+
+Commit message: "Show the order summary on the picker". The design doc changes for the summary go in this commit: section 2 ("What the picker can show"), the "Order details before a payment" row in section 9, the "Merchant name and amount on the picker" follow-up in section 10, and the "Order id" detail in section 11.
+
+- [ ] **Step 4: Implement the logo and commit it**
+
+Commit message: "Show the merchant's logo when there is one". One line in the design doc's section 11 goes in this commit.
+
+- [ ] **Step 5: Gate**
+
+Run: `npm run check && npm run build`
+Expected: both pass.
+
+---
+
 ## How this plan is executed
 
 - **Tasks 1 to 13** are implemented one at a time, in order, each by a fresh implementer on Opus that is given this plan, the spec and its own task.
@@ -1618,4 +1710,5 @@ git add -A && git commit -m "Add the README and bring the design doc in line wit
 - **The planning agent** reads each commit and its diff, re-runs `npm run check`, and records in `docs/agent-log.md` anything rejected or wrong.
 - **After Task 13,** Codex reviews the whole branch, and the full gate runs once more.
 - **Task 14** is done with the human.
+- **Task 15** was added after the walk-through and is built like Tasks 1 to 13: one implementer on Opus, then a Codex review of its commits.
 - Nothing is pushed until the human says so.
