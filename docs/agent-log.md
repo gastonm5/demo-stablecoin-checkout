@@ -95,3 +95,9 @@ Codex raised fourteen points and all of them held up. The four that mattered mos
 - **Behaviour inside components.** The plan put timers, clipboard access and effects in components, against this repo's own rule that components render and hooks own behaviour. The plan now names a hook for each, and `AGENTS.md` says exactly what a component may hold: view state nothing else reads.
 - **A pay screen that could load forever.** After a reload, if the currency list failed to load, the pay screen had no way to tell "still loading" from "failed" and no retry.
 - **Copy buttons that did not say what they copy.** The status screens had buttons labelled just "Copy", against the rule that a copy button names what it copies.
+
+## 12 Nov 2026: the build
+
+### Task 1
+
+- **A plan written from stale knowledge.** The planning agent told the implementer to keep "the template's ESLint config". The current Vite template no longer has one: it ships oxlint and TypeScript 7. The implementing agent stopped at the first step and reported it, with the options, instead of improvising. The decision was to pin the last template version that ships ESLint, because the lint rule that bans `Number(...)` on amounts cannot be written in oxlint.

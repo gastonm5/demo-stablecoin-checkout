@@ -102,8 +102,10 @@ src/
 - [ ] **Step 1: Scaffold without touching existing files**
 
 ```bash
-npm create vite@latest scaffold-tmp -- --template react-ts
+npm create vite@9.0.7 scaffold-tmp -- --template react-ts
 ```
+
+The version is pinned on purpose. From 9.1 the `react-ts` template ships oxlint and TypeScript 7 with no ESLint, and the current `typescript-eslint` does not support TypeScript 7 yet. 9.0.7 is the last template with ESLint, on TypeScript 6.0 and the current Vite. This project keeps ESLint because the ban on `Number(...)` needs `no-restricted-syntax`, which oxlint does not have.
 
 Move everything from `scaffold-tmp/` into the repo root except its `.gitignore` and `README.md`, then delete `scaffold-tmp/`. Keep the repo's own `.gitignore`.
 
