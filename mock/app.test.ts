@@ -238,6 +238,20 @@ test.each(['awaiting_payment', ...NEVER_EXPIRING])(
   },
 )
 
+test('a refused requote of a live quote says until when it is valid', async () => {
+  const { payment_reference: ref, quote } = await createPayment()
+  const res = await post(`/api/payments/${ref}/requote`, {
+    currency: 'USDT',
+    network: 'tron',
+  })
+  expect(await res.json()).toEqual({
+    type: 'https://developers.triple-a.io/errors/quote-not-expired',
+    title: 'Quote has not expired',
+    status: 409,
+    detail: `The current quote is valid until ${quote.expires_at}.`,
+  })
+})
+
 test('requote from expired keeps the reference and returns a fresh quote for the new pair', async () => {
   const { payment_reference } = await createPayment()
   t += 900_001
@@ -308,7 +322,19 @@ test.each([
     'invalid-request',
   ],
   [
-    'an unknown pair on requote',
+    'an unknown pair on requote of a live quote',
+    async () => {
+      const { payment_reference: ref } = await createPayment()
+      return post(`/api/payments/${ref}/requote`, {
+        currency: 'ETH',
+        network: 'tron',
+      })
+    },
+    422,
+    'invalid-request',
+  ],
+  [
+    'an unknown pair on requote of an expired quote',
     async () => {
       const { payment_reference: ref } = await createPayment()
       t += 900_001

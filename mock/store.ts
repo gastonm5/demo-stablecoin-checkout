@@ -179,6 +179,8 @@ export function createStore(clock: () => number = Date.now): MockStore {
     requote(reference, { currency, network }) {
       const payment = payments.get(reference)
       if (!payment) return { ok: false, reason: 'not_found' }
+      const quote = quoteFor(currency, network)
+      if (!quote) return { ok: false, reason: 'unknown_pair' }
       const current = expireIfDue(payment)
       if (current.status === 'awaiting_payment')
         return {
@@ -188,8 +190,6 @@ export function createStore(clock: () => number = Date.now): MockStore {
         }
       if (current.status !== 'expired')
         return { ok: false, reason: 'not_expired' }
-      const quote = quoteFor(currency, network)
-      if (!quote) return { ok: false, reason: 'unknown_pair' }
       return {
         ok: true,
         payment: save({ ...current, quote }, 'awaiting_payment', {}),

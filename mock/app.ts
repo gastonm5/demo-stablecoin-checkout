@@ -4,7 +4,7 @@ import { CURRENCIES } from './fixtures'
 import { createStore, type MockStore } from './store'
 
 const PROBLEMS = {
-  'quote-not-expired': [409, 'Quote not expired'],
+  'quote-not-expired': [409, 'Quote has not expired'],
   'payment-not-found': [404, 'Payment not found'],
   'invalid-request': [422, 'Invalid request'],
 } as const
@@ -96,7 +96,7 @@ export function createMockApp(store: MockStore = createStore()): Express {
         res,
         'quote-not-expired',
         result.expires_at
-          ? `The quote is valid until ${result.expires_at}.`
+          ? `The current quote is valid until ${result.expires_at}.`
           : 'Only an expired quote can be requoted.',
       )
   })
