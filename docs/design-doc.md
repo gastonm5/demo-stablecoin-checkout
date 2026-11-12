@@ -144,7 +144,7 @@ In code, the known statuses are one discriminated union and the screen function 
 
 ### 3.7 When polling stops
 
-Polling stops on `paid`, `overpaid` and `failed`.
+Polling stops on `paid`, `overpaid` and `failed`. After one of those, or after the server says it does not know the payment, the page sends no request of any kind: not from the timer, the tab returning, a reconnect or "Try now".
 
 It does **not** stop on `expired`, which the brief might count as terminal. A shopper who sent in the last seconds can be told "expired" before the server sees their money. If the page stopped there, it would invite a second payment while the first is in flight. So `expired` keeps polling, more slowly, until the shopper gets a new quote, and the screen says "Already sent? Do not send again. We are still watching for your payment." The trade-off is in [ADR 0003](adr/0003-partial-and-late-payments.md).
 
@@ -217,7 +217,7 @@ Polling uses TanStack Query's own interval on one query per payment reference. T
 - The library's built-in retries are off for this query, because the next poll is the retry.
 - A hidden tab pauses polling. One poll fires as the tab returns.
 - There is one query per payment reference, and every trigger goes through it: the interval, the tab returning, the check at zero and "Try now". A trigger that fires during a request joins that request instead of starting another.
-- Starting a requote waits for the poll in flight to be cancelled before it sends. The requote's response then replaces the cached payment, so an older "expired" answer cannot overwrite a fresh quote.
+- Starting a requote waits for the poll in flight to be cancelled before it sends, and cancels again just before it writes the answer. A poll that was running, or one that started during the requote, cannot overwrite the fresh quote with an older "expired" answer.
 - Unmounting, or switching to another payment, aborts the request in flight and clears the timer.
 
 The guarantee that two polls never overlap comes from the library: a query has at most one request in flight, and an interval tick that lands during a request joins it. I rely on that and prove it with tests that fire every trigger against a response slower than the interval. The alternative, a hand-written loop, is weighed in [ADR 0002](adr/0002-polling-with-tanstack-query-interval.md).

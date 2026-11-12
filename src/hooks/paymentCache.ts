@@ -44,6 +44,8 @@ export async function runRequote(
   await client.cancelQueries({ queryKey })
   try {
     const payment = await requotePayment(reference, choice)
+    // A poll that started during the requote may carry the old quote too. Awaited, so no revert lands after the write.
+    await client.cancelQueries({ queryKey })
     client.setQueryData<PaymentEntry>(queryKey, (previous) =>
       mergePayment(previous, payment, Date.now()),
     )

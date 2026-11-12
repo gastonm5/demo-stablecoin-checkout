@@ -134,18 +134,47 @@ test('polls every three seconds while awaiting payment', async () => {
   expect(calls).toHaveLength(4)
 })
 
-test.each(['paid', 'overpaid', 'failed'])(
-  'stops after %s, a final status',
-  async (status) => {
-    await mount()
-    answerWith(withStatus(status))
-    await advance(3_000)
-    expect(calls).toHaveLength(2)
-    await advance(60_000)
-    expect(calls).toHaveLength(2)
-    expect(vi.getTimerCount()).toBe(0)
-  },
-)
+test.each<[string, () => void]>([
+  ['paid', () => answerWith(withStatus('paid'))],
+  ['overpaid', () => answerWith(withStatus('overpaid'))],
+  ['failed', () => answerWith(withStatus('failed'))],
+  ['a not-found answer', () => failWith(notFound)],
+])('sends nothing after %s, whatever the trigger', async (_name, stop) => {
+  const { result } = await mount()
+  // A handler from the render before the last answer, as a click can still hold.
+  const earlier = result.current
+  stop()
+  await advance(3_000)
+  expect(calls).toHaveLength(2)
+
+  await advance(60_000)
+  expect(calls).toHaveLength(2)
+  expect(vi.getTimerCount()).toBe(0)
+  await fire(() => setVisibility('hidden'))
+  await fire(() => setVisibility('visible'))
+  expect(calls).toHaveLength(2)
+  await fire(() => onlineManager.setOnline(false))
+  await fire(() => onlineManager.setOnline(true))
+  expect(calls).toHaveLength(2)
+  await fire(() => result.current.checkNow())
+  await fire(() => earlier.checkNow())
+  expect(calls).toHaveLength(2)
+})
+
+// on_hold stands for a status the page does not know, which it treats as live.
+test.each([
+  'awaiting_payment',
+  'underpaid',
+  'expired',
+  'detected',
+  'confirming',
+  'on_hold',
+])('checkNow asks at once on %s', async (status) => {
+  answerWith(withStatus(status))
+  const { result } = await mount()
+  await fire(() => result.current.checkNow())
+  expect(calls).toHaveLength(2)
+})
 
 test('polls every fifteen seconds on expired', async () => {
   answerWith(withStatus('expired'))
@@ -265,15 +294,31 @@ test('aborts the request in flight and stops on unmount', async () => {
   expect(vi.getTimerCount()).toBe(0)
 })
 
-test('switching to another payment aborts the old request', async () => {
+test('switching to another payment aborts the old request and starts the count afresh', async () => {
+  const { result, rerender } = renderHook(
+    (reference) => usePayment(reference),
+    { initialProps: REFERENCE, wrapper: withClient(client) },
+  )
+  await fire(() => {})
+  failWith(serverError)
+  await advance(3_000 + 6_000)
+  expect(result.current.consecutiveFailures).toBe(2)
   hold()
-  const { rerender } = renderHook((reference) => usePayment(reference), {
-    initialProps: REFERENCE,
-    wrapper: withClient(client),
-  })
+  await advance(12_000)
+  expect(calls).toHaveLength(4)
+
+  failWith(serverError)
   rerender('AQH-100307-PMT')
-  expect(calls[0].signal?.aborted).toBe(true)
-  expect(calls).toHaveLength(2)
+  expect(calls[3].signal?.aborted).toBe(true)
+  expect(result.current.consecutiveFailures).toBe(0)
+  await fire(() => {})
+  expect(calls).toHaveLength(5)
+  // Its first failure is its own first, so it backs off from 6 s, not from the old payment's 24 s.
+  expect(result.current.consecutiveFailures).toBe(1)
+  await advance(5_000)
+  expect(calls).toHaveLength(5)
+  await advance(1_000)
+  expect(calls).toHaveLength(6)
 })
 
 test('stops polling when the server no longer knows the payment', async () => {
@@ -335,6 +380,43 @@ test('a requote cancels the poll in flight and cannot be overwritten by it', asy
   const payment = client.getQueryData<PaymentEntry>(key)?.payment
   expect(payment?.status).toBe('awaiting_payment')
   expect(payment?.quote.expires_at).toBe(NEW_QUOTE.expires_at)
+})
+
+test('a poll that starts during the requote cannot overwrite the new quote', async () => {
+  answerWith(withStatus('expired'))
+  await mount()
+  const newQuote = withStatus('awaiting_payment', NEW_QUOTE)
+  let answerRequote: (payment: Payment) => void = () => {}
+  vi.mocked(requotePayment).mockImplementation(
+    () =>
+      new Promise<Payment>((resolve) => {
+        answerRequote = resolve
+      }),
+  )
+  let requote: Promise<Payment> | undefined
+  await fire(() => {
+    requote = runRequote(client, REFERENCE, CHOICE)
+  })
+  holdThroughAbort()
+  await advance(15_000)
+  expect(calls).toHaveLength(2)
+
+  await fire(() => answerRequote(newQuote))
+  await expect(requote).resolves.toBe(newQuote)
+  expect(calls[1].signal?.aborted).toBe(true)
+
+  // The poll answers last, with what the server said before it handled the requote.
+  await fire(() => calls[1].answer(withStatus('expired')))
+  const entry = client.getQueryData<PaymentEntry>(key)
+  expect(entry?.payment).toEqual(newQuote)
+  expect(entry?.sequence).toMatchObject({
+    quoteExpiresAt: NEW_QUOTE.expires_at,
+    quoteStartIndex: 1,
+  })
+  expect(entry?.sequence.entries.map((e) => e.status)).toEqual([
+    'expired',
+    'awaiting_payment',
+  ])
 })
 
 test.each([
