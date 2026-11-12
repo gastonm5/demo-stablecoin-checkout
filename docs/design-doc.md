@@ -479,6 +479,7 @@ These were not discussed one by one. I set them while writing this document, and
 
 - **Timings:** poll every 3 s, 15 s on `expired`, backoff doubling to 30 s, request timeout 10 s, "still working" hint at 4 s, connection notice after two failed polls in a row.
 - **Order summary:** the assumed object is order `ORD-88213` for Nordwind Audio, EUR 149.90, the same values the mock returns. `?order_id=` in the URL replaces the id and nothing else.
+- **Merchant logo:** the header shows `merchant.logo_url` when there is one, with an empty `alt`, because the merchant's name beside it is its text. With no logo, or one that fails to load, it shows the first letter of the name. The brief's merchant has no logo, so the running page shows the letter; tests cover the image.
 - **Exchange rate:** shown under the amount, exactly as sent ("1 USDT = 0.9214 EUR").
 - **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens, and focus returns to the link when it closes.
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".
