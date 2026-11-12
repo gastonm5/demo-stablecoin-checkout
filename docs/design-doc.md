@@ -337,7 +337,7 @@ A real example from the mock's ETH quote, checked in Node:
 
 I show crypto exactly as sent, not in the shopper's locale, because that number gets retyped or pasted into a wallet. A wallet that expects a dot may reject `163,69`, or read `1.234,56` wrongly. A locale-formatted crypto amount is the one way this page could cause a wrong amount.
 
-**Where `decimals` is used.** `GET /api/currencies` returns each currency's `decimals`. The page uses it for the decimal-places check above and nowhere else. After a reload the currency list has to be fetched again. Until it arrives and the amount has passed the check, the pay screen shows a loading state with no amount, address or QR. Screens that only report a status do not wait for it, so a payment in flight is never hidden behind the currency list. It would also be needed to build wallet payment links, which the page does not do; see [ADR 0004](adr/0004-qr-holds-address-only.md).
+**Where `decimals` is used.** `GET /api/currencies` returns each currency's `decimals`. The page uses it for the decimal-places check above and nowhere else. After a reload the currency list has to be fetched again. Until it arrives and the amount has passed the check, the pay screen shows a loading state with no amount, address or QR. The quote's currency and network must also be in the currency list, under the same network name; if they are not, the pay screen shows the same problem state it shows for an amount that fails the check. Screens that only report a status do not wait for it, so a payment in flight is never hidden behind the currency list. It would also be needed to build wallet payment links, which the page does not do; see [ADR 0004](adr/0004-qr-holds-address-only.md).
 
 ## 7. How I show failure states
 
@@ -433,6 +433,7 @@ These are places where the brief is silent or does not fit together. Each is a q
 | Is `expired` terminal? | "Stop polling on terminal states", without listing them | Only `paid`, `overpaid` and `failed` are terminal. `expired` can return to `awaiting_payment` through requote |
 | Money sent to an earlier quote after a requote | Not stated | The page cannot attribute it. It offers a new quote only when it has seen no money for the current quote, and it shows whatever the server reports |
 | An unknown reference | Not stated | The mock returns 404 in the same problem format |
+| An answer about another payment or pair | Not stated | The page checks a create or requote answer against the shopper's choice, and every answer against the reference it asked for. A later poll cannot be checked against the choice, because the page keeps no record of it across a reload, so the network the server states is named beside the address in every case |
 | `failed` reasons | One example, `settlement_rejected` | Known codes get plain words. Any other code gets generic wording with the code in small print |
 
 ## 10. Follow-ups

@@ -29,12 +29,14 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 - Show the address and QR only on `awaiting_payment` and `underpaid`, and never on `awaiting_payment` once money was seen for that quote.
 - Never promise an outcome the API does not state. In particular, never promise a refund, and never say a payment is safe or unaffected because a request failed.
 - A copy button copies the exact string and says what it copies.
+- Never show an address unless the quote's currency and network are in the currency list under the same network name.
 
 ## Requests
 
 - Reads retry themselves. Writes do not: there is no idempotency key, so a retried write can create a second payment.
 - Every request has a timeout and an abort signal, and bypasses the HTTP cache.
 - At most one poll is in flight. Polling runs through TanStack Query only.
+- An answer must be about what was asked: the same reference, order and pair. Check it in `src/api`.
 - Clean up every timer and listener you add.
 
 ## Structure

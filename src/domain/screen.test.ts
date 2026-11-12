@@ -18,7 +18,7 @@ const input = (over: Partial<ScreenInput>): ScreenInput => ({
   now: D - 30_000,
   lastSuccessAt: D - 31_000,
   lastFailureAt: null,
-  amountsChecked: true,
+  detailsChecked: true,
   ...over,
 })
 
@@ -162,10 +162,10 @@ test('underpaid past the old deadline still shows the address', () => {
 test.each([['detected'], ['confirming'], ['underpaid']])(
   'awaiting_payment after %s hides the address',
   (money) => {
-    for (const amountsChecked of [true, false]) {
+    for (const detailsChecked of [true, false]) {
       expect(
         statuses(['awaiting_payment', money, 'awaiting_payment'], 'creation', {
-          amountsChecked,
+          detailsChecked,
         }),
       ).toEqual({ kind: 'checking' })
     }
@@ -183,12 +183,12 @@ test('only a new quote brings the address back', () => {
 })
 
 test('the pay screen waits for the amount check', () => {
-  expect(deriveScreen(input({ amountsChecked: false }))).toEqual({
+  expect(deriveScreen(input({ detailsChecked: false }))).toEqual({
     kind: 'pay_loading',
   })
   expect(
     statuses(['awaiting_payment', 'underpaid'], 'creation', {
-      amountsChecked: false,
+      detailsChecked: false,
     }),
   ).toEqual({ kind: 'pay_loading' })
 })
@@ -206,7 +206,7 @@ test.each([
   (status, screen) => {
     expect(
       statuses(['awaiting_payment', status], 'creation', {
-        amountsChecked: false,
+        detailsChecked: false,
       }),
     ).toEqual(screen)
   },

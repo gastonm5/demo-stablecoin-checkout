@@ -14,7 +14,7 @@ export type PaymentScreenState = {
   entry: PaymentEntry | undefined
   screen: Screen | null // null until the first answer
   connection: Connection
-  detailsProblem: boolean // the pay screen cannot show its amount: the catalogue failed, lacks the quote's currency, or an amount does not fit
+  detailsProblem: boolean // the pay screen cannot show its amount: the catalogue failed, lacks the quote's currency or network under its name, or an amount does not fit
   money: SequenceEntry | undefined // lastMoney of the sequence
   usualSeconds: number | undefined // from the catalogue entry for the quote's currency and network
 }
@@ -31,9 +31,11 @@ export function usePaymentScreen(
   const currency = catalogue.currencies?.find(
     (c) => c.code === quote?.crypto_currency,
   )
-  const amountsChecked =
+  const network = currency?.networks.find((n) => n.id === quote?.network)
+  const detailsChecked =
     current !== undefined &&
     currency !== undefined &&
+    network?.name === current.quote.network_name &&
     amountsToSend(current).every((amount) =>
       fitsDecimals(amount, currency.decimals),
     )
@@ -43,7 +45,7 @@ export function usePaymentScreen(
   const detailsProblem =
     toPay &&
     (catalogue.error != null ||
-      (catalogue.currencies !== undefined && !amountsChecked))
+      (catalogue.currencies !== undefined && !detailsChecked))
 
   // At zero the countdown only asks; the server decides. Once per quote, so a re-render never asks again.
   const deadlinePassed =
@@ -66,13 +68,12 @@ export function usePaymentScreen(
           now,
           lastSuccessAt: payment.lastSuccessAt,
           lastFailureAt: payment.lastFailureAt,
-          amountsChecked,
+          detailsChecked,
         })
       : null,
     connection: deriveConnection(online, payment.consecutiveFailures),
     detailsProblem,
     money: entry && lastMoney(entry.sequence.entries),
-    usualSeconds: currency?.networks.find((n) => n.id === quote?.network)
-      ?.avg_confirmation_seconds,
+    usualSeconds: network?.avg_confirmation_seconds,
   }
 }

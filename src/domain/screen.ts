@@ -34,11 +34,11 @@ export type ScreenInput = {
   now: number // device clock, ms
   lastSuccessAt: number // device time of the last valid response for this payment
   lastFailureAt: number | null
-  amountsChecked: boolean // the currency list is loaded and amountsToSend(payment) all fit its decimals
+  detailsChecked: boolean // the currency list is loaded, holds the quote's currency and network under its name, and amountsToSend(payment) all fit its decimals
 }
 
 export function deriveScreen(input: ScreenInput): Screen {
-  const { payment, sequence, amountsChecked } = input
+  const { payment, sequence, detailsChecked } = input
   switch (payment.status) {
     case 'paid':
       return { kind: 'complete', overpaid: false }
@@ -76,10 +76,10 @@ export function deriveScreen(input: ScreenInput): Screen {
     case 'awaiting_payment':
       // Going backwards may be a stale answer with the money already sent; an address would invite paying twice.
       if (moneySeen(currentQuote(sequence))) return { kind: 'checking' }
-      if (!amountsChecked) return { kind: 'pay_loading' }
+      if (!detailsChecked) return { kind: 'pay_loading' }
       return payInFull(input)
     case 'underpaid':
-      if (!amountsChecked) return { kind: 'pay_loading' }
+      if (!detailsChecked) return { kind: 'pay_loading' }
       // Any money stops the clock: the shopper can always send the rest.
       return {
         kind: 'pay',

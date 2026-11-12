@@ -131,6 +131,22 @@ test('an amount with too many decimal places is a details problem', () => {
   expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
 })
 
+test('a quote network missing from the catalogue currency is a details problem', () => {
+  const polygon = { network: 'polygon', network_name: 'Polygon' }
+  const hook = mount(withStatus('awaiting_payment', polygon))
+  expect(hook.result.current.detailsProblem).toBe(true)
+  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+  hook.rerender({ p: withStatus('underpaid', polygon), c: catalogue() })
+  expect(hook.result.current.detailsProblem).toBe(true)
+  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+})
+
+test('a quote network name other than the catalogue one is a details problem', () => {
+  const hook = mount(withStatus('awaiting_payment', { network_name: 'Tron' }))
+  expect(hook.result.current.detailsProblem).toBe(true)
+  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+})
+
 test('a catalogue that is still loading is not a problem yet', () => {
   const hook = mount(
     withStatus('awaiting_payment'),
