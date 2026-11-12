@@ -14,7 +14,8 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 - An amount is a string from the API response to the screen. It is never a `number`.
 - Do not use `Number`, `parseFloat`, `toFixed`, unary `+` or arithmetic on an amount. The page does no maths on money; it shows the totals the server sends.
 - Show crypto amounts exactly as received. Only the fiat amount follows the shopper's locale.
-- Reject a response whose amount is a JSON number or is malformed. Reject a crypto amount with more decimal places than its currency's `decimals` allows.
+- Reject a response whose amount is a JSON number or is malformed.
+- Never show an amount to send until it has passed the decimal-places check against its currency's `decimals`.
 
 ## The server is the authority
 
@@ -38,7 +39,7 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 
 ## Structure
 
-- Components render. Hooks own behaviour. `src/domain` is pure functions. `src/api` is the only place that talks to the server or validates a response.
+- Components render. Hooks own behaviour. `src/domain` is pure functions. `src/api` is the only place that talks to the server or validates a response's shape.
 - No state library. Local state lives in React state inside a custom hook.
 - Do not add a dependency without asking.
 - The app's request code must not know the mock exists. Only the dev panel calls the mock's control endpoints.

@@ -61,3 +61,16 @@ All of these are fixed in the design doc.
 - **Polling on `expired`.** Codex noted the brief says to stop polling on terminal states and the API never says `expired` can change. I kept the polling, because stopping there invites a second payment from a shopper whose first one is in flight. Whether `expired` is terminal is now an explicit open question.
 - **Resuming after a refresh.** Codex noted the brief puts persistence out of scope. I kept it; ADR 0005 already argues why.
 - **The QR and the network.** Codex noted that a QR holding only an address gives the wallet no network. That is true and stays true until the API returns what a payment link needs. The design doc now states the limit plainly and no longer says a wrong-network send is impossible.
+
+## 12 Nov 2026: second review pass
+
+Codex read the revised documents once more. This was the second and last pass on the design.
+
+### What it caught in the agent's revisions
+
+- **An amount shown before it was checked.** To avoid hiding a payment in flight, the agent had let a resumed payment render before the currency list arrived, which meant an amount to send could appear before its decimal-places check. Now only the pay screen waits for the list. Screens that only report a status do not.
+- **An unknown status with no way forward.** The "we're checking" screen for a status the page does not know had no reference and no contact line, so a status that never resolved left the shopper stuck. It now has both.
+
+### What Codex argued that I kept as it was
+
+- **Changing currency while a quote is live.** Codex wanted no change allowed once an address has been shown, because the confirmation cannot rule out a transfer started on another device. I kept the confirmation. A shopper who picked the wrong network should not have to wait for the quote to expire before they can correct it.

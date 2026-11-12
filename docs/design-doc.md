@@ -39,7 +39,7 @@ The API forces part of this. `POST /api/payments/:reference/requote` returns 409
 
 **Changing the choice:**
 
-- **While the quote is live** (`awaiting_payment` only): "Change currency or network" asks for confirmation first, because a payment sent to the old address after the change would not be tracked on this page. If the shopper confirms they have not sent anything, the page returns to the picker and the next choice creates a new payment.
+- **While the quote is live** (`awaiting_payment` only): "Change currency or network" asks for confirmation first, because a payment sent to the old address after the change would not be tracked on this page. If the shopper confirms they have not sent anything, the page returns to the picker and the next choice creates a new payment. The confirmation cannot rule out a transfer started on another device a moment earlier. I accept that, because the alternative is to make a shopper who picked the wrong network wait for the quote to expire before they can correct it.
 - **After the quote expired with no money seen:** the same link returns to the picker, and the next choice calls requote on the same reference. Requote takes a currency and a network, so it can change both. No payment is abandoned, and the page keeps polling the payment while the picker is open, in case a late payment arrives.
 - **Once any money was seen** (`underpaid`, `detected` and later): there is no way to change. The remainder has to go to the same address on the same network.
 - **If the server ends a partial payment** (`expired` straight after `underpaid`): there is no change and no new quote. The page sends the shopper to the merchant ([ADR 0003](adr/0003-partial-and-late-payments.md)).
@@ -136,7 +136,7 @@ Its rules:
 
 ### 3.6 Unknown statuses
 
-A status the page does not know is not a validation error. The schema accepts any status string, and an unknown one maps to a safe screen: "We're checking your payment. Don't send again." Polling continues.
+A status the page does not know is not a validation error. The schema accepts any status string, and an unknown one maps to a safe screen: "We're checking your payment. Don't send again." Polling continues. The screen also shows the payment reference with a copy button and says to contact the merchant if it does not change, so a status that never resolves still leaves the shopper a way forward.
 
 In code, the known statuses are one discriminated union and the screen function switches over it exhaustively. Adding a ninth status fails to compile until every place handles it.
 
@@ -171,7 +171,7 @@ Data moves one way. A server response is validated, stored in the query cache wi
 
 | Folder | Holds | Rule |
 |---|---|---|
-| `src/api` | Request functions, timeouts, zod schemas | The only code that talks to the server or validates a response |
+| `src/api` | Request functions, timeouts, zod schemas | The only code that talks to the server or validates a response's shape |
 | `src/domain` | Status groups, `deriveScreen`, the status sequence, countdown maths, the amount guard | Pure functions, no React, no I/O |
 | `src/hooks` | `useCheckout`, `usePayment`, `useCurrencies`, `useCountdown` | Own all behaviour and timing |
 | `src/components` | The card, picker, pay screen, status screens, strip | Render only |
@@ -326,7 +326,8 @@ A real example from the mock's ETH quote, checked in Node:
 
 - **Amounts are strings end to end.** The API sends decimal strings. They get their own string type, created only where a response is validated, so passing one to ordinary maths is a compile error.
 - **No maths on money.** The page shows `total_due`, `amount_outstanding` and `amount_excess` as the server sends them. It never adds the fee, subtracts what was received, or rounds.
-- **Validation at the boundary.** A response is rejected if an amount arrives as a JSON number or is malformed. A crypto amount is also rejected if it has more decimal places than its currency's `decimals` allows. A JSON number has already been through a float by the time the page sees it.
+- **Validation at the boundary.** A response is rejected if an amount arrives as a JSON number or is malformed. A JSON number has already been through a float by the time the page sees it.
+- **A decimal-places check before any amount to send is shown.** A crypto amount with more decimal places than its currency's `decimals` allows is rejected. This check needs the currency list, so it runs where the payment and the list meet.
 - **Crypto is shown exactly as sent.** Dot decimal, no thousands separators, never rounded or shortened, including all eighteen ETH places. The copy button copies that exact string with no unit.
 - **Only fiat follows the locale.** The order amount goes to the browser's number formatter as a string, which current browsers format exactly, so a German shopper sees `149,90 €`. A test asserts that a long decimal string comes through the formatter unchanged.
 - **No decimal library.** A library would earn its place if the page did arithmetic. It does not.
@@ -334,7 +335,7 @@ A real example from the mock's ETH quote, checked in Node:
 
 I show crypto exactly as sent, not in the shopper's locale, because that number gets retyped or pasted into a wallet. A wallet that expects a dot may reject `163,69`, or read `1.234,56` wrongly. A locale-formatted crypto amount is the one way this page could cause a wrong amount.
 
-**Where `decimals` is used.** `GET /api/currencies` returns each currency's `decimals`. The page uses it for the guard above and nowhere else. The guard needs the currency list, and a resumed payment does not wait for it: the payment shows as soon as it loads, and the decimal-places check applies once the list arrives. Not hiding a payment in flight outranks the extra check. It would also be needed to build wallet payment links, which the page does not do; see [ADR 0004](adr/0004-qr-holds-address-only.md).
+**Where `decimals` is used.** `GET /api/currencies` returns each currency's `decimals`. The page uses it for the decimal-places check above and nowhere else. After a reload the currency list has to be fetched again. Until it arrives and the amount has passed the check, the pay screen shows a loading state with no amount, address or QR. Screens that only report a status do not wait for it, so a payment in flight is never hidden behind the currency list. It would also be needed to build wallet payment links, which the page does not do; see [ADR 0004](adr/0004-qr-holds-address-only.md).
 
 ## 7. How I show failure states
 
@@ -356,7 +357,7 @@ I show crypto exactly as sent, not in the shopper's locale, because that number 
 | `expired` after `underpaid` | The full amount wasn't reached | What was received and what was missing. "Do not send again. This page can't complete this payment or tell you what happens to the 120.00 USDT you sent. Contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
 | `overpaid` | Payment complete | "You sent 16.31 USDT more than was due. This page can't return the extra amount. Contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
 | `failed` | This payment could not be completed | The reason in plain words, the server's reason code in small print, "do not send anything more", contact the merchant | None |
-| unknown | We're checking your payment | "Don't send again." | None |
+| unknown | We're checking your payment | "Don't send again. If this doesn't change, contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
 
 The tick box belongs to the plain `expired` screen and its cautious reload variant. The partial-payment screen has no tick box, because a shopper who paid part cannot truthfully tick "I have not sent a payment". It is a dead end, with no button and no link to change currency.
 
