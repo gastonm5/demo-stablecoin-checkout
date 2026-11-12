@@ -306,6 +306,8 @@ The two clock errors behave differently, and I accept both:
 - **Device clock ahead:** the countdown ends early, the check finds the quote still live, and the shopper can still pay. Without the "still live" rule, a shopper whose clock runs far ahead could never pay.
 - **Device clock behind:** the countdown shows more time than the server allows. The page corrects at the first poll after the server expires the quote. This is the real cost of using the device clock, and the late-payment polling on `expired` softens it.
 
+- **Device clock behind, during an outage:** the address stays visible until the device's countdown reaches zero, and the real deadline can pass first. This needs both failures at once, and I accept it rather than hide a valid quote from everyone whose connection drops for a minute.
+
 I considered correcting the clock from the server's `Date` header and chose not to. The reasoning is in [ADR 0001](adr/0001-server-decides-expiry.md).
 
 **Underpaid keeps the deadline.** The countdown keeps running on `underpaid`, against the original `expires_at`. A quote is a price held for a limited time, and a partial payment does not extend it.

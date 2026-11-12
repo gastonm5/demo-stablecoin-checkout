@@ -51,3 +51,7 @@ All of these are fixed in the design doc.
 ### Where the review changed a decision of mine
 
 - **No new quote after a partial payment.** In the design session I had decided that a quote which expired after a partial payment would offer a new quote for the full amount, with a warning that the earlier funds would not count. Codex pointed out that the API says nothing about what happens to those funds, so the warning was a guess told to the shopper as fact, against the design's own wording rule. The agent proposed softening the wording. I went further and removed the new quote: that screen is now a dead end that points to the merchant. See ADR 0003.
+
+### What Codex argued that I kept as it was
+
+- **A slow device clock during an outage.** Codex showed that two of my decisions combine badly: the countdown uses the device clock, and the address stays visible during an outage until that countdown reaches zero. With a slow clock and an unreachable server, the real deadline can pass while the address is still on screen. I kept both decisions and wrote the consequence into ADR 0001. Hiding the address after a period of silence would hurt the common case, a correct clock and a short outage, to protect a rare double failure.
