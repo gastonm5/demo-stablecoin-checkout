@@ -1,15 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { ConfirmChangeDialog } from './ConfirmChangeDialog'
 
 const TITLE = 'Have you already sent a payment?'
 const proto = HTMLDialogElement.prototype
 const jsdomShowModal = Object.getOwnPropertyDescriptor(proto, 'showModal')
+const jsdomClose = Object.getOwnPropertyDescriptor(proto, 'close')
 
 afterEach(() => {
   if (jsdomShowModal) Object.defineProperty(proto, 'showModal', jsdomShowModal)
   else Reflect.deleteProperty(proto, 'showModal')
+  if (jsdomClose) Object.defineProperty(proto, 'close', jsdomClose)
+  else Reflect.deleteProperty(proto, 'close')
 })
 
 // jsdom has no showModal(); the stub does the part a test can see, opening the dialog.
@@ -51,6 +55,30 @@ test('opens as a modal where the browser has showModal', () => {
   expect(showModal.mock.contexts[0]).toBe(dialog)
   setOpen(true)
   expect(showModal).toHaveBeenCalledOnce()
+})
+
+test('opens once under Strict Mode, which runs the effect twice', () => {
+  // As a browser does: showModal() on an open dialog throws.
+  const showModal = vi.fn(function (this: HTMLDialogElement) {
+    if (this.open) throw new DOMException('Already open', 'InvalidStateError')
+    this.setAttribute('open', '')
+  })
+  const close = vi.fn(function (this: HTMLDialogElement) {
+    this.removeAttribute('open')
+  })
+  for (const [name, value] of Object.entries({ showModal, close })) {
+    Object.defineProperty(proto, name, {
+      value,
+      configurable: true,
+      writable: true,
+    })
+  }
+  render(
+    <StrictMode>
+      <ConfirmChangeDialog open onConfirm={() => {}} onCancel={() => {}} />
+    </StrictMode>,
+  )
+  expect(screen.getByRole('dialog', { name: TITLE })).toHaveAttribute('open')
 })
 
 test('is still shown where there is no showModal', () => {
