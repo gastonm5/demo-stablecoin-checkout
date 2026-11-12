@@ -108,3 +108,14 @@ Codex raised fourteen points and all of them held up. The four that mattered mos
 
 - **An order of checks taken from the wrong place.** The mock's requote checked whether the quote had expired before checking that the requested currency and network exist, so a request for a pair that does not exist got "not expired" where it should get "invalid request". The implementing agent said afterwards that it had taken the order from the order in which a type listed its cases. Codex caught it. A request is now validated before the payment's state is looked at.
 - **Wording close to the brief, but not the brief's.** The 409 said "Quote not expired" where the brief's example says "Quote has not expired". I caught it reading the commit. The brief gives the fixture, so the mock now uses its words exactly.
+
+### Task 3
+
+- **A plan rule that contradicted the design.** The plan said the mock refuses any negative setting. The design's dev panel sets the server clock five minutes behind, which is a negative number. The implementing agent noticed, applied the rule only to the quote lifetime and the delay, and reported it.
+- **A delay that outlived its request.** With the mock set to respond slowly, a request the page had already given up on still ran on the server when the delay ended. Codex caught it. The timer is now cleared when the connection closes.
+- **A test that proved nothing.** For that fix, the planning agent specified a test: abort a slow create, then check that no payment appeared. The implementing agent ran it against the unfixed code first and found it passed anyway, because Node discards the body of an aborted request before the handler can use it. It said so and wrote a test that does fail without the fix. I would not have known the first test was empty.
+- **Nothing tested the Vite plugin.** Removing either of its two hooks would have left every test green. Codex caught it.
+
+### Task 4
+
+- Nothing was rejected. Codex had no findings. The implementing agent removed three validation rules in turn to show that the tests fail when the behaviour is gone, which is the check I now ask every task for.
