@@ -119,3 +119,11 @@ Codex raised fourteen points and all of them held up. The four that mattered mos
 ### Task 4
 
 - Nothing was rejected. Codex had no findings. The implementing agent removed three validation rules in turn to show that the tests fail when the behaviour is gone, which is the check I now ask every task for.
+
+### Task 5
+
+- **Tests that would not have caught a regression.** The API client itself had no bugs, but Codex found three places where its tests proved less than they claimed: timeouts and aborts were only tested while the request was pending, not while the body was being read; the success test would have passed if the parser's result were thrown away; and the two error checks were never tried against a look-alike object. The implementing agent then showed the gaps were real: the original suite let four deliberate breakages through.
+
+### Task 6
+
+- Nothing was rejected. Codex had no findings. The implementing agent raised a risk in a later task on its own: a poll already in flight that comes back after a requote would be taken for a new quote. The plan already cancels that poll first, and the warning now travels with Task 8.
