@@ -220,6 +220,10 @@ test('shows the order reference and no fiat amount', async () => {
   expect(screen.getByText('ORD-88213')).toBeVisible()
   expect(screen.getByText('Order')).toBeVisible()
   await choose('USDT', 'tron')
-  expect(document.body).not.toHaveTextContent('€')
-  expect(screen.queryByText('Payment for')).not.toBeInTheDocument()
+  // The order's amount and merchant come only with a payment, so none of them may appear here.
+  for (const fiat of ['149.90', 'EUR', '€', '$149']) {
+    expect(document.body).not.toHaveTextContent(fiat)
+  }
+  expect(screen.queryByText(/payment for/i)).not.toBeInTheDocument()
+  expect(document.body).not.toHaveTextContent('Nordwind')
 })

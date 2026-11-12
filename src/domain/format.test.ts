@@ -24,6 +24,30 @@ test('keeps a number too long for a float exact', () => {
   ).toMatch(/^€\s?1,234,567,890,123,456\.78$/)
 })
 
+test('keeps every decimal place the amount has', () => {
+  expect(formatFiat('0.001' as DecimalString, 'USD', 'en-US')).toMatch(
+    /^\$\s?0\.001$/,
+  )
+  expect(formatFiat('149.905' as DecimalString, 'EUR', 'en-US')).toMatch(
+    /^€\s?149\.905$/,
+  )
+  expect(formatFiat('149.905' as DecimalString, 'EUR', 'de-DE')).toMatch(
+    /^149,905\s€$/,
+  )
+  expect(
+    formatFiat('0.054229071702481731' as DecimalString, 'USD', 'en-US'),
+  ).toMatch(/^\$\s?0\.054229071702481731$/)
+})
+
+test("never shows fewer places than the currency's usual number", () => {
+  expect(formatFiat('149.90' as DecimalString, 'EUR', 'en-US')).toMatch(
+    /^€\s?149\.90$/,
+  )
+  expect(formatFiat('5' as DecimalString, 'USD', 'en-US')).toMatch(
+    /^\$\s?5\.00$/,
+  )
+})
+
 test('falls back to the amount as sent when the currency code is rejected', () => {
   expect(formatFiat('149.90' as DecimalString, 'EURO', 'en-US')).toBe(
     '149.90 EURO',
@@ -50,6 +74,7 @@ test.each([
 test('formatUsdFee', () => {
   expect(formatUsdFee('1.00' as DecimalString, 'en-US')).toBe('≈ $1.00')
   expect(formatUsdFee('0.01' as DecimalString, 'en-US')).toBe('≈ $0.01')
+  expect(formatUsdFee('0.001' as DecimalString, 'en-US')).toBe('≈ $0.001')
 })
 
 test('confirmationsLabel', () => {

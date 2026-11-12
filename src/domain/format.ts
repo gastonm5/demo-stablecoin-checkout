@@ -1,4 +1,5 @@
 import type { DecimalString } from '../api/schemas'
+import { fractionDigits } from './money'
 
 export function formatFiat(
   amount: DecimalString,
@@ -6,9 +7,13 @@ export function formatFiat(
   locale = navigator.language,
 ): string {
   try {
+    const options = { style: 'currency', currency } as const
+    // The currency style rounds to the currency's usual places, so 0.001 would show as 0.00.
+    const usual = new Intl.NumberFormat(locale, options).resolvedOptions()
+      .maximumFractionDigits
     const formatter = new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency,
+      ...options,
+      maximumFractionDigits: Math.max(usual ?? 0, fractionDigits(amount)),
     })
     // The string itself, never a number: the formatter keeps every digit of a decimal string.
     // The ES2023 typings take only a `${number}` literal, which a validated string is not.
