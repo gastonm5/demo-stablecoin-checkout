@@ -1,6 +1,6 @@
 # Stablecoin Checkout: design doc
 
-**Status:** agreed design, written before the build on 12 Nov 2026. I will revise it when the build is done so it describes what exists. The decisions with a real trade-off are in [`adr/`](adr/).
+**Status:** written before the build on 12 Nov 2026 and revised the same day after two reviews. I will revise it again when the build is done so it describes what exists. The decisions with a real trade-off are in [`adr/`](adr/).
 
 ## 1. What this is
 
@@ -42,7 +42,7 @@ The API forces part of this. `POST /api/payments/:reference/requote` returns 409
 - **While the quote is live** (`awaiting_payment` only): "Change currency or network" asks for confirmation first, because a payment sent to the old address after the change would not be tracked on this page. If the shopper confirms they have not sent anything, the page returns to the picker and the next choice creates a new payment.
 - **After the quote expired with no money seen:** the same link returns to the picker, and the next choice calls requote on the same reference. Requote takes a currency and a network, so it can change both. No payment is abandoned, and the page keeps polling the payment while the picker is open, in case a late payment arrives.
 - **Once any money was seen** (`underpaid`, `detected` and later): there is no way to change. The remainder has to go to the same address on the same network.
-- **After a partial payment expired:** there is no change and no new quote. The page sends the shopper to the merchant ([ADR 0003](adr/0003-partial-and-late-payments.md)).
+- **If the server ends a partial payment** (`expired` straight after `underpaid`): there is no change and no new quote. The page sends the shopper to the merchant ([ADR 0003](adr/0003-partial-and-late-payments.md)).
 
 **What the picker can show.** The API returns the merchant name and the order amount only inside a payment. On the picker no payment exists, so it shows the order reference and the choices, and the merchant name and fiat amount appear from the pay screen onwards. I did not add an order endpoint to the mock to fill this in; see section 9.
 
@@ -111,23 +111,23 @@ The screen is the output of one pure function. Its inputs are the server's statu
 | `detected`, `confirming` | | Waiting | hidden | none | 3 s |
 | `paid` | | Complete | hidden | none | off |
 | `overpaid` | | Complete, with a notice about the extra | hidden | none | off |
-| `expired` | no money seen for this quote | Expired | hidden | none | 15 s |
-| `expired` | `underpaid` seen for this quote | Expired after a partial payment, a dead end | hidden | none | 15 s |
+| `expired` | straight after a status that carried money | Expired after money was seen, a dead end | hidden | none | 15 s |
 | `expired` | sequence started from a reload | Expired, cautious wording | hidden | none | 15 s |
+| `expired` | otherwise | Expired | hidden | none | 15 s |
 | `failed` | money seen, not seen, or unknown | Failed, in three wordings | hidden | none | off |
 | anything else | | "We're checking" | hidden | none | 3 s |
 
 Connection trouble is not a row in this table. It is a notice in the strip, laid over whichever row applies (section 7).
 
-**A status that goes backwards.** If `awaiting_payment` follows `detected`, `confirming` or `underpaid` on the same quote, the page cannot tell which of two things happened. Either the answer is stale and the money is there, or the transaction was dropped and the shopper does need to pay again. Showing the address would be right in the second case and would invite a double payment in the first. So the page shows "We're checking your payment. Don't send again." and keeps polling, and only a new quote brings an address back. In the dropped-transaction case the shopper waits for the quote to expire and then gets a new one. A delay can be recovered from, and a double payment cannot.
+**A status that goes backwards.** If `awaiting_payment` follows `detected`, `confirming` or `underpaid` on the same quote, the page cannot tell which of two things happened. Either the answer is stale and the money is there, or the transaction was dropped and the shopper does need to pay again. Showing the address would be right in the second case and would invite a double payment in the first. So the page shows "We're checking your payment. Don't send again." and keeps polling, and only a new quote brings an address back. In the dropped-transaction case the shopper waits for the quote to expire and then gets a new one: `expired` straight after `awaiting_payment` is the plain expired screen. A delay can be recovered from, and a double payment cannot.
 
 ### 3.5 The status sequence
 
-Some screens depend on what happened before. `expired` after `underpaid` must not offer a new quote, because the shopper already sent part of the money and the API does not say what happens to it. The `expired` response itself carries only `expired_at`.
+Some screens depend on what happened before. `expired` straight after `underpaid` must not offer a new quote, because the shopper already sent part of the money and the API does not say what happens to it. The `expired` response itself carries only `expired_at`.
 
 So the page keeps the sequence of statuses it has seen for a payment, each with the fields that came with it (amount received, amount outstanding, transaction hash). It is stored beside the payment in the query cache and appended in the one function where a server response becomes cached data. Polls and requotes both pass through that function, so there is no effect to keep in sync and no second store.
 
-Three rules:
+Its rules:
 
 - A repeated status updates the last entry instead of adding one.
 - "For this quote" means the entries since the last creation or requote. A partial payment on an earlier quote does not change the wording for a later one.
@@ -409,7 +409,7 @@ The mock is a small Express app mounted inside the dev server, so `npm run dev` 
 | Faults, on every API request | Delay of 3 s or 15 s; HTTP 500; dropped connection. The control endpoints are exempt |
 | Server clock offset | −5 min, 0, +5 min, to see the clock-difference handling without changing the system clock |
 
-"You're offline" is tested with the browser's own offline switch.
+The offline notice is tested with the browser's own offline switch.
 
 The panel is docked on the right and pushes the card aside instead of covering it, so a reviewer can change a status and watch the page react. It starts collapsed.
 
@@ -454,6 +454,7 @@ These were not discussed one by one. I set them while writing this document, and
 - **Exchange rate:** shown under the amount, exactly as sent ("1 USDT = 0.9214 EUR").
 - **Going back from a live quote:** a native dialog. "Have you already sent a payment? Only change if you have not sent anything."
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".
+- **`expired` straight after `detected` or `confirming`:** this should not happen on a real server, but the dev panel can force it. It gets the same dead end as after a partial payment, with the headline "This payment expired".
 - **Picker menus:** the browser's own, with the fee and usual time in each option's text. A currency with one network (ETH) has it filled in.
 - **Payment not found on resume:** back to the picker with a notice.
 - **Copy buttons:** show "Copied" for two seconds, announced to screen readers.
