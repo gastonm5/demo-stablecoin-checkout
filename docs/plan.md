@@ -1151,8 +1151,8 @@ test('shows the not-found notice', ...)
 test('shows the order reference and no fiat amount', ...) // 'ORD-88213' present; no '€' anywhere
 ```
 
-- [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/domain/format.test.ts src/components/Picker.test.tsx`. Expected: FAIL.
-- [ ] **Step 3: Implement `format.ts`, `CheckoutCard`, `OrderHeader` and `Picker`.**
+- [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/domain/format.test.ts src/hooks/usePickerChoice.test.ts src/hooks/useDelayedFlag.test.ts src/components/Picker.test.tsx`. Expected: FAIL.
+- [ ] **Step 3: Implement `format.ts`, `usePickerChoice`, `useDelayedFlag`, `CheckoutCard`, `OrderHeader` and `Picker`.**
 - [ ] **Step 4: Run and see them pass.**
 - [ ] **Step 5: Record the result in the design doc.** In section 11, remove the TypeScript typings line from the verification list and say whether the formatter accepted a string without a cast.
 - [ ] **Step 6: Gate and commit**
@@ -1267,8 +1267,8 @@ test('says copying failed when the clipboard rejects', ...) // writeText rejects
 test('says copying failed when there is no clipboard', ...) // navigator.clipboard undefined -> same text, no throw
 ```
 
-- [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/components/PayScreen.test.tsx src/components/CopyButton.test.tsx`. Expected: FAIL.
-- [ ] **Step 3: Implement the five components.**
+- [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/hooks/useCopy.test.ts src/components/PayScreen.test.tsx src/components/CopyButton.test.tsx`. Expected: FAIL.
+- [ ] **Step 3: Implement `useCopy` and the five components.**
 - [ ] **Step 4: Run and see them pass**, then gate and commit
 
 ```bash
@@ -1280,7 +1280,7 @@ npm run check && git add -A && git commit -m "Add the pay screen with the networ
 ### Task 12: Status screens, the notice strip and the page
 
 **Files:**
-- Create: `src/hooks/usePaymentScreen.ts`, `src/hooks/usePaymentScreen.test.tsx`, `src/hooks/useFocusOnChange.ts`, `src/components/WaitingScreen.tsx`, `CompleteScreen.tsx`, `ExpiredScreen.tsx`, `FailedScreen.tsx`, `CheckingScreen.tsx`, `NoticeStrip.tsx`, `PaymentView.tsx`, and `src/components/StatusScreens.test.tsx`, `NoticeStrip.test.tsx`, `PaymentView.test.tsx`
+- Create: `src/hooks/usePaymentScreen.ts`, `src/hooks/usePaymentScreen.test.tsx`, `src/hooks/useFocusOnChange.ts`, `src/hooks/useFocusOnChange.test.tsx`, `src/components/WaitingScreen.tsx`, `CompleteScreen.tsx`, `ExpiredScreen.tsx`, `FailedScreen.tsx`, `CheckingScreen.tsx`, `NoticeStrip.tsx`, `PaymentView.tsx`, and `src/components/StatusScreens.test.tsx`, `NoticeStrip.test.tsx`, `PaymentView.test.tsx`
 - Modify: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`
 
 **Interfaces:**
@@ -1300,7 +1300,7 @@ export function ExpiredScreen(props: {
   onChange(): void
 }): JSX.Element
 export function FailedScreen(props: { payment: Payment; screen: Extract<Screen, { kind: 'failed' }>; money?: SequenceEntry }): JSX.Element
-export function CheckingScreen(props: { payment: Payment }): JSX.Element
+export function CheckingScreen(props: { payment: Payment; money?: SequenceEntry }): JSX.Element // money supplies the transaction row when the status itself carries none
 export function reasonText(reason: string): string
 export function connectionNotice(connection: Connection, onTryNow: () => void): ReactNode | null
 export function PaymentView(props: { checkout: UseCheckoutResult; catalogue: Catalogue }): JSX.Element
@@ -1328,7 +1328,7 @@ export function useFocusOnChange<T extends HTMLElement>(key: string): React.RefO
 - Every status screen has a Reference row, and a Transaction row whenever the payment or the `money` entry carries a `tx_hash`. Both values are shown in full. Their buttons are labelled "Copy payment reference" and "Copy transaction hash".
 - `connectionNotice` is exported from `NoticeStrip.tsx`. It returns `null` for `'ok'`. When it is not null, it replaces the screen's own strip text.
 
-**Copy** (layout from `docs/design/status-screens-proposal.png`):
+**Copy** (layout from `docs/design/status-screens-proposal.png`). The table lists each screen's own rows; the Reference row, and the Transaction row when there is a hash, are added to every screen by the shared rule above:
 
 | Screen | Left column | Right column | Strip |
 |---|---|---|---|
@@ -1409,6 +1409,7 @@ test.each([['yes', /We saw your payment/], ['no', /The settlement was rejected/]
 test('failed has no button and shows the reason code', ...) // no button except the Copy buttons; 'Reason code: settlement_rejected'
 test('a reason the page does not know gets generic wording', ...) // reasonText('chain_reorg') === 'The payment service reported a problem.'
 test('checking gives the reference and a way forward', ...) // 'AQH-100306-PMT'; /contact Nordwind Audio/
+test('checking keeps the transaction seen earlier', ...) // money { tx_hash: '9d1f4c8a2be7...' } with an unknown status -> the hash and 'Copy transaction hash'
 
 // NoticeStrip.test.tsx
 test('says nothing when the connection is fine', ...) // null
@@ -1425,6 +1426,10 @@ test('a failed catalogue is a details problem for a pay status only', ...) // aw
 test('a catalogue without the quote currency is a details problem', ...)
 test('an amount with too many decimal places is a details problem', ...) // total_due '163.1234567', USDT decimals 6
 test('a catalogue that is still loading is not a problem yet', ...)
+
+// useFocusOnChange.test.tsx
+test('does not take focus on first mount', ...)
+test('focuses the element when the key changes', ...) // rerender with a new key -> document.activeElement is the element
 
 // PaymentView.test.tsx — checkout built from a fake UseCheckoutResult, catalogue from a fake Catalogue
 test('shows a loading card before the first answer', ...)
@@ -1447,8 +1452,8 @@ test('opens on the picker', ...) // mock endpoints; 'Choose how to pay'
 test('offers Try again when the options cannot be loaded', ...)
 ```
 
-- [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/components src/App.test.tsx`. Expected: FAIL.
-- [ ] **Step 3: Implement the screens, `connectionNotice`, `PaymentView` and `App`.**
+- [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/hooks/usePaymentScreen.test.tsx src/hooks/useFocusOnChange.test.tsx src/components src/App.test.tsx`. Expected: FAIL.
+- [ ] **Step 3: Implement `usePaymentScreen`, `useFocusOnChange`, the screens, `connectionNotice`, `PaymentView` and `App`.** `PaymentView` passes `money` to `CheckingScreen` as well as to the expired and failed screens.
 - [ ] **Step 4: Run and see them pass.**
 - [ ] **Step 5: Try it by hand**
 
@@ -1496,7 +1501,7 @@ export function DevPanel(props: { reference: string | null }): JSX.Element
 **Behaviour** (layout from `docs/design/dev-panel-proposal.png`):
 
 - `mockControl.ts` calls `/__mock` through its own small helper, not through `src/api`. The helper follows the request rules: a 10 s timeout, an abort signal, and `cache: 'no-store'`.
-- `useMockState` reads the state while `open` is true: once at once, then 2 s after each read settles, so reads never overlap. Closing the panel or unmounting aborts the read in flight and clears the timer. `refresh()` reads at once.
+- `useMockState` reads the state while `open` is true: once at once, then 2 s after each read settles, so reads never overlap. Closing the panel or unmounting aborts the read in flight and clears the timer. `refresh()` aborts the read in flight or cancels the waiting timer, then reads at once, so there is still never more than one read in flight.
 - `DevPanel` holds only whether it is open.
 - Collapsed at first: a narrow tab on the right edge labelled "DEV". Clicking it opens the panel; "hide" collapses it.
 - Open: docked on the right, 330 px wide, dark background, monospaced. In `App`, the page and the panel sit in a flex row so the panel pushes the card aside. Under 900 px wide it lies over the page instead.
@@ -1527,6 +1532,7 @@ test('refreshes the state after an action', ...)
 // useMockState.test.tsx
 test('reads at once when opened, then two seconds after each read settles', ...)
 test('never has two reads in flight', ...) // hold a read open for 10 s -> getMockState called once
+test('refresh during a read aborts it and starts another', ...) // first signal aborted; in-flight count never above 1
 test('aborts the read in flight and stops when closed', ...) // signal.aborted true; advance 10 s -> no call; vi.getTimerCount() === 0
 test('aborts and stops on unmount', ...)
 
@@ -1536,7 +1542,7 @@ test('gives up after ten seconds', ...)
 ```
 
 - [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/dev`. Expected: FAIL.
-- [ ] **Step 3: Implement `mockControl.ts` and `DevPanel.tsx`, and add the panel to `App`.**
+- [ ] **Step 3: Implement `mockControl.ts`, `useMockState.ts` and `DevPanel.tsx`, and add the panel to `App`.**
 - [ ] **Step 4: Run and see them pass**, then gate and commit
 
 ```bash
