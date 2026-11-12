@@ -30,7 +30,7 @@ beforeEach(() => {
     .mockReturnValue(new Promise(() => {}))
 })
 
-test('mounts the dev panel collapsed beside the page', async () => {
+test('mounts the dev panel collapsed, outside the main landmark, without reading the mock', async () => {
   vi.mocked(getCurrencies).mockResolvedValue(currencies)
   render(<App />)
   const tab = screen.getByRole('button', { name: 'DEV' })

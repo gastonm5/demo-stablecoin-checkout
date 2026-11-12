@@ -1,20 +1,25 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { mergePayment } from '../hooks/paymentCache'
 import type { PaymentEntry } from '../hooks/paymentCache'
 import { makePayment, STATE_FIXTURES } from '../test/fixtures'
 import { DevPanel } from './DevPanel'
-import {
-  getMockSettings,
-  setMockStatus,
-  updateMockSettings,
-} from './mockControl'
+import { getMockSettings, updateMockSettings } from './mockControl'
 import type { MockSettings } from './mockControl'
+
+const statusCommand = vi.hoisted(() => ({
+  sent: vi.fn(),
+  answer: (): Promise<void> => Promise.resolve(),
+}))
 
 vi.mock('./mockControl', () => ({
   getMockSettings: vi.fn(),
-  setMockStatus: vi.fn(),
+  // A plain function: a vi.fn handles the promises it returns, which would hide an unhandled rejection.
+  setMockStatus: (...args: unknown[]) => {
+    statusCommand.sent(...args)
+    return statusCommand.answer()
+  },
   updateMockSettings: vi.fn(),
 }))
 
@@ -51,7 +56,8 @@ beforeEach(() => {
   vi.mocked(getMockSettings)
     .mockReset()
     .mockReturnValue(new Promise(() => {}))
-  vi.mocked(setMockStatus).mockReset().mockResolvedValue(undefined)
+  statusCommand.sent.mockReset()
+  statusCommand.answer = () => Promise.resolve()
   vi.mocked(updateMockSettings)
     .mockReset()
     .mockReturnValue(new Promise(() => {}))
@@ -101,7 +107,22 @@ test('hide collapses it', async () => {
 test.each(STATUSES)('sets %s for the current payment', async (status) => {
   const user = await renderOpen()
   await user.click(button(status))
-  expect(setMockStatus).toHaveBeenCalledExactlyOnceWith(REFERENCE, status)
+  expect(statusCommand.sent).toHaveBeenCalledExactlyOnceWith(REFERENCE, status)
+})
+
+// Vitest fails the run on an unhandled rejection, so this also proves the failure is handled.
+test('a failed status command leaves the panel as it is', async () => {
+  statusCommand.answer = () =>
+    Promise.reject(
+      new Error('POST /__mock/payments/AQH-100306-PMT/status answered 404'),
+    )
+  const user = await renderOpen()
+  await user.click(button('paid'))
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+  expect(statusCommand.sent).toHaveBeenCalledOnce()
+  expect(button('awaiting_payment')).toHaveAttribute('aria-pressed', 'true')
+  expect(button('paid')).toHaveAttribute('aria-pressed', 'false')
+  expect(button('paid')).toBeEnabled()
 })
 
 test('marks the status the page is showing', async () => {
@@ -125,16 +146,24 @@ test('the stepper sets confirmations from the payment', async () => {
   )
   expect(screen.getByText('1 of 3')).toBeVisible()
   await user.click(button('+'))
-  expect(setMockStatus).toHaveBeenLastCalledWith(REFERENCE, 'confirming', 2)
+  expect(statusCommand.sent).toHaveBeenLastCalledWith(
+    REFERENCE,
+    'confirming',
+    2,
+  )
   await user.click(button('−'))
-  expect(setMockStatus).toHaveBeenLastCalledWith(REFERENCE, 'confirming', 0)
+  expect(statusCommand.sent).toHaveBeenLastCalledWith(
+    REFERENCE,
+    'confirming',
+    0,
+  )
 })
 
 test('the stepper counts from zero when the status carries no confirmations', async () => {
   const user = await renderOpen(REFERENCE, entryOf('underpaid'))
   expect(button('−')).toBeDisabled()
   await user.click(button('+'))
-  expect(setMockStatus).toHaveBeenCalledExactlyOnceWith(
+  expect(statusCommand.sent).toHaveBeenCalledExactlyOnceWith(
     REFERENCE,
     'confirming',
     1,
@@ -146,7 +175,7 @@ test('the stepper does not go below zero', async () => {
   expect(screen.getByText('0 of 1')).toBeVisible()
   expect(button('−')).toBeDisabled()
   await user.click(button('−'))
-  expect(setMockStatus).not.toHaveBeenCalled()
+  expect(statusCommand.sent).not.toHaveBeenCalled()
 })
 
 test.each<[string, Partial<MockSettings>]>([
@@ -224,7 +253,7 @@ test('disables the status buttons when there is no payment', async () => {
   expect(button('−')).toBeDisabled()
   expect(button('+')).toBeDisabled()
   await user.click(button('+'))
-  expect(setMockStatus).not.toHaveBeenCalled()
+  expect(statusCommand.sent).not.toHaveBeenCalled()
   // The settings do not belong to a payment.
   expect(button('drop')).toBeEnabled()
 })

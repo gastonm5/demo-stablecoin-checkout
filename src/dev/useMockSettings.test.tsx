@@ -80,3 +80,55 @@ test('update keeps the settings the mock answers with', async () => {
   expect(updateMockSettings).toHaveBeenCalledWith({ fault: 'drop' })
   expect(result.current.settings).toEqual(answer)
 })
+
+// An answer the test releases when it chooses, so answers can arrive out of order.
+function held() {
+  let answer: (settings: MockSettings) => void = () => {}
+  const promise = new Promise<MockSettings>((resolve) => {
+    answer = resolve
+  })
+  return { promise, answer: (settings: MockSettings) => answer(settings) }
+}
+
+const DROP: MockSettings = { ...SETTINGS, fault: 'drop' }
+const HTTP_500: MockSettings = { ...SETTINGS, fault: 'http_500' }
+
+test('a read that answers after an update does not undo it', async () => {
+  const read = held()
+  const change = held()
+  vi.mocked(getMockSettings).mockReturnValue(read.promise)
+  vi.mocked(updateMockSettings).mockReturnValue(change.promise)
+  const { result } = renderSettings(true)
+  act(() => result.current.update({ fault: 'drop' }))
+  await act(async () => change.answer(DROP))
+  await act(async () => read.answer(SETTINGS))
+  expect(result.current.settings).toEqual(DROP)
+})
+
+test('the later of two updates wins when they answer in reverse order', async () => {
+  const first = held()
+  const second = held()
+  vi.mocked(updateMockSettings)
+    .mockReturnValueOnce(first.promise)
+    .mockReturnValueOnce(second.promise)
+  const { result } = renderSettings(true)
+  await act(() => Promise.resolve())
+  act(() => result.current.update({ fault: 'drop' }))
+  act(() => result.current.update({ fault: 'http_500' }))
+  await act(async () => second.answer(HTTP_500))
+  await act(async () => first.answer(DROP))
+  expect(result.current.settings).toEqual(HTTP_500)
+})
+
+// Vitest fails the run on an unhandled rejection, so this also proves the failure is handled.
+test('a failed update leaves the settings as they were', async () => {
+  vi.mocked(updateMockSettings).mockRejectedValue(
+    new Error('POST /__mock/settings answered 422'),
+  )
+  const { result } = renderSettings(true)
+  await act(() => Promise.resolve())
+  act(() => result.current.update({ delay_ms: 3_000 }))
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+  expect(updateMockSettings).toHaveBeenCalledOnce()
+  expect(result.current.settings).toEqual(SETTINGS)
+})

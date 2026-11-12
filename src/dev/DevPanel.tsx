@@ -123,7 +123,8 @@ export function DevPanel({
   const confirmations =
     payment && 'confirmations' in payment ? payment.confirmations : 0
   const send = (...args: [status: string, confirmations?: number]) => {
-    if (reference !== null) void setMockStatus(reference, ...args)
+    // A failed command changes nothing; the card beside the panel shows whether a status took.
+    if (reference !== null) setMockStatus(reference, ...args).catch(() => {})
   }
 
   return (
