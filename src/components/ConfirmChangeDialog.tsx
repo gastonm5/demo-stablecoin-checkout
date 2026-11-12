@@ -1,8 +1,8 @@
 import { useId } from 'react'
+import { useModalDialog } from '../hooks/useModalDialog'
 
 const button = 'rounded-full px-5 py-3 text-[15px] font-bold'
 
-// Shown through the open attribute, not showModal(), which jsdom does not implement.
 export function ConfirmChangeDialog({
   open,
   onConfirm,
@@ -13,16 +13,19 @@ export function ConfirmChangeDialog({
   onCancel(): void
 }) {
   const id = useId()
+  const ref = useModalDialog(open)
   if (!open) return null
   return (
     <dialog
-      open
+      ref={ref}
       aria-labelledby={`${id}-title`}
       aria-describedby={`${id}-body`}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') onCancel()
+      onCancel={(event) => {
+        // Escape: the caller owns whether this is open, so it decides, not the browser.
+        event.preventDefault()
+        onCancel()
       }}
-      className="fixed inset-0 z-10 m-auto h-fit w-[440px] max-w-[calc(100%-32px)] rounded-[22px] border border-[#dfe3e8] bg-white p-6 text-[#14161a] shadow-[0_0_0_100vmax_rgba(20,22,26,.45)]"
+      className="fixed inset-0 z-10 m-auto h-fit w-[440px] max-w-[calc(100%-32px)] rounded-[22px] border border-[#dfe3e8] bg-white p-6 text-[#14161a] backdrop:bg-[#14161a]/45"
     >
       <h2
         id={`${id}-title`}
@@ -35,14 +38,7 @@ export function ConfirmChangeDialog({
         address after you change will not be tracked on this page.
       </p>
       <div className="mt-5 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={onConfirm}
-          className={`${button} border border-[#cfd4da]`}
-        >
-          I haven't sent anything, change
-        </button>
-        {/* Staying is the safe answer, so it has the focus. */}
+        {/* Staying is the safe answer. showModal() focuses the first button, and autoFocus does the same without it. */}
         <button
           type="button"
           autoFocus
@@ -50,6 +46,13 @@ export function ConfirmChangeDialog({
           className={`${button} bg-[#14161a] text-white`}
         >
           Stay on this payment
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className={`${button} border border-[#cfd4da]`}
+        >
+          I haven't sent anything, change
         </button>
       </div>
     </dialog>

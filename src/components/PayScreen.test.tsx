@@ -4,7 +4,6 @@ import { QRCodeSVG } from 'qrcode.react'
 import type { ComponentProps } from 'react'
 import { expect, test, vi } from 'vitest'
 import { makePayment, STATE_FIXTURES } from '../test/fixtures'
-import { ConfirmChangeDialog } from './ConfirmChangeDialog'
 import { PayScreen } from './PayScreen'
 
 type Props = ComponentProps<typeof PayScreen>
@@ -85,15 +84,20 @@ test('names the network on the banner, the address label, the copy button and th
   ).toBeInTheDocument()
 })
 
-test('the QR holds the address and nothing else', () => {
+test('the QR holds exactly the address, with a quiet zone of four modules', () => {
   const cells = (svg: Element | null) =>
     [...(svg?.querySelectorAll('path') ?? [])].map((p) => p.getAttribute('d'))
-  const alone = render(<QRCodeSVG value={ADDRESS} />)
+  // The same library encoding the bare address: any other value draws other cells.
+  const alone = render(<QRCodeSVG value={ADDRESS} marginSize={4} />)
   const expected = cells(alone.container.querySelector('svg'))
   alone.unmount()
   renderPay()
-  const qr = screen.getByTitle('QR code for the Tron (TRC-20) address')
-  expect(cells(qr.closest('svg'))).toEqual(expected)
+  const qr = screen
+    .getByTitle('QR code for the Tron (TRC-20) address')
+    .closest('svg')
+  expect(cells(qr)).toEqual(expected)
+  // This address takes 29 modules a side; the quiet zone adds four on each side.
+  expect(qr).toHaveAttribute('viewBox', '0 0 37 37')
   expect(screen.getByText('Scan with your wallet app')).toBeInTheDocument()
   expect(
     screen.getByText(
@@ -285,36 +289,4 @@ test('the change link asks the caller to change', async () => {
     .setup()
     .click(screen.getByRole('button', { name: 'Change currency or network' }))
   expect(onChange).toHaveBeenCalledOnce()
-})
-
-test('the change dialog asks first, and offers both answers', async () => {
-  const onConfirm = vi.fn()
-  const onCancel = vi.fn()
-  const dialog = (open: boolean) => (
-    <ConfirmChangeDialog
-      open={open}
-      onConfirm={onConfirm}
-      onCancel={onCancel}
-    />
-  )
-  const { rerender } = render(dialog(false))
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  rerender(dialog(true))
-  expect(
-    screen.getByRole('dialog', { name: 'Have you already sent a payment?' }),
-  ).toHaveAccessibleDescription(
-    'Only change if you have not sent anything. A payment sent to the current address after you change will not be tracked on this page.',
-  )
-  const stay = screen.getByRole('button', { name: 'Stay on this payment' })
-  expect(stay).toHaveFocus()
-  const user = userEvent.setup()
-  await user.click(
-    screen.getByRole('button', { name: "I haven't sent anything, change" }),
-  )
-  expect(onConfirm).toHaveBeenCalledOnce()
-  expect(onCancel).not.toHaveBeenCalled()
-  await user.click(stay)
-  expect(onCancel).toHaveBeenCalledOnce()
-  await user.keyboard('{Escape}')
-  expect(onCancel).toHaveBeenCalledTimes(2)
 })

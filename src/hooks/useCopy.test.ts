@@ -1,6 +1,24 @@
 import { act, renderHook } from '@testing-library/react'
+import type { SetStateAction } from 'react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { useCopy } from './useCopy'
+
+// React 19 silently drops an update to an unmounted component, so count the hook's updates to see one.
+const stateUpdates = vi.hoisted(() => ({ count: 0 }))
+vi.mock('react', async (importOriginal) => {
+  const react = await importOriginal<typeof import('react')>()
+  return {
+    ...react,
+    useState<S>(initial: S | (() => S)) {
+      const [state, setState] = react.useState(initial)
+      const counted = (next: SetStateAction<S>) => {
+        stateUpdates.count++
+        setState(next)
+      }
+      return [state, counted] as const
+    },
+  }
+})
 
 const writeText = vi.fn<(value: string) => Promise<void>>()
 
@@ -92,12 +110,30 @@ test('clears its timer on unmount', async () => {
   expect(vi.getTimerCount()).toBe(0)
 })
 
-test('starts no timer when the copy finishes after unmount', async () => {
-  let finish = () => {}
-  writeText.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)))
+test.each([
+  ['succeeds', (settle: Settle) => settle.resolve()],
+  ['fails', (settle: Settle) => settle.reject(new Error('denied'))],
+])('ignores a copy that %s after unmount', async (_, finish) => {
+  const settle = {} as Settle
+  writeText.mockReturnValue(
+    new Promise<void>((resolve, reject) =>
+      Object.assign(settle, { resolve, reject }),
+    ),
+  )
   const { result, unmount } = renderCopy()
   act(() => result.current.copy())
   unmount()
-  await act(async () => finish())
+  const before = stateUpdates.count
+  await act(async () => finish(settle))
+  expect(stateUpdates.count).toBe(before)
   expect(vi.getTimerCount()).toBe(0)
 })
+
+test('counts the updates it makes while mounted', async () => {
+  const { result } = renderCopy()
+  const before = stateUpdates.count
+  await copy(result)
+  expect(stateUpdates.count).toBe(before + 1)
+})
+
+type Settle = { resolve(): void; reject(reason: unknown): void }

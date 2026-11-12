@@ -23,15 +23,14 @@ export function QrFrame({
           />
           {`${networkName.toUpperCase()} ONLY`}
         </div>
-        <div className="bg-white p-3">
-          {/* Address only: the API gives no token contract to build a payment link from. See ADR 0004. */}
-          <QRCodeSVG
-            value={address}
-            title={`QR code for the ${networkName} address`}
-            size={208}
-            className="size-44 sm:size-52"
-          />
-        </div>
+        {/* Address only: the API gives no token contract to build a payment link from. See ADR 0004.
+            The four-module margin is the quiet zone the QR standard asks for, so the dark frame never touches the code. */}
+        <QRCodeSVG
+          value={address}
+          title={`QR code for the ${networkName} address`}
+          marginSize={4}
+          className="size-50 sm:size-58"
+        />
       </div>
       <div>
         <p className="text-base font-bold">Scan with your wallet app</p>
