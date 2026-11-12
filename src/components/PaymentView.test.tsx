@@ -103,6 +103,32 @@ test('shows a loading card before the first answer', () => {
   expect(screen.queryByRole('heading')).not.toBeInTheDocument()
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
   expect(screen.queryByText(/USDT/)).not.toBeInTheDocument()
+  expect(screen.queryByText(UNREACHABLE)).not.toBeInTheDocument()
+  expect(
+    screen.queryByText('You appear to be offline.'),
+  ).not.toBeInTheDocument()
+})
+
+// A reload during an outage has no status to show yet, but must still say why nothing arrives.
+test('the loading card says when the payment service cannot be reached', async () => {
+  const { checkout } = renderView(
+    checkoutWith(paymentResult([], { consecutiveFailures: 2 })),
+  )
+  expect(screen.getByText('Loading your payment…')).toBeInTheDocument()
+  expect(screen.getByText(UNREACHABLE)).toBeInTheDocument()
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Try now' }))
+  expect(checkout.payment.checkNow).toHaveBeenCalledOnce()
+  expect(screen.queryByText(/USDT/)).not.toBeInTheDocument()
+  expect(screen.queryByText(ADDRESS)).not.toBeInTheDocument()
+  expect(screen.queryByTitle(/QR code/)).not.toBeInTheDocument()
+})
+
+test('the loading card says when the browser is offline', () => {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+  renderView(checkoutWith(paymentResult([])))
+  expect(screen.getByText('Loading your payment…')).toBeInTheDocument()
+  expect(screen.getByText('You appear to be offline.')).toBeInTheDocument()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 
 test('the pay screen waits for the currency list', () => {

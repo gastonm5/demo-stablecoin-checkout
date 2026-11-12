@@ -65,9 +65,17 @@ export function PaymentView({
 
   function body(): ReactNode {
     if (!entry || !screen) {
+      // A reload during an outage has no status to show yet, so the notice is the only thing that says why.
       return (
-        <div className="mx-auto w-full max-w-[940px] rounded-[22px] border border-[#dfe3e8] bg-white px-8 py-7 text-center text-[15px] text-gray-600">
-          Loading your payment…
+        <div className="mx-auto w-full max-w-[940px] overflow-hidden rounded-[22px] border border-[#dfe3e8] bg-white text-[15px]">
+          <p className="px-8 py-7 text-center text-gray-600">
+            Loading your payment…
+          </p>
+          {notice && (
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-[#dfe3e8] px-5 py-3.5 text-[13.5px] md:px-8">
+              {notice}
+            </div>
+          )}
         </div>
       )
     }
