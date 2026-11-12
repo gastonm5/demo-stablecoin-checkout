@@ -20,10 +20,12 @@
 - **Timings:** poll 3 s; 15 s on `expired`; backoff doubling to 30 s; request timeout 10 s; "still working" hint at 4 s; connection notice after 2 failed polls in a row; untimed "still valid" state needs a server answer from the last 10 s.
 - **Dependencies:** only the ones in Tech Stack. Ask before adding any other.
 - **Layers:** `src/api` must not import from `src/dev` or `mock/`. Only `src/dev` calls `/__mock`.
+- **Components and hooks:** a component may hold view state that nothing else reads: a ticked box, an open dialog, an open panel. Timers, requests, subscriptions, clipboard access and anything derived from server data live in a hook or in `src/domain`.
 - **Look:** follow `docs/design/*.png`. Use `docs/design/src/*.html` for structure, spacing and exact copy, translated to Tailwind classes. Do not copy its CSS wholesale. System font. The QR in the drawings is a placeholder; the real one comes from `qrcode.react`.
 - **Tests:** test-first for `src/domain`, `src/api`, `src/hooks` and `mock/`. Tests sit beside the file they test (`x.test.ts`). No snapshot tests.
 - **Gate:** `npm run check` (lint, typecheck, tests) passes before every commit.
 - **History:** one commit per task, more if a task needs a fix. Never squash or amend. Commit as `7192634+gastonm5@users.noreply.github.com` (already set in this repo's git config). Each commit message says why and ends with a co-author line naming the model that wrote it.
+- **Commit commands:** the `git commit -m` lines in the tasks give the subject only. Add a body that says why, and the co-author line.
 - **Never commit** `docs/requirements/`.
 - **Documents:** if a task changes behaviour the design doc or an ADR describes, update that document in the same commit. If you get something wrong or a suggestion is rejected, add an entry to `docs/agent-log.md` then.
 - **Comments:** explain why, never what. No issue or PR numbers.
@@ -67,6 +69,11 @@ src/
     useCurrencies.ts catalogue query
     url.ts           order_id and payment in the URL
     useCheckout.ts   picker/payment flow, create, requote, resume
+    usePickerChoice.ts  the picker's two selections
+    useDelayedFlag.ts   true once something has lasted a given time
+    useCopy.ts          clipboard write and its feedback
+    usePaymentScreen.ts screen, connection and the check at zero for one payment
+    useFocusOnChange.ts moves focus to a heading when the screen changes
   components/
     CheckoutCard.tsx OrderHeader.tsx Picker.tsx
     PayScreen.tsx NetworkBanner.tsx QrFrame.tsx CopyButton.tsx ConfirmChangeDialog.tsx
@@ -74,6 +81,7 @@ src/
     NoticeStrip.tsx PaymentView.tsx
   dev/
     mockControl.ts   calls /__mock
+    useMockState.ts  reads the mock's state while the panel is open
     DevPanel.tsx
   test/
     setup.ts fixtures.ts
@@ -127,7 +135,7 @@ Expected: FAIL, because no test environment is configured.
 - `src/index.css`: `@import "tailwindcss";` and nothing else.
 - `src/App.tsx`: a `<main>` element with no content yet. Delete the template's demo component, assets and CSS.
 - `tsconfig.node.json`: add `"mock"` to `include`.
-- `package.json`: `"engines": { "node": ">=22" }` and these scripts:
+- `package.json`: set `engines.node` to the range the installed Vite's own `package.json` declares, and no lower than `>=22.12`. Add these scripts:
 
 ```json
 "dev": "vite",
@@ -157,6 +165,8 @@ Expected: all pass, one test.
 ```
 
 - [ ] **Step 8: Commit**
+
+Commit `package-lock.json` with it, so every later task runs against the same versions.
 
 ```bash
 git add -A && git commit -m "Scaffold the project and its gate"
@@ -234,7 +244,7 @@ export function startServer(app: import('express').Express): Promise<{ url: stri
 - Every `/api` response carries `Cache-Control: no-store`.
 - Expiry is applied on read: an `awaiting_payment` payment whose `expires_at` has passed becomes `expired` with `expired_at` equal to that `expires_at`. No other status ever expires by itself.
 - Requote from `expired`: 201, same reference, the new pair's quote, a fresh `expires_at`, status `awaiting_payment`, earlier status fields removed. From any other status: 409.
-- Errors are `application/problem+json` with `type`, `title`, `status`, `detail`:
+- Errors are `application/problem+json` with `type`, `title`, `status`, `detail`. A body that is not valid JSON must get the 422 below too, not Express's default error page, so the app needs its own error-handling middleware:
 
 | Case | Status | `type` |
 |---|---|---|
@@ -305,8 +315,22 @@ test('requote from expired keeps the reference and returns a fresh quote for the
 // expire it, requote to USDC:solana -> 201, same payment_reference, status 'awaiting_payment',
 // quote.total_due '162.732536', expires_at === t + 900_000, no expired_at
 
-test('an unknown reference is a 404 problem', ...)
-test('an unknown pair is a 422 problem', ...) // { currency: 'ETH', network: 'tron' }
+test.each([
+  ['an unknown reference', () => fetch(`${url}/api/payments/NOPE`), 404, 'payment-not-found'],
+  ['an unknown reference on requote', () => post('/api/payments/NOPE/requote', { currency: 'USDT', network: 'tron' }), 404, 'payment-not-found'],
+  ['an unknown pair', () => post('/api/payments', { order_id: 'ORD-1', currency: 'ETH', network: 'tron' }), 422, 'invalid-request'],
+  ['a missing field', () => post('/api/payments', { order_id: 'ORD-1' }), 422, 'invalid-request'],
+  ['a body that is not JSON', () => fetch(`${url}/api/payments`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{nope' }), 422, 'invalid-request'],
+])('%s is a complete problem document', async (_name, send, status, slug) => {
+  const res = await send()
+  expect(res.status).toBe(status)
+  expect(res.headers.get('content-type')).toContain('application/problem+json')
+  expect(res.headers.get('cache-control')).toBe('no-store')
+  const body = await res.json()
+  expect(body).toMatchObject({ type: `https://developers.triple-a.io/errors/${slug}`, status })
+  expect(typeof body.title).toBe('string')
+  expect(typeof body.detail).toBe('string')
+})
 ```
 
 - [ ] **Step 2: Run and see them fail**
@@ -373,7 +397,7 @@ test('underpaid on Tron uses the brief amounts', ...) // amount_received '120.00
 test('a status outside the eight is refused', ...) // 422
 test('quote lifetime applies to new quotes', ...) // settings { quote_lifetime_seconds: 30 } -> expires_at === t + 30_000
 test('the server clock offset moves expires_at', ...) // { clock_offset_seconds: 300 } -> expires_at === t + 300_000 + 900_000
-test('http_500 fails API requests with a problem body', ...) // status 500
+test('http_500 fails API requests with a complete problem document', ...) // status 500, problem content type, type ends '/internal', title and detail are strings
 test('drop closes the connection without a response', async () => {
   await expect(fetch(`${url}/api/currencies`)).rejects.toThrow()
 })
@@ -404,7 +428,7 @@ curl -s -X POST localhost:5173/__mock/settings -H 'content-type: application/jso
 curl -sS -o /dev/null -w '%{http_code}\n' localhost:5173/api/currencies; echo "curl exit $?"
 ```
 
-Expected: the first prints JSON. The last prints `000` and `curl exit 52` (empty reply). Stop the dev server.
+Expected: the first prints JSON. The last prints `000` and a curl exit code that is not 0, meaning no HTTP response arrived. Stop the dev server.
 
 If the last command prints `500` instead, stop and report it: the mock would have to run beside the dev server, which changes this task.
 
@@ -496,7 +520,10 @@ test('rejects a numeric amount inside a status', () => {
 test('maps a status it does not know to unknown', () => {
   expect(parsePayment(paymentJson({ status: 'refunded' }))).toMatchObject({ status: 'unknown', raw_status: 'refunded' })
 })
-test.each(['', 'soon', '2026-08-14', 1794503441])('rejects %p as expires_at', (bad) => {
+test.each(['2026-08-14T08:52:10.842Z', '2026-08-14T11:52:10+03:00'])('accepts %s as expires_at', (ok) => {
+  expect(parsePayment(paymentJson({}, { expires_at: ok })).quote.expires_at).toBe(ok)
+})
+test.each(['', 'soon', '2026-08-14', '2026-08-14T08:52:10', 1794503441])('rejects %p as expires_at', (bad) => {
   expect(() => parsePayment(paymentJson({}, { expires_at: bad }))).toThrow()
 })
 test('rejects a known status that is missing its fields', () => {
@@ -515,7 +542,7 @@ test('amountsToSend is the total, plus the outstanding amount on underpaid', ...
 Run: `npx vitest run src/api/schemas.test.ts src/domain/money.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement the schemas, `money.ts` and the fixtures.** Parse the base shape and the status separately: read `status` as a string, pick the matching state schema, and fall back to `{ status: 'unknown', raw_status }`. Validate `expires_at` with zod's ISO date-time check that requires an offset.
+- [ ] **Step 3: Implement the schemas, `money.ts` and the fixtures.** Parse the base shape and the status separately: read `status` as a string, pick the matching state schema, and fall back to `{ status: 'unknown', raw_status }`. Validate every timestamp field with `z.iso.datetime({ offset: true })`, which accepts `Z` and a numeric offset and rejects a time with no zone.
 
 - [ ] **Step 4: Run and see them pass**, then gate and commit
 
@@ -890,6 +917,11 @@ test('a refused requote re-reads the payment', ...) // requotePayment rejects 40
 test('a requote that fails some other way re-reads the payment too', ...) // rejects with a 'timeout' ApiError -> getPayment called again
 test('does not poll while the browser is offline, and polls at once when it returns', ...) // onlineManager.setOnline(false): advance 30 s -> 0 calls; setOnline(true) -> 1 call
 
+// useOnline.test.tsx (add `src/hooks/useOnline.test.tsx` to this task's files)
+test('starts from navigator.onLine', ...)
+test('follows the offline and online events', ...) // dispatch 'offline' -> false; 'online' -> true
+test('removes its listeners on unmount', ...) // spy on window.removeEventListener: called for both events
+
 // useNow.test.tsx
 test('ticks every second', ...)
 test('refreshes at once when the tab becomes visible', ...) // advance system time 120 s with the tab hidden, show it -> value jumps
@@ -927,7 +959,8 @@ export function readUrl(search: string): { orderId: string; reference: string | 
 export function writeReference(reference: string | null): void // history.replaceState; keeps order_id
 
 // src/hooks/useCurrencies.ts
-export function useCurrencies(): { currencies: Currency[] | undefined; isLoading: boolean; error: unknown; retry(): void }
+export type Catalogue = { currencies: Currency[] | undefined; isLoading: boolean; error: unknown; retry(): void }
+export function useCurrencies(): Catalogue // error is set only after the retries are used up
 // query key ['currencies'], staleTime: Infinity; retries twice, but never an 'http' error with a status below 500
 
 // src/hooks/useCheckout.ts
@@ -939,7 +972,7 @@ export type UseCheckoutResult = {
   reference: string | null
   view: CheckoutView
   payment: UsePaymentResult
-  submit(choice: Choice): void // creates in 'create' mode, requotes in 'requote' mode
+  submit(choice: Choice): void // creates when there is no reference, requotes when there is one
   submitting: boolean
   submitError: unknown // null when there is none
   changeChoice(): void
@@ -952,9 +985,10 @@ export function useCheckout(): UseCheckoutResult
 
 - Start: read the URL once. With a reference, the view is `payment` and `usePayment` fetches it. Without one, the picker in `create` mode.
 - `usePayment(reference)` is always mounted while a reference exists, including while the picker is open in `requote` mode.
-- `submit` in `create` mode: `createPayment({ order_id: orderId, ...choice })`. On success: `seedCreatedPayment`, set the reference, `writeReference`, view `payment`. On failure: `submitError`, the view does not change.
-- `submit` in `requote` mode: `runRequote(client, reference, choice)`. On success or on a refused requote (`isQuoteNotExpired`): view `payment`, no error. On any other failure: `submitError`.
-- `submit` does nothing while `submitting` is true.
+- `submit` decides by the reference, not by the view: with no reference it creates, and with one it requotes. The expired screen calls it while the view is `payment`, and the requote picker calls it too.
+- `submit` with no reference: `createPayment({ order_id: orderId, ...choice })`. On success: `seedCreatedPayment`, set the reference, `writeReference`, view `payment`. On failure: `submitError`, the view does not change.
+- `submit` with a reference: `runRequote(client, reference, choice)`. On success or on a refused requote (`isQuoteNotExpired`): view `payment`, no error. On any other failure: `submitError`.
+- `submit` is guarded by a ref that is set before the request starts and cleared in `finally`. A second call returns at once, even when it happens before React has re-rendered. `submitting` mirrors the ref for the UI.
 - `changeChoice`: if the payment's status is `expired`, open the picker in `requote` mode and keep the reference. Otherwise drop the reference, `writeReference(null)`, and open the picker in `create` mode. The caller is responsible for asking for confirmation first.
 - While the picker is open in `requote` mode, the view goes back to `payment` by itself as soon as the status is no longer `expired`. Derive this during render; do not sync it with an effect.
 - `cancelChange`: back to `payment` from the picker in `requote` mode.
@@ -975,7 +1009,7 @@ test('writeReference replaces the history entry and keeps order_id', ...) // his
 // useCheckout.test.tsx
 test('opens on the picker with the default order', ...)
 test('submit creates a payment for the order and the choice', ...) // createPayment called with { order_id: 'ORD-88213', currency: 'USDT', network: 'tron' }
-test('a second submit while the first is in flight is ignored', ...) // submit twice -> createPayment called once
+test('a second submit before any re-render is ignored', ...) // call submit twice inside one act() -> createPayment called once
 test('after creation it shows the payment and puts the reference in the URL', ...) // view.kind 'payment'; location.search contains 'payment=AQH-100306-PMT'; sequence startedFrom 'creation'
 test('a failed create keeps the picker and reports the error', ...)
 test('a reference in the URL resumes the payment', ...) // getPayment called with it; view 'payment'; sequence startedFrom 'reload'
@@ -986,7 +1020,8 @@ test('changing an expired quote keeps the payment and requotes', ...) // picker 
 test('the payment keeps polling while the picker is open for a requote', ...) // advance 15 s -> getPayment called again
 test('a late payment closes the picker', ...) // picker 'requote', poll answers 'detected' -> view 'payment'
 test('a refused requote goes back to the payment without an error', ...) // 409 -> view 'payment', submitError null
-test('a second requote while the first is in flight is ignored', ...)
+test('a second requote before any re-render is ignored', ...) // two submit calls inside one act() -> requotePayment called once
+test('submit from the payment view requotes the expired payment', ...) // view 'payment', status expired -> requotePayment called, createPayment not called
 test('a requote that fails reports the error and stays on the picker', ...) // 'timeout' -> submitError set, view picker 'requote'
 test('cancelChange returns to the payment', ...)
 test('the catalogue is not retried after a 4xx', ...) // getCurrencies rejects http 422 -> called once
@@ -1005,7 +1040,7 @@ npm run check && git add -A && git commit -m "Add the checkout flow: create, req
 ### Task 10: The card and the picker
 
 **Files:**
-- Create: `src/domain/format.ts`, `src/domain/format.test.ts`, `src/components/CheckoutCard.tsx`, `src/components/OrderHeader.tsx`, `src/components/Picker.tsx`, `src/components/Picker.test.tsx`
+- Create: `src/domain/format.ts`, `src/domain/format.test.ts`, `src/hooks/usePickerChoice.ts`, `src/hooks/usePickerChoice.test.ts`, `src/hooks/useDelayedFlag.ts`, `src/hooks/useDelayedFlag.test.ts`, `src/components/CheckoutCard.tsx`, `src/components/OrderHeader.tsx`, `src/components/Picker.tsx`, `src/components/Picker.test.tsx`
 
 **Interfaces:**
 - Consumes: `Currency`, `DecimalString`, `Choice`.
@@ -1019,6 +1054,21 @@ export function usualTime(seconds: number): string // 15 -> '15 s', 60 -> '1 min
 export function networkShortName(name: string): string // 'Tron (TRC-20)' -> 'Tron', 'Polygon' -> 'Polygon'
 export function formatDateTime(iso: string, locale?: string): string // medium date, short time, device time zone
 export function confirmationsLabel(count: number): string // '1 confirmation', '3 confirmations'
+
+// src/hooks/usePickerChoice.ts
+export type PickerChoice = {
+  currencyCode: string // '' when nothing is chosen
+  networkId: string // '' when nothing is chosen
+  currency: Currency | undefined
+  network: Network | undefined
+  choice: Choice | null // set only when both are chosen
+  setCurrency(code: string): void // clears the network, unless the currency has exactly one, which it selects
+  setNetwork(id: string): void
+}
+export function usePickerChoice(currencies: Currency[]): PickerChoice
+
+// src/hooks/useDelayedFlag.ts
+export function useDelayedFlag(active: boolean, delayMs: number): boolean // true once `active` has stayed true for delayMs; false again when it stops
 
 // src/components
 export function CheckoutCard(props: { left: ReactNode; right: ReactNode; strip?: ReactNode }): JSX.Element
@@ -1037,7 +1087,8 @@ export function Picker(props: {
 
 **Behaviour and copy** (layout from `docs/design/picker-proposal.png`):
 
-- `formatFiat` passes the string itself to `Intl.NumberFormat(locale, { style: 'currency', currency })`. `locale` defaults to `navigator.language`. If the formatter throws, return `` `${amount} ${currency}` ``.
+- `formatFiat` passes the string itself to `Intl.NumberFormat(locale, { style: 'currency', currency })`. `locale` defaults to `navigator.language`. If the formatter throws, return `` `${amount} ${currency}` ``. If TypeScript's declarations do not accept a string there, cast the method's signature and nothing else: `(formatter.format as (value: string) => string)(amount)`. Never convert the amount.
+- `Picker` takes its selections from `usePickerChoice` and its "Still working…" hint from `useDelayedFlag(submitting, 4000)`. It holds no state of its own.
 - `CheckoutCard`: two columns from 768 px up, one column below it with `right` after `left`; the strip spans the bottom.
 - `OrderHeader` without `merchantName` shows the label "Order" and the order id. With it, "Payment for" and the merchant name on the left, "Order {orderId}" and the fiat amount on the right, and a tile with the merchant's first letter.
 - Two native `<select>` elements, "Currency" and "Network". Nothing is selected at first. The first option of each is a disabled placeholder: "Choose currency", "Choose network". The network menu is disabled until a currency is chosen.
@@ -1059,10 +1110,10 @@ export function Picker(props: {
 // format.test.ts
 test('formats fiat for the locale', () => {
   expect(formatFiat('149.90' as DecimalString, 'EUR', 'de-DE')).toMatch(/^149,90\s€$/)
-  expect(formatFiat('149.90' as DecimalString, 'EUR', 'en-US')).toBe('€149.90')
+  expect(formatFiat('149.90' as DecimalString, 'EUR', 'en-US')).toMatch(/^€\s?149\.90$/)
 })
 test('keeps a number too long for a float exact', () => {
-  expect(formatFiat('1234567890123456.78' as DecimalString, 'EUR', 'en-US')).toBe('€1,234,567,890,123,456.78')
+  expect(formatFiat('1234567890123456.78' as DecimalString, 'EUR', 'en-US')).toMatch(/^€\s?1,234,567,890,123,456\.78$/)
 })
 test('falls back to the amount as sent when the currency code is rejected', () => {
   expect(formatFiat('149.90' as DecimalString, 'EURO', 'en-US')).toBe('149.90 EURO')
@@ -1071,6 +1122,18 @@ test.each([[15, '15 s'], [30, '30 s'], [60, '1 min'], [180, '3 min']])('usualTim
 test.each([['Tron (TRC-20)', 'Tron'], ['Ethereum (ERC-20)', 'Ethereum'], ['Polygon', 'Polygon']])('networkShortName(%s)', ...)
 test('formatUsdFee', ...) // '1.00' -> '≈ $1.00' in en-US
 test('confirmationsLabel', ...)
+
+// usePickerChoice.test.ts
+test('starts with nothing chosen', ...) // currencyCode '', networkId '', choice null
+test('choosing both gives the choice', ...) // { currency: 'USDT', network: 'tron' }
+test('changing the currency clears the network', ...)
+test('a currency with one network selects it', ...) // setCurrency('ETH') -> networkId 'ethereum', choice set
+test('ignores a network the currency does not have', ...) // USDT then setNetwork('solana') -> networkId ''
+
+// useDelayedFlag.test.ts
+test('turns true only after the delay', ...) // active true: false at 3999 ms, true at 4000 ms
+test('turns false as soon as it stops being active', ...)
+test('clears its timer on unmount and when it stops early', ...) // vi.getTimerCount() === 0
 
 // Picker.test.tsx — currencies from parseCurrencies(CURRENCIES_JSON)
 test('opens with nothing selected and the button disabled', ...) // both selects have value ''; button named 'Continue' is disabled
@@ -1082,6 +1145,7 @@ test('a currency with one network has it filled in', ...) // ETH -> network 'eth
 test('shows each network with its fee and usual time', ...) // option text 'Ethereum (ERC-20) · fee ≈ $4.50 · usually 3 min'
 test('requote mode changes the button and offers Back', ...)
 test('disables everything while submitting', ...)
+test('says it is still working after four seconds', ...) // fake timers: no 'Still working…' at 3.9 s, present at 4 s
 test('shows an error and keeps the choices', ...) // role alert; selects keep their values
 test('shows the not-found notice', ...)
 test('shows the order reference and no fiat amount', ...) // 'ORD-88213' present; no '€' anywhere
@@ -1102,7 +1166,7 @@ npm run check && git add -A && git commit -m "Add the card shell and the currenc
 ### Task 11: The pay screen
 
 **Files:**
-- Create: `src/components/NetworkBanner.tsx`, `src/components/QrFrame.tsx`, `src/components/CopyButton.tsx`, `src/components/CopyButton.test.tsx`, `src/components/ConfirmChangeDialog.tsx`, `src/components/PayScreen.tsx`, `src/components/PayScreen.test.tsx`
+- Create: `src/hooks/useCopy.ts`, `src/hooks/useCopy.test.ts`, `src/components/NetworkBanner.tsx`, `src/components/QrFrame.tsx`, `src/components/CopyButton.tsx`, `src/components/CopyButton.test.tsx`, `src/components/ConfirmChangeDialog.tsx`, `src/components/PayScreen.tsx`, `src/components/PayScreen.test.tsx`
 
 **Interfaces:**
 - Consumes: `Payment`, `Screen` (Task 7), `formatRemaining` (Task 7), `format.ts`, `CheckoutCard`, `OrderHeader` (Task 10).
@@ -1111,7 +1175,9 @@ npm run check && git add -A && git commit -m "Add the card shell and the currenc
 ```ts
 export function NetworkBanner(props: { currency: string; networkId: string; networkName: string }): JSX.Element
 export function QrFrame(props: { address: string; networkId: string; networkName: string; note: string }): JSX.Element
-export function CopyButton(props: { value: string; label: string }): JSX.Element
+export type CopyState = 'idle' | 'copied' | 'failed'
+export function useCopy(value: string): { state: CopyState; copy(): void } // src/hooks/useCopy.ts
+export function CopyButton(props: { value: string; label: string }): JSX.Element // renders from useCopy; label says what it copies
 export function ConfirmChangeDialog(props: { open: boolean; onConfirm(): void; onCancel(): void }): JSX.Element
 export function PayScreen(props: {
   payment: Payment // awaiting_payment or underpaid
@@ -1143,7 +1209,8 @@ export function PayScreen(props: {
 | `cannot_confirm` | "**We can't confirm this quote is still live.** Don't send until this page reconnects." |
 
 - If `notice` is given, it replaces the strip text. The "Change currency or network" link, when `onChange` is not null, stays at the right of the strip.
-- `CopyButton`: calls `navigator.clipboard.writeText(value)`. On success the label reads "Copied" for 2 s, in a `aria-live="polite"` element. If the clipboard is missing or the call rejects, it reads "Copy failed. Select the text and copy it." for 4 s. It never throws.
+- `useCopy`: `copy()` calls `navigator.clipboard.writeText(value)`. On success the state is `'copied'` for 2 s. If the clipboard is missing or the call rejects, it is `'failed'` for 4 s. A new `copy()` replaces the running timer, and unmounting clears it. It never throws.
+- `CopyButton` holds no state. It shows its label when idle, "Copied" when copied and "Copy failed. Select the text and copy it." when failed, in an `aria-live="polite"` element.
 - `ConfirmChangeDialog`: a native `<dialog>`. Title "Have you already sent a payment?" Body "Only change if you have not sent anything. A payment sent to the current address after you change will not be tracked on this page." Buttons "I haven't sent anything, change" and "Stay on this payment".
 
 - [ ] **Step 1: Write the failing tests**
@@ -1187,6 +1254,13 @@ test('underpaid shows the remaining amount, what arrived, and no countdown', () 
 test('underpaid copies the remaining amount', ...) // '43.69'
 test('a connection notice replaces the strip text', ...)
 
+// useCopy.test.ts
+test('is copied for two seconds, then idle', ...)
+test('is failed for four seconds when the clipboard rejects', ...)
+test('is failed when there is no clipboard, and does not throw', ...)
+test('a second copy replaces the first timer', ...) // copy, 1.5 s, copy, 1.5 s -> still 'copied'; vi.getTimerCount() === 1
+test('clears its timer on unmount', ...) // vi.getTimerCount() === 0
+
 // CopyButton.test.tsx
 test('says Copied, then goes back to its label', ...) // fake timers: 'Copied' then after 2 s the label
 test('says copying failed when the clipboard rejects', ...) // writeText rejects -> 'Copy failed. Select the text and copy it.'
@@ -1206,7 +1280,7 @@ npm run check && git add -A && git commit -m "Add the pay screen with the networ
 ### Task 12: Status screens, the notice strip and the page
 
 **Files:**
-- Create: `src/components/WaitingScreen.tsx`, `CompleteScreen.tsx`, `ExpiredScreen.tsx`, `FailedScreen.tsx`, `CheckingScreen.tsx`, `NoticeStrip.tsx`, `PaymentView.tsx`, and `src/components/StatusScreens.test.tsx`, `NoticeStrip.test.tsx`, `PaymentView.test.tsx`
+- Create: `src/hooks/usePaymentScreen.ts`, `src/hooks/usePaymentScreen.test.tsx`, `src/hooks/useFocusOnChange.ts`, `src/components/WaitingScreen.tsx`, `CompleteScreen.tsx`, `ExpiredScreen.tsx`, `FailedScreen.tsx`, `CheckingScreen.tsx`, `NoticeStrip.tsx`, `PaymentView.tsx`, and `src/components/StatusScreens.test.tsx`, `NoticeStrip.test.tsx`, `PaymentView.test.tsx`
 - Modify: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`
 
 **Interfaces:**
@@ -1229,7 +1303,21 @@ export function FailedScreen(props: { payment: Payment; screen: Extract<Screen, 
 export function CheckingScreen(props: { payment: Payment }): JSX.Element
 export function reasonText(reason: string): string
 export function connectionNotice(connection: Connection, onTryNow: () => void): ReactNode | null
-export function PaymentView(props: { checkout: UseCheckoutResult; currencies: Currency[] | undefined }): JSX.Element
+export function PaymentView(props: { checkout: UseCheckoutResult; catalogue: Catalogue }): JSX.Element
+
+// src/hooks/usePaymentScreen.ts
+export type PaymentScreenState = {
+  entry: PaymentEntry | undefined
+  screen: Screen | null // null until the first answer
+  connection: Connection
+  detailsProblem: boolean // the pay screen cannot show its amount: the catalogue failed, lacks the quote's currency, or an amount does not fit
+  money: SequenceEntry | undefined // lastMoney of the sequence
+  usualSeconds: number | undefined // from the catalogue entry for the quote's currency and network
+}
+export function usePaymentScreen(payment: UsePaymentResult, catalogue: Catalogue): PaymentScreenState
+
+// src/hooks/useFocusOnChange.ts
+export function useFocusOnChange<T extends HTMLElement>(key: string): React.RefObject<T | null> // focuses the element when `key` changes, not on first mount
 ```
 
 **Shared rules:**
@@ -1237,14 +1325,14 @@ export function PaymentView(props: { checkout: UseCheckoutResult; currencies: Cu
 - Every screen uses `CheckoutCard` with `OrderHeader` (merchant and fiat) at the top of the left column, facts in the left column as label and value rows, and the headline with its icon in the right column.
 - Each screen's headline is an `<h2 tabIndex={-1}>`.
 - None of these screens renders the address or a QR.
-- The payment reference and the transaction hash are shown in full with a "Copy" button each.
+- Every status screen has a Reference row, and a Transaction row whenever the payment or the `money` entry carries a `tx_hash`. Both values are shown in full. Their buttons are labelled "Copy payment reference" and "Copy transaction hash".
 - `connectionNotice` is exported from `NoticeStrip.tsx`. It returns `null` for `'ok'`. When it is not null, it replaces the screen's own strip text.
 
 **Copy** (layout from `docs/design/status-screens-proposal.png`):
 
 | Screen | Left column | Right column | Strip |
 |---|---|---|---|
-| `waiting` | "Payment seen", `{amount_received} {currency}`; rows Network, Transaction, and "Seen at" when `detected_at` exists | "We've seen your payment" · "Waiting for the network to confirm it. You don't need to send anything else." · "Confirmations" with "{confirmations} of {required_confirmations}" and a bar · "Usually about {usualTime} on {short}." when `usualSeconds` is given | "This page updates by itself." |
+| `waiting` | "Payment seen", `{amount_received} {currency}`; rows Network, Transaction, and "Seen at" when `detected_at` exists | "We've seen your payment on the network" · "Waiting for it to be confirmed. You don't need to send anything else." · "Confirmations" with "{confirmations} of {required_confirmations}" and a bar · "Usually about {usualTime} on {short}." when `usualSeconds` is given | "This page updates by itself." |
 | `complete`, paid | "Paid", `{amount_received} {currency}`; rows Network, Transaction, Reference, Settled | "Payment complete" · "{merchant} has your payment for order {orderId}." | "Nothing more to do. You can close this page." |
 | `complete`, overpaid | "Received", `{amount_received} {currency}`; rows "Amount due" `{total_due}`, "Extra sent" `{amount_excess}`, Network, Reference | "Payment complete" · notice "**You sent {amount_excess} {currency} more than was due.** This page can't return the extra amount. Contact {merchant} and quote reference {reference}." | "Your order is paid. Nothing more to send." |
 | `expired`, plain | "Expired quote", `{total_due} {currency}` greyed; rows Network, "Expired at", Address "Hidden, so nothing more is sent to it" | "This quote has expired" · "**Already sent?** Do not send again. We are still watching for your payment." · checkbox "I have not sent a payment" · button "Get a new quote" | "Still checking for a late payment." and the link "Change currency or network" |
@@ -1263,18 +1351,25 @@ export function PaymentView(props: { checkout: UseCheckoutResult; currencies: Cu
 
 **`PaymentView`:**
 
+**`usePaymentScreen`** owns everything that is not rendering:
+
+- `amountsChecked` is true when the catalogue is loaded, the quote's currency is in it, and every `amountsToSend(payment)` passes `fitsDecimals`.
+- `detailsProblem` is true when the status is `awaiting_payment` or `underpaid` and one of these holds: the catalogue has an `error`; it is loaded but lacks the quote's currency; or an amount does not fit. While the catalogue is still loading it is false.
+- `screen` is `deriveScreen(...)` with `useNow()`. `connection` is `deriveConnection(useOnline(), consecutiveFailures)`.
+- The check at zero: call `payment.checkNow()` once per quote, the first time that quote's device-clock deadline has passed while the status is `awaiting_payment`. Key it by `quote.expires_at`, so a re-render never repeats it and a new quote gets its own.
+
+**`PaymentView`:**
+
 - With no entry yet: a loading card, "Loading your payment…", and nothing else.
-- Compute `amountsChecked`: `currencies` is loaded, the quote's currency is found in it, and every `amountsToSend(payment)` passes `fitsDecimals`. If the list is loaded and an amount does not fit, treat it as an invalid response: show the `unreachable` notice and the `pay_loading` state.
-- Call `deriveScreen` with `useNow()`, and `deriveConnection(useOnline(), consecutiveFailures)`.
-- `pay_loading`: the card with `OrderHeader` and "Loading the payment details…". No amount, no address, no QR.
-- When the `pay` clock first becomes `'checking'`, call `checkout.payment.checkNow()` once. This is the check at zero.
+- `pay_loading` without a details problem: the card with `OrderHeader` and "Loading the payment details…". No amount, no address, no QR.
+- `pay_loading` with a details problem: "We couldn't load the payment details." and a "Try again" button that calls `catalogue.retry()` and `checkout.payment.checkNow()`. No amount, no address, no QR. Status-only screens are never replaced by this.
 - "Change currency or network" on the pay screen opens `ConfirmChangeDialog`; confirming calls `checkout.changeChoice()`. On the expired screens it calls `changeChoice()` directly.
 - `onRequote` calls `checkout.submit` with the current quote's currency and network. `requoting` and `error` come from `checkout.submitting` and `checkout.submitError`.
-- `money` for the dead ends and for `failed` is `lastMoney` of the sequence.
-- `usualSeconds` comes from the catalogue entry for the quote's currency and network.
-- Announce the headline of the current screen in one `aria-live="polite"` region, and move focus to the new headline when the screen kind changes.
+- Whether the confirm dialog is open is the one piece of state `PaymentView` holds.
+- Announce the headline of the current screen in one `aria-live="polite"` region, and move focus to the new headline with `useFocusOnChange(screen.kind)`.
+- `ExpiredScreen` holds whether its box is ticked. That is view state.
 
-**`App`:** creates one `QueryClient`, provides it, calls `useCheckout` and `useCurrencies`, and renders the picker or `PaymentView` inside `<main>`. While the catalogue loads on the picker: "Loading payment options…". If it fails after its retries: "We couldn't load the payment options." with a "Try again" button.
+**`App`:** creates one `QueryClient`, provides it, calls `useCheckout` and `useCurrencies`, and renders the picker or `PaymentView` inside `<main>`, passing the whole `Catalogue` to `PaymentView`. While the catalogue loads on the picker: "Loading payment options…". If it fails after its retries: "We couldn't load the payment options." with a "Try again" button.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1306,7 +1401,9 @@ test('overpaid tells the truth about the extra', () => {
   expect(document.body.textContent).not.toMatch(/refund/i)
 })
 test('paid shows the amount, the reference and the settled time', ...)
-test('detected says seen, not received', ...) // "We've seen your payment"; '0 of 1'; body text does not match /received|complete/i
+test('detected says seen on the network, not received', ...) // "We've seen your payment on the network"; '0 of 1'; body text does not match /received|complete/i
+test('every status screen shows the full reference with a labelled copy button', ...) // each screen: 'AQH-100306-PMT' and a button named 'Copy payment reference'
+test('shows the transaction hash wherever the payment has one', ...) // detected, paid, overpaid, expired dead end: '9d1f4c8a2be7...' and 'Copy transaction hash'
 test('confirming shows its progress', ...) // '2 of 3'
 test.each([['yes', /We saw your payment/], ['no', /The settlement was rejected/], ['unknown', /If you sent any funds/]])('failed, money %s', ...)
 test('failed has no button and shows the reason code', ...) // no button except the Copy buttons; 'Reason code: settlement_rejected'
@@ -1319,12 +1416,28 @@ test('offline', ...) // 'You appear to be offline.'
 test('unreachable offers Try now', ...) // click -> onTryNow called
 test('never says the payment is safe or unaffected', ...) // neither notice matches /unaffected|safe/i
 
-// PaymentView.test.tsx — checkout built from a fake UseCheckoutResult
+// usePaymentScreen.test.tsx — payment built from a fake UsePaymentResult
+test('asks the server once when the countdown reaches zero', ...) // advance the clock past expires_at -> checkNow called exactly once
+test('does not ask again on later renders of the same quote', ...) // advance 30 s more -> still once
+test('a new quote gets its own check at zero', ...) // new expires_at, advance past it -> twice in total
+test('does not ask at zero for a status with no clock', ...) // underpaid past the old deadline -> never called
+test('a failed catalogue is a details problem for a pay status only', ...) // awaiting_payment -> true; detected -> false
+test('a catalogue without the quote currency is a details problem', ...)
+test('an amount with too many decimal places is a details problem', ...) // total_due '163.1234567', USDT decimals 6
+test('a catalogue that is still loading is not a problem yet', ...)
+
+// PaymentView.test.tsx — checkout built from a fake UseCheckoutResult, catalogue from a fake Catalogue
 test('shows a loading card before the first answer', ...)
-test('the pay screen waits for the currency list', ...) // currencies undefined, awaiting_payment -> 'Loading the payment details…'; no '163.69'; no address
-test('a status screen does not wait for the currency list', ...) // currencies undefined, detected -> "We've seen your payment"
-test('an amount with too many decimal places is not shown', ...) // total_due '163.1234567' with USDT decimals 6 -> no '163.1234567' in the document
-test('asks the server once when the countdown reaches zero', ...) // advance past expires_at -> checkNow called exactly once
+test('the pay screen waits for the currency list', ...) // catalogue loading, awaiting_payment -> 'Loading the payment details…'; no '163.69'; no address
+test('a status screen does not wait for the currency list', ...) // catalogue loading, detected -> "We've seen your payment on the network"
+test('a failed catalogue offers Try again and shows no amount', ...) // click -> catalogue.retry and checkNow called; no '163.69'; no address
+test('an amount with too many decimal places is not shown', ...) // no '163.1234567' in the document
+test.each([
+  ['a live quote keeps its address when polls fail', 'awaiting_payment', 'before the deadline', true],
+  ['underpaid keeps its address when polls fail', 'underpaid', 'any time', true],
+  ['a quote past its deadline hides its address when polls fail', 'awaiting_payment', 'after the deadline', false],
+])('%s', ...) // consecutiveFailures 2, lastFailureAt after lastSuccessAt: the unreachable notice shows, and the address is present or absent as given
+test('a live quote keeps its address while the browser is offline', ...)
 test('keeps the last status and adds the notice when polls fail', ...) // consecutiveFailures 2 -> the waiting screen and 'We can\'t reach the payment service.'
 test('changing a live quote asks first', ...) // click 'Change currency or network' -> dialog; confirm -> changeChoice called
 test('announces a new status and moves focus to its headline', ...) // rerender with 'paid' -> live region text 'Payment complete'; document.activeElement is the h2
@@ -1358,7 +1471,7 @@ npm run check && git add -A && git commit -m "Add the status screens, the connec
 ### Task 13: The dev panel
 
 **Files:**
-- Create: `src/dev/mockControl.ts`, `src/dev/DevPanel.tsx`, `src/dev/DevPanel.test.tsx`
+- Create: `src/dev/mockControl.ts`, `src/dev/mockControl.test.ts`, `src/dev/useMockState.ts`, `src/dev/useMockState.test.tsx`, `src/dev/DevPanel.tsx`, `src/dev/DevPanel.test.tsx`
 - Modify: `src/App.tsx`
 
 **Interfaces:**
@@ -1369,9 +1482,12 @@ npm run check && git add -A && git commit -m "Add the status screens, the connec
 // src/dev/mockControl.ts
 export type MockSettings = { quote_lifetime_seconds: number; delay_ms: number; fault: 'none' | 'http_500' | 'drop'; clock_offset_seconds: number }
 export type MockState = { settings: MockSettings; payments: Array<{ payment_reference: string; status: string; quote: { expires_at: string } }> }
-export function getMockState(): Promise<MockState>
+export function getMockState(signal?: AbortSignal): Promise<MockState>
 export function setMockStatus(reference: string, status: string, confirmations?: number): Promise<void>
 export function updateMockSettings(patch: Partial<MockSettings>): Promise<MockSettings>
+
+// src/dev/useMockState.ts
+export function useMockState(open: boolean): { state: MockState | undefined; refresh(): void }
 
 // src/dev/DevPanel.tsx
 export function DevPanel(props: { reference: string | null }): JSX.Element
@@ -1379,10 +1495,12 @@ export function DevPanel(props: { reference: string | null }): JSX.Element
 
 **Behaviour** (layout from `docs/design/dev-panel-proposal.png`):
 
-- `mockControl.ts` uses plain `fetch` on `/__mock`. It does not go through `src/api`.
+- `mockControl.ts` calls `/__mock` through its own small helper, not through `src/api`. The helper follows the request rules: a 10 s timeout, an abort signal, and `cache: 'no-store'`.
+- `useMockState` reads the state while `open` is true: once at once, then 2 s after each read settles, so reads never overlap. Closing the panel or unmounting aborts the read in flight and clears the timer. `refresh()` reads at once.
+- `DevPanel` holds only whether it is open.
 - Collapsed at first: a narrow tab on the right edge labelled "DEV". Clicking it opens the panel; "hide" collapses it.
 - Open: docked on the right, 330 px wide, dark background, monospaced. In `App`, the page and the panel sit in a flex row so the panel pushes the card aside. Under 900 px wide it lies over the page instead.
-- While open it reads `getMockState()` every 2 s and after every action.
+- While open it shows `useMockState(open).state` and calls `refresh()` after every action.
 - Sections:
   - **Current payment:** the reference; the server's status from the mock state; "expires in" using `formatRemaining`; and "seen:" followed by the statuses in the page's sequence for that reference, joined with " → ", read from the query cache with `paymentKey`.
   - **Set status:** eight buttons named by status. The one matching the server's status is highlighted. A stepper "confirmations − n +" that calls `setMockStatus(reference, 'confirming', n)`.
@@ -1404,7 +1522,17 @@ test.each([['30 s', { quote_lifetime_seconds: 30 }], ['15 s', { delay_ms: 15_000
   'the %s button updates the settings', ...)
 test('shows the statuses the page has seen', ...) // cache seeded with awaiting_payment -> underpaid: 'awaiting_payment → underpaid'
 test('disables the status buttons when there is no payment', ...)
-test('stops reading the mock state when collapsed or unmounted', ...) // fake timers: no getMockState calls after collapse
+test('refreshes the state after an action', ...)
+
+// useMockState.test.tsx
+test('reads at once when opened, then two seconds after each read settles', ...)
+test('never has two reads in flight', ...) // hold a read open for 10 s -> getMockState called once
+test('aborts the read in flight and stops when closed', ...) // signal.aborted true; advance 10 s -> no call; vi.getTimerCount() === 0
+test('aborts and stops on unmount', ...)
+
+// mockControl.test.ts
+test('sends no-store and an abort signal', ...) // fetch called with { cache: 'no-store', signal: expect.any(AbortSignal) }
+test('gives up after ten seconds', ...)
 ```
 
 - [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/dev`. Expected: FAIL.

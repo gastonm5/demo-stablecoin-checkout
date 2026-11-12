@@ -78,3 +78,20 @@ Codex read the revised documents once more. This was the second and last pass on
 ### What Codex raised that I deferred
 
 - **Money seen, then forgotten.** Two paths still lead to a new quote after the page has seen money: a status that goes backwards and then expires, and a reload, which restarts the status sequence. Both sit behind the "I have not sent a payment" tick box. I approved the design with these as known limits and listed the fixes as follow-ups in the design doc.
+
+## 12 Nov 2026: the plan
+
+The agent wrote the task plan from the approved design. Two checks ran before any code was written.
+
+### What the agent's own pre-flight check caught
+
+- **A requote that would have created a second payment.** The plan made "create or requote" depend on which screen was showing. But "Get a new quote" is pressed on the expired screen, where the plan would have chosen "create". The rule is now simple: a payment that already exists is requoted, and a new one is created only when there is none.
+
+### What Codex caught in the plan
+
+Codex raised fourteen points and all of them held up. The four that mattered most:
+
+- **A double-click guard that did not guard.** The plan stopped a second write by checking React state, which is still stale when two clicks land before a re-render. It is now a latch set synchronously before the request starts.
+- **Behaviour inside components.** The plan put timers, clipboard access and effects in components, against this repo's own rule that components render and hooks own behaviour. The plan now names a hook for each, and `AGENTS.md` says exactly what a component may hold: view state nothing else reads.
+- **A pay screen that could load forever.** After a reload, if the currency list failed to load, the pay screen had no way to tell "still loading" from "failed" and no retry.
+- **Copy buttons that did not say what they copy.** The status screens had buttons labelled just "Copy", against the rule that a copy button names what it copies.
