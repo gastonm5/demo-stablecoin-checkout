@@ -10,6 +10,7 @@ import {
 import { useDelayedFlag } from '../hooks/useDelayedFlag'
 import { usePickerChoice } from '../hooks/usePickerChoice'
 import { CheckoutCard } from './CheckoutCard'
+import { NetworkChip } from './NetworkChip'
 import { OrderHeader } from './OrderHeader'
 
 const STILL_WORKING_AFTER_MS = 4_000
@@ -18,12 +19,6 @@ const label = 'mb-1.5 block text-xs font-semibold text-gray-500'
 const note = 'text-[13.5px] text-gray-500'
 const menu =
   'w-full rounded-xl border-[1.5px] border-[#dfe3e8] bg-white px-3.5 py-3 font-bold disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500'
-
-// The colours the agreed drawings give; a network they do not draw gets a neutral chip.
-const chipColour: Record<string, string> = {
-  tron: 'bg-[#ff060a]',
-  ethereum: 'bg-[#627eea]',
-}
 
 export function Picker({
   orderId,
@@ -130,12 +125,11 @@ export function Picker({
               <div>
                 <div className={label}>You are paying with</div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#14161a] py-1.5 pr-3.5 pl-1.5 text-sm font-bold text-white">
-                  <span
-                    aria-hidden="true"
-                    className={`flex size-[26px] shrink-0 items-center justify-center rounded-full text-[13px] font-extrabold ${chipColour[network.id] ?? 'bg-gray-500'}`}
-                  >
-                    {network.name[0]}
-                  </span>
+                  <NetworkChip
+                    networkId={network.id}
+                    networkName={network.name}
+                    className="size-[26px] text-[13px]"
+                  />
                   <span>{`${currency.code} on ${network.name}`}</span>
                 </div>
               </div>
