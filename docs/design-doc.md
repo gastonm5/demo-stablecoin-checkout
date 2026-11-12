@@ -1,6 +1,6 @@
 # Stablecoin Checkout: design doc
 
-**Status:** written before the build on 12 Nov 2026 and revised the same day after two reviews. I will revise it again when the build is done so it describes what exists. The decisions with a real trade-off are in [`adr/`](adr/).
+**Status:** written before the build on 12 Nov 2026, revised the same day after two reviews, and revised again after the build so that it describes what exists. Where the build departed from the first design, the text says so. The decisions with a real trade-off are in [`adr/`](adr/).
 
 ## 1. What this is
 
@@ -30,6 +30,8 @@ The page has three screens inside one card. The card keeps the same shape throug
 | Status | Every other status | [`design/status-screens-proposal.png`](design/status-screens-proposal.png) |
 
 ![Pay screen](design/pay-screen-proposal.png)
+
+The drawings are the designs I agreed before the build, and they are kept as agreed. Two details changed while building: the pay screen has no bar under the countdown (section 5), and the dev panel has no live readout (section 8).
 
 **Choose first, then quote.** The page opens on the picker with nothing selected. No payment exists and no clock runs. Only when the shopper presses "Continue with USDT on Tron" does the page call `POST /api/payments` and show an address.
 
@@ -155,19 +157,24 @@ flowchart LR
     URL["URL: order_id, payment"] --> UC["useCheckout"]
     UC --> PK["Picker"]
     UC --> PV["PaymentView"]
-    PV --> UP["usePayment: poll + status sequence"]
-    UP --> DS["deriveScreen (pure)"]
-    CD["useCountdown: device clock"] --> DS
-    CN["connection state"] --> DS
+    UC --> UP["usePayment: poll + status sequence"]
+    UP --> PS["usePaymentScreen"]
+    PV --> PS
+    NOW["useNow: device clock"] --> PS
+    ON["useOnline: connection"] --> PS
+    CUR["useCurrencies"] --> PS
+    PS --> DS["deriveScreen (pure)"]
     DS --> SC["Pay / status screens + notice strip"]
-    PK -- "create payment" --> API
-    SC -- "requote" --> API
+    PK -- "choice" --> UC
+    SC -- "new quote" --> UC
+    UC -- "create, requote" --> API
     UP <--> API["src/api: fetch, timeout, zod"]
+    CUR <--> API
     API <--> MOCK["Express mock: /api"]
     DP["DevPanel"] <--> CTRL["Express mock: /__mock"]
 ```
 
-Data moves one way. A server response is validated, stored in the query cache with the status sequence, turned into a screen by a pure function, and rendered. Shopper actions go back out as two writes, create and requote, whose responses re-enter by the same path.
+Data moves one way. A server response is validated, stored in the query cache with the status sequence, turned into a screen by a pure function, and rendered. Shopper actions go back out through `useCheckout` as two writes, create and requote, whose responses re-enter by the same path.
 
 ### 4.1 Layers
 
@@ -175,8 +182,8 @@ Data moves one way. A server response is validated, stored in the query cache wi
 |---|---|---|
 | `src/api` | Request functions, timeouts, zod schemas | The only code that talks to the server or validates a response's shape |
 | `src/domain` | Status groups, `deriveScreen`, the status sequence, countdown maths, the amount guard | Pure functions, no React, no I/O |
-| `src/hooks` | `useCheckout`, `usePayment`, `useCurrencies`, `useCountdown` | Own all behaviour and timing |
-| `src/components` | The card, picker, pay screen, status screens, strip | Render only |
+| `src/hooks` | `useCheckout`, `usePayment`, `usePaymentScreen`, `useCurrencies`, `useNow`, `useOnline`, and small ones for the picker's selection, copying and the dialog | Own all behaviour and timing |
+| `src/components` | The card, picker, pay screen, status screens, strip | Render only. A component may keep view state that nothing else reads, such as a ticked box or an open dialog |
 | `src/dev` | The dev panel | The only code that knows the mock exists |
 | `mock/` | The Express app, fixtures, control endpoints | |
 
@@ -185,8 +192,10 @@ Data moves one way. A server response is validated, stored in the query cache wi
 | State | Lives in | Why |
 |---|---|---|
 | Payment, currencies, status sequence | TanStack Query cache | It is server data, or derived from it at the boundary |
-| Selected currency and network, which screen | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
+| Selected currency and network | React state in `usePickerChoice` | It belongs to the picker and nothing else reads it |
+| Whether the picker is open for a new quote, a write in progress and its error | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
 | Payment reference, order id | The URL | So a refresh resumes |
+| A ticked box, an open dialog, the open dev panel | React state in that component | View state that nothing else reads |
 | Which screen to show, connection notice, time left | Not stored | Derived on every render |
 
 There is no state library and no state machine library. A client state machine would model transitions the page does not own: the server drives every one of them, and the page only maps the latest answer to a screen.
@@ -208,6 +217,7 @@ Further rules:
 - A 4xx with a problem body is an answer, not an outage. It is not retried.
 - A requote that returns 409 `quote-not-expired` makes the page re-read the payment and show what the server says.
 - A response that fails validation counts as a failed request.
+- An answer must be about what was asked. A payment with another reference, another order or another pair than the request named is rejected in the same way as a malformed one. The whole-branch review found this missing; section 9 states the one case it cannot cover.
 - Every API request bypasses the HTTP cache (`cache: 'no-store'`), and the mock sends `Cache-Control: no-store`. A cached `awaiting_payment` must never stand in for a fresh one.
 
 ### 4.4 Polling
@@ -285,7 +295,9 @@ Errors are `application/problem+json` with `type`, `title`, `status` and `detail
 
 ## 5. How the countdown stays correct
 
-**It is never a counter.** The page does not subtract one each second. Every tick recomputes `expires_at` minus the device clock. A browser throttles or suspends timers in a hidden tab, so a counter would fall behind by however many ticks it missed. A recomputed value cannot drift: the first tick after the tab returns shows the right time, whether the tab was hidden for two minutes or the laptop slept for an hour.
+**It is never a counter.** The page does not subtract one each second. Every tick recomputes `expires_at` minus the device clock. A browser throttles or suspends timers in a hidden tab, so a counter would fall behind by however many ticks it missed. A recomputed value cannot drift: the first tick after the tab returns shows the right time, whether the tab was hidden for two minutes or the laptop slept for an hour. The time is rounded up to the next second, so `0:00` appears only when no time is left.
+
+**No bar under the time.** The agreed drawing has a progress bar under the countdown. A bar needs the quote's full lifetime, and the API gives only its deadline, so the build shows the time alone.
 
 **The tab returning is an event.** When the tab becomes visible again, the page recomputes at once and polls at once, so the shopper never acts on a stale screen.
 
@@ -384,14 +396,14 @@ While the connection is down, the address and QR **stay visible** on `underpaid`
 
 ### 7.4 Shopper safety on the pay screen
 
-- **The network is named five times:** in the banner at the top, in the address label, on the copy button ("Copy Tron address"), on the frame around the QR, and in the picker's button before any of that ("Continue with USDT on Tron").
+- **The network is named in six places:** on the picker's button before any address appears ("Continue with USDT on Tron"), in the pay screen's heading, in the banner under it, in the address label, on the copy button ("Copy Tron address"), and on the frame around the QR.
 - **The QR holds the address only.** An Ethereum address and a Polygon address look identical, so the QR itself carries no network information, and a wallet that scans it learns nothing about the network. That is a real limit of this design. The frame around the QR names the network, and the step that stands in for a machine-readable network is the picker's button, which the shopper presses with the network named on it immediately before the address appears.
 - **A hint for the commonest cause of underpayment:** "Sending from an exchange? Make sure 163.69 USDT arrives after its withdrawal fee."
 - **Nothing is preselected in the picker,** and changing the currency clears the network, so the network is always chosen on purpose.
 
 ## 8. The mock and the dev panel
 
-The mock is a small Express app mounted inside the dev server, so `npm run dev` starts one process on one port. It keeps payments in memory.
+The mock is a small Express app mounted inside the dev server, so `npm run dev` starts one process on one port. `npm run preview` mounts it too. It keeps payments in memory, so restarting the server forgets them.
 
 **What it does:**
 
@@ -415,6 +427,14 @@ The mock is a small Express app mounted inside the dev server, so `npm run dev` 
 The offline notice is tested with the browser's own offline switch.
 
 The panel is docked on the right and pushes the card aside instead of covering it, so a reviewer can change a status and watch the page react. It starts collapsed.
+
+What the build changed from the drawing:
+
+- **No live readout.** The drawing shows the mock's status and time left, refreshed every two seconds. I cut it before the panel was built, because it needed its own polling loop to show what the checkout page beside it already shows. The panel shows the open payment's reference and the statuses the page has seen, taken from the page's own data. It reads the mock's settings once each time it opens, so its buttons match the mock after a reload.
+- **A failed command shows nothing in the panel.** The checkout page beside it already reports a payment the server does not know.
+- **It is in every build.** The mock is too. A real deployment would have neither.
+
+After `paid`, `overpaid` or `failed` the page has stopped asking the server (3.7), so a status set from the panel after that shows only after a reload.
 
 ## 9. Assumptions and open questions
 
@@ -447,6 +467,9 @@ Things I left out on purpose, and what each would need:
 - **Full resume after a reload.** The status sequence restarts on reload, so the page forgets that money was seen. Keeping the sequence in session storage would restore the exact wording, and even a single stored "money was seen" flag per payment would close the gap on the same device. ([ADR 0005](adr/0005-resume-from-url-reference.md))
 - **Making "money was seen" permanent for a quote.** Today a quote that goes `detected`, back to `awaiting_payment`, then `expired` offers a new quote behind the tick box. Treating it as a dead end would be stricter, at the cost of the dropped-transaction path.
 - **A new quote after a partial payment.** Needs the backend to define what happens to funds already sent.
+- **Checking every poll against the shopper's choice.** Needs the choice to survive a reload (section 9).
+- **A bar under the countdown.** Needs the quote's lifetime or start time in the response.
+- **A live readout and error messages in the dev panel.**
 - **Browser end-to-end tests.**
 - **A mock script that advances a payment by itself.** The dev panel's status buttons already reach every state.
 
@@ -457,7 +480,7 @@ These were not discussed one by one. I set them while writing this document, and
 - **Timings:** poll every 3 s, 15 s on `expired`, backoff doubling to 30 s, request timeout 10 s, "still working" hint at 4 s, connection notice after two failed polls in a row.
 - **Order id:** read from `?order_id=` in the URL, falling back to `ORD-88213` so the page runs with no setup.
 - **Exchange rate:** shown under the amount, exactly as sent ("1 USDT = 0.9214 EUR").
-- **Going back from a live quote:** a native dialog. "Have you already sent a payment? Only change if you have not sent anything."
+- **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens, and focus returns to the link when it closes.
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".
 - **`expired` straight after `detected` or `confirming`:** this should not happen on a real server, but the dev panel can force it. It gets the same dead end as after a partial payment, with the headline "This payment expired".
 - **Picker menus:** the browser's own, with the fee and usual time in each option's text. A currency with one network (ETH) has it filled in.
@@ -469,9 +492,9 @@ These were not discussed one by one. I set them while writing this document, and
 - **Tools:** Vite, React and TypeScript in strict mode; Tailwind; TanStack Query; zod; `qrcode.react` for the QR; Express for the mock; Vitest and React Testing Library; ESLint and Prettier; npm.
 - **Browsers:** current Chrome, Safari, Firefox and Edge.
 
-Checked during the build: a dropped connection from the mock mounted in the dev server arrives as no HTTP response at all, not as a 500. Through `npm run dev`, `curl` printed status `000` and exited with code 52 ("Empty reply from server"). Node's `fetch` rejects on it in the mock's tests. I have not watched it in a browser.
+Checked during the build: a dropped connection from the mock mounted in the dev server arrives as no HTTP response at all, not as a 500. Through `npm run dev`, `curl` printed status `000` and exited with code 52 ("Empty reply from server"). Node's `fetch` rejects on it in the mock's tests. In a browser, with the mock set to drop, the page kept the last status, showed the notice after two failed polls, sent exactly one request for "Try now", and recovered by itself once the fault was switched off.
 
-Checked during the build: TanStack Query never starts a second request for a payment while one is in flight. The polling test holds a request open and fires every trigger at it: ten seconds of interval ticks, "Check now" twice, the tab hidden and shown, and the browser going offline and back. The seven fetches those triggers made all joined the open request, and no more than one request was ever in flight.
+Checked during the build: TanStack Query never starts a second request for a payment while one is in flight. The polling test holds a request open and fires every trigger at it: ten seconds of interval ticks, a manual check twice, the tab hidden and shown, and the browser going offline and back. The seven fetches those triggers made all joined the open request, and no more than one request was ever in flight.
 
 Checked during the build: TypeScript's typings do not accept the amount string in the number formatter without a cast. TypeScript 6.0 types `Intl.NumberFormat.format` as taking a number, a bigint or a `${number}` literal type, and a validated decimal string is a branded `string`, so it is rejected. `formatFiat` casts the method's signature and nothing else, and passes the string unchanged. Node formats it exactly, and a test checks that `1234567890123456.78` comes through with every digit.
 
