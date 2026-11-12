@@ -1,6 +1,7 @@
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { act, cleanup, renderHook } from '@testing-library/react'
+import { useLayoutEffect, useRef } from 'react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { ApiError } from '../api/client'
 import {
@@ -179,6 +180,28 @@ test('a submit after the create answered but before it rendered is ignored', asy
   expect(createPayment).toHaveBeenCalledTimes(1)
   expect(requotePayment).not.toHaveBeenCalled()
   expect(result.current.reference).toBe(REFERENCE)
+})
+
+test('a submit in the commit that mounts the hook keeps the latch held', async () => {
+  const create = held<Payment>()
+  vi.mocked(createPayment).mockReturnValue(create.promise)
+  const { result } = renderHook(
+    () => {
+      const checkout = useCheckout()
+      const sent = useRef(false)
+      // After the commit, before the passive effects flush: where a browser can deliver a click.
+      useLayoutEffect(() => {
+        if (sent.current) return
+        sent.current = true
+        checkout.submit(CHOICE)
+      })
+      return checkout
+    },
+    { wrapper: withClient(client) },
+  )
+  await fire(() => result.current.submit(CHOICE))
+  expect(createPayment).toHaveBeenCalledTimes(1)
+  await fire(() => create.answer(awaiting))
 })
 
 // A write that settles at once batches submitting's true and false into one render.

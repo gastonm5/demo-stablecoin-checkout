@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPayment, isNotFound, isQuoteNotExpired } from '../api/endpoints'
 import type { Choice } from '../api/endpoints'
 import { currentQuote, moneySeen } from '../domain/sequence'
@@ -60,7 +60,9 @@ export function useCheckout(): UseCheckoutResult {
   }, [reference])
 
   // Until the render showing the result commits, a click still reaches a submit holding the old reference.
-  useEffect(() => {
+  // A layout effect runs inside the commit, before the browser can deliver a click. A passive one could
+  // run after a click's write had started, and open the latch while that write is in flight.
+  useLayoutEffect(() => {
     writing.current = false
   }, [settled])
 
