@@ -81,7 +81,7 @@ export function createMockApp(store: MockStore = createStore()): Express {
     next()
   })
   api.use((req, res, next) => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       const { fault } = store.settings
       // Destroying the socket sends no status at all, so the client sees a network error.
       if (fault === 'drop') req.socket.destroy()
@@ -89,6 +89,8 @@ export function createMockApp(store: MockStore = createStore()): Express {
         problem(res, 'internal', 'The mock is set to fail every API request.')
       else next()
     }, store.settings.delay_ms)
+    // A request whose client has gone must not still run when the delay ends.
+    res.once('close', () => clearTimeout(timer))
   })
   api.use(express.json())
 
@@ -166,12 +168,17 @@ export function createMockApp(store: MockStore = createStore()): Express {
   })
 
   control.post('/settings', (req, res) => {
-    const patch = req.body ?? {}
-    if (!Object.entries(patch).every(isSetting))
+    const patch: unknown = req.body
+    if (
+      typeof patch !== 'object' ||
+      patch === null ||
+      Array.isArray(patch) ||
+      !Object.entries(patch).every(isSetting)
+    )
       return problem(
         res,
         'invalid-request',
-        'quote_lifetime_seconds and delay_ms take a whole number of 0 or more, clock_offset_seconds a whole number, and fault one of none, http_500 or drop.',
+        'Send a JSON object where quote_lifetime_seconds and delay_ms take a whole number of 0 or more, clock_offset_seconds a whole number, and fault one of none, http_500 or drop.',
       )
     res.json(store.updateSettings(patch))
   })
@@ -179,6 +186,8 @@ export function createMockApp(store: MockStore = createStore()): Express {
   control.use(rejectUnparsableBody)
 
   const app = express()
+  // The dev server passes every request through the mock, so the header would land on the page too.
+  app.disable('x-powered-by')
   app.use('/api', api)
   app.use('/__mock', control)
   return app

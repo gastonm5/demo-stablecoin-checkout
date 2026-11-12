@@ -1,11 +1,10 @@
-import { createServer } from 'node:http'
+import { createServer, type RequestListener } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import type { Express } from 'express'
 
 export function startServer(
-  app: Express,
+  listener: RequestListener,
 ): Promise<{ url: string; close(): Promise<void> }> {
-  const server = createServer(app)
+  const server = createServer(listener)
   return new Promise((resolve, reject) => {
     server.once('error', reject)
     server.listen(0, '127.0.0.1', () => {

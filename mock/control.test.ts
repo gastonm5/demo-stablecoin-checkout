@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { afterEach, beforeEach, expect, test } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createMockApp } from './app'
-import { createStore } from './store'
+import { createStore, type MockStore } from './store'
 import { startServer } from './testServer'
 
 // The assertions check every shape, so the tests read response bodies loosely.
@@ -17,13 +17,15 @@ const DEFAULTS = {
 }
 
 let t: number
+let store: MockStore
 let server: { url: string; close(): Promise<void> }
 let url: string
 let ref: string
 
 beforeEach(async () => {
   t = START
-  server = await startServer(createMockApp(createStore(() => t)))
+  store = createStore(() => t)
+  server = await startServer(createMockApp(store))
   url = server.url
   ref = (await createPayment('USDT', 'ethereum')).payment_reference
 })
@@ -51,6 +53,8 @@ const setStatus = (reference: string, status: string, confirmations?: number) =>
   ok(post(`/__mock/payments/${reference}/status`, { status, confirmations }))
 
 const configure = (patch: object) => ok(post('/__mock/settings', patch))
+
+const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
 test.each([
   ['awaiting_payment', []],
@@ -165,6 +169,24 @@ test.each([
     'invalid-request',
   ],
   [
+    'a status body that is an array',
+    () => post(`/__mock/payments/${ref}/status`, []),
+    422,
+    'invalid-request',
+  ],
+  [
+    'a settings body that is an array',
+    () => post('/__mock/settings', []),
+    422,
+    'invalid-request',
+  ],
+  [
+    'a settings request with no JSON body',
+    () => fetch(`${url}/__mock/settings`, { method: 'POST' }),
+    422,
+    'invalid-request',
+  ],
+  [
     'an unknown reference',
     () => post('/__mock/payments/NOPE/status', { status: 'paid' }),
     404,
@@ -264,6 +286,33 @@ test('a delay holds the response', async () => {
   const started = performance.now()
   await ok(fetch(`${url}/api/currencies`))
   expect(performance.now() - started).toBeGreaterThanOrEqual(80)
+})
+
+test('a request abandoned during the delay never reaches its handler', async () => {
+  const reads = vi.spyOn(store, 'getPayment')
+  await configure({ delay_ms: 200 })
+  const aborting = new AbortController()
+  const { signal } = aborting
+  const abandoned = [
+    // A late GET would still read the store; a late POST has lost its body by then.
+    fetch(`${url}/api/payments/${ref}`, { signal }),
+    fetch(`${url}/api/payments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        order_id: 'ORD-88213',
+        currency: 'USDT',
+        network: 'tron',
+      }),
+      signal,
+    }),
+  ]
+  await wait(50)
+  aborting.abort()
+  for (const request of abandoned) await expect(request).rejects.toThrow()
+  await wait(300)
+  expect(reads).not.toHaveBeenCalled()
+  expect((await ok(fetch(`${url}/__mock/state`))).payments).toHaveLength(1)
 })
 
 test.each(['drop', 'http_500'])(
