@@ -14,6 +14,7 @@ import { parseCurrencies } from '../api/schemas'
 import type { Payment } from '../api/schemas'
 import { CURRENCIES_JSON, makePayment, STATE_FIXTURES } from '../test/fixtures'
 import { createTestClient, withClient } from '../test/query'
+import { resetVisibility, setVisibility } from '../test/visibility'
 import { paymentKey } from './paymentCache'
 import type { PaymentEntry } from './paymentCache'
 import { useCheckout } from './useCheckout'
@@ -119,6 +120,8 @@ afterEach(() => {
   expect(focusManager.hasListeners()).toBe(false)
   expect(onlineManager.hasListeners()).toBe(false)
   client.clear()
+  onlineManager.setOnline(true)
+  resetVisibility()
   vi.resetAllMocks()
   window.history.replaceState(null, '', '/')
   vi.useRealTimers()
@@ -534,3 +537,33 @@ test('the catalogue retries an outage twice before it reports it, and retry asks
   expect(getCurrencies).toHaveBeenCalledTimes(4)
   expect(result.current).toMatchObject({ currencies, error: null })
 })
+
+test.each<[string, () => void, () => void]>([
+  [
+    'the tab is shown again',
+    () => setVisibility('hidden'),
+    () => setVisibility('visible'),
+  ],
+  [
+    'the connection returns',
+    () => onlineManager.setOnline(false),
+    () => onlineManager.setOnline(true),
+  ],
+])(
+  'a catalogue that failed for good asks again when %s',
+  async (_name, leave, back) => {
+    const outage = new ApiError('http', 'GET answered 503', { status: 503 })
+    vi.mocked(getCurrencies).mockRejectedValue(outage)
+    const { result } = renderHook(() => useCurrencies(), {
+      wrapper: withClient(client),
+    })
+    await advance(10_000)
+    expect(getCurrencies).toHaveBeenCalledTimes(3)
+    expect(result.current).toMatchObject({ isLoading: false, error: outage })
+
+    await fire(leave)
+    expect(getCurrencies).toHaveBeenCalledTimes(3)
+    await fire(back)
+    expect(getCurrencies).toHaveBeenCalledTimes(4)
+  },
+)

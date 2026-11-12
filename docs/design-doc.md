@@ -197,7 +197,7 @@ Reads retry themselves. Writes ask the shopper. The API has no idempotency key, 
 
 | Request | Slow response | Failure | Retry |
 |---|---|---|---|
-| `GET /api/currencies` | Loading state, give up at 10 s | Full-card error | Automatic, two more tries with backoff, then "Try again" |
+| `GET /api/currencies` | Loading state, give up at 10 s | Full-card error | Automatic, two more tries with backoff, then "Try again". Until the list arrives, it also asks again when the tab regains focus or the connection returns |
 | `POST /api/payments` | Progress on the button, "still working" after 4 s, give up at 10 s | Error beside the button, choices intact | Manual only |
 | `GET /api/payments/:ref` | Give up at 10 s, counts as a failed poll | Last status stays, notice after two failures in a row | The next poll is the retry |
 | `POST …/requote` | As for create | Error on the expired screen | Manual only, then re-read the payment in case it went through |
