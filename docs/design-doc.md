@@ -40,8 +40,9 @@ The API forces part of this. `POST /api/payments/:reference/requote` returns 409
 **Changing the choice:**
 
 - **While the quote is live** (`awaiting_payment` only): "Change currency or network" asks for confirmation first, because a payment sent to the old address after the change would not be tracked on this page. If the shopper confirms they have not sent anything, the page returns to the picker and the next choice creates a new payment.
-- **After the quote expired:** the same link returns to the picker, and the next choice calls requote on the same reference. Requote takes a currency and a network, so it can change both. No payment is abandoned, and the page keeps polling the payment while the picker is open, in case a late payment arrives.
+- **After the quote expired with no money seen:** the same link returns to the picker, and the next choice calls requote on the same reference. Requote takes a currency and a network, so it can change both. No payment is abandoned, and the page keeps polling the payment while the picker is open, in case a late payment arrives.
 - **Once any money was seen** (`underpaid`, `detected` and later): there is no way to change. The remainder has to go to the same address on the same network.
+- **After a partial payment expired:** there is no change and no new quote. The page sends the shopper to the merchant ([ADR 0003](adr/0003-partial-and-late-payments.md)).
 
 **What the picker can show.** The API returns the merchant name and the order amount only inside a payment. On the picker no payment exists, so it shows the order reference and the choices, and the merchant name and fiat amount appear from the pay screen onwards. I did not add an order endpoint to the mock to fill this in; see section 9.
 
@@ -93,7 +94,7 @@ The brief asks which states the shopper can still fix. I sort the statuses by wh
 | **Wait** | `detected`, `confirming` | Progress, and "nothing more to send" | None. The address and QR are gone so nobody sends twice |
 | **Final** | `paid`, `overpaid`, `failed` | The result | None |
 
-Fixable problems are `underpaid` (send the rest) and `expired` (get a new quote). They carry one clear action each. The problems the shopper cannot fix are `failed` and the extra money in `overpaid`. Those screens have no button at all, so nothing looks like a fix that is not one. They give the shopper the reference, the amounts and the merchant's name to take away.
+Fixable problems are `underpaid` (send the rest) and `expired` when no money was seen (get a new quote). They carry one clear action each. The problems the shopper cannot fix are `failed`, the extra money in `overpaid`, and a quote that expired after a partial payment. Those screens have no button at all, so nothing looks like a fix that is not one. They give the shopper the reference, the amounts and the merchant's name to take away.
 
 ### 3.4 From status to screen
 
@@ -111,7 +112,7 @@ The screen is the output of one pure function. Its inputs are the server's statu
 | `paid` | | Complete | hidden | none | off |
 | `overpaid` | | Complete, with a notice about the extra | hidden | none | off |
 | `expired` | no money seen for this quote | Expired | hidden | none | 15 s |
-| `expired` | `underpaid` seen for this quote | Expired after a partial payment | hidden | none | 15 s |
+| `expired` | `underpaid` seen for this quote | Expired after a partial payment, a dead end | hidden | none | 15 s |
 | `expired` | sequence started from a reload | Expired, cautious wording | hidden | none | 15 s |
 | `failed` | money seen, not seen, or unknown | Failed, in three wordings | hidden | none | off |
 | anything else | | "We're checking" | hidden | none | 3 s |
@@ -122,7 +123,7 @@ Connection trouble is not a row in this table. It is a notice in the strip, laid
 
 ### 3.5 The status sequence
 
-Some screens depend on what happened before. `expired` after `underpaid` must not offer a plain "get a new quote", because the shopper already sent part of the money. The `expired` response itself carries only `expired_at`.
+Some screens depend on what happened before. `expired` after `underpaid` must not offer a new quote, because the shopper already sent part of the money and the API does not say what happens to it. The `expired` response itself carries only `expired_at`.
 
 So the page keeps the sequence of statuses it has seen for a payment, each with the fields that came with it (amount received, amount outstanding, transaction hash). It is stored beside the payment in the query cache and appended in the one function where a server response becomes cached data. Polls and requotes both pass through that function, so there is no effect to keep in sync and no second store.
 
@@ -130,7 +131,7 @@ Three rules:
 
 - A repeated status updates the last entry instead of adding one.
 - "For this quote" means the entries since the last creation or requote. A partial payment on an earlier quote does not change the wording for a later one.
-- The sequence records whether it started at creation or from a reload. After a reload the page cannot know whether money arrived earlier, so `expired` and `failed` use cautious wording: "if you already sent funds, they won't count toward a new quote". If a resumed sequence later sees money, that evidence wins over the cautious wording.
+- The sequence records whether it started at creation or from a reload. After a reload the page cannot know whether money arrived earlier, so `expired` and `failed` use cautious wording: "If you sent any funds for this payment, do not get a new quote. Contact Nordwind Audio." If a resumed sequence later sees money, that evidence wins over the cautious wording.
 - `failed` carries only a reason and `expired` only a time. Any amount on those screens comes from the sequence, never from `total_due`.
 
 ### 3.6 Unknown statuses
@@ -351,12 +352,12 @@ I show crypto exactly as sent, not in the shopper's locale, because that number 
 |---|---|---|---|
 | `underpaid` | Part of your payment arrived | What was received, the exact amount still to send, same address and network, countdown still running | Send the rest |
 | `expired` | This quote has expired | "Already sent? Do not send again. We are still watching for your payment." The address is hidden | "Get a new quote", enabled only after ticking "I have not sent a payment" |
-| `expired` after `underpaid` | The full amount wasn't reached | What was received and what was missing. A new quote is for the full amount, and the earlier funds will not count toward it | "Get a new quote for the full amount" |
+| `expired` after `underpaid` | The full amount wasn't reached | What was received and what was missing. "Do not send again. This page can't complete this payment or tell you what happens to the 120.00 USDT you sent. Contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
 | `overpaid` | Payment complete | "You sent 16.31 USDT more than was due. This page can't return the extra amount. Contact Nordwind Audio and quote reference AQH-100306-PMT." | None |
 | `failed` | This payment could not be completed | The reason in plain words, the server's reason code in small print, "do not send anything more", contact the merchant | None |
 | unknown | We're checking your payment | "Don't send again." | None |
 
-The tick box belongs to the plain `expired` screen and its cautious reload variant. The partial-payment screen has no tick box, because a shopper who paid part cannot truthfully tick "I have not sent a payment". It has its own button and warning, and no link to change currency.
+The tick box belongs to the plain `expired` screen and its cautious reload variant. The partial-payment screen has no tick box, because a shopper who paid part cannot truthfully tick "I have not sent a payment". It is a dead end, with no button and no link to change currency.
 
 Notes on three of them:
 
@@ -423,7 +424,7 @@ These are places where the brief is silent or does not fit together. Each is a q
 | What `GET` returns | "Returns the payment with an updated status, plus the fields below" | The whole payment, plus the status fields |
 | Repeated `POST /api/payments` | Not stated | A new payment with a new reference each time |
 | Deadline on `underpaid` | The response has no deadline field | The quote's original `expires_at` still applies |
-| Requote after a partial payment | "Same body as `POST /api/payments`" | The new quote is for the full amount. Funds already sent do not count toward it |
+| Funds from a partial payment that expired | Not stated. Requote returns the "same body as `POST /api/payments`", with no word on earlier funds | The page does not guess. It offers no new quote and sends the shopper to the merchant |
 | Money arriving after expiry | No status for it | The server may move `expired` to `detected`, so the page keeps watching |
 | Is `expired` terminal? | "Stop polling on terminal states", without listing them | Only `paid`, `overpaid` and `failed` are terminal. `expired` can return to `awaiting_payment` through requote |
 | An unknown reference | Not stated | The mock returns 404 in the same problem format |
@@ -438,6 +439,7 @@ Things I left out on purpose, and what each would need:
 - **Fees in the order's currency.** The picker shows catalogue fees in USD while the order is in EUR.
 - **A server time source for the countdown.** A time field in the response body would remove the device-clock error. ([ADR 0001](adr/0001-server-decides-expiry.md))
 - **Full resume after a reload.** The status sequence restarts on reload. Keeping it in session storage would restore the exact wording. ([ADR 0005](adr/0005-resume-from-url-reference.md))
+- **A new quote after a partial payment.** Needs the backend to define what happens to funds already sent.
 - **Browser end-to-end tests.**
 - **A mock script that advances a payment by itself.** The dev panel's status buttons already reach every state.
 

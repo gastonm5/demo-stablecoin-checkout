@@ -29,8 +29,8 @@ The status sequence is not persisted.
 
 - This goes beyond the brief on purpose. I think a payment page that forgets a payment on refresh is a shopper-safety problem, not a missing feature.
 - After a reload the page knows the current status but not what came before. Two screens depend on that history:
-  - `expired` after a partial payment normally warns that earlier funds will not count toward a new quote.
+  - `expired` after a partial payment normally offers no new quote and sends the shopper to the merchant.
   - `failed` normally says whether money was seen.
-- To keep those warnings from silently disappearing, the sequence records whether it started at creation or from a reload. When it started from a reload, `expired` and `failed` use cautious wording: "if you already sent funds, they won't count toward a new quote".
+- To keep those warnings from silently disappearing, the sequence records whether it started at creation or from a reload. When it started from a reload, `expired` and `failed` use cautious wording: "If you sent any funds for this payment, do not get a new quote. Contact Nordwind Audio." The tick box "I have not sent a payment" still guards the new-quote button.
 - The reference is visible in the address bar and in browser history. It is not a secret in this API, since there is no auth, but a real deployment would want to check that.
 - Full resume is listed as a follow-up. The better fix is on the server: if `expired` and `failed` carried `amount_received`, the page would not need to remember anything.
