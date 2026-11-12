@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { ConfirmChangeDialog } from './ConfirmChangeDialog'
 
@@ -80,6 +80,71 @@ test('opens once under Strict Mode, which runs the effect twice', () => {
   )
   expect(screen.getByRole('dialog', { name: TITLE })).toHaveAttribute('open')
 })
+
+// Opens the dialog from a link, as the pay screen does, so focus has somewhere to go back to.
+function Opener() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Change currency or network
+      </button>
+      <ConfirmChangeDialog
+        open={open}
+        onConfirm={() => setOpen(false)}
+        onCancel={() => setOpen(false)}
+      />
+    </>
+  )
+}
+
+test.each([
+  ['Stay on this payment', 'click'],
+  ['Escape', 'cancel'],
+] as const)(
+  'closing with %s gives focus back to the link that opened it',
+  async (_, how) => {
+    // As a browser does: nothing in a closed dialog is rendered, so it cannot take focus,
+    // and showModal() opens the dialog and focuses its first button.
+    const focus = HTMLElement.prototype.focus
+    vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(function (
+      this: HTMLElement,
+      options?: FocusOptions,
+    ) {
+      if (!this.closest('dialog:not([open])')) focus.call(this, options)
+    })
+    const showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.setAttribute('open', '')
+      this.querySelector('button')?.focus()
+    })
+    const close = vi.fn(function (this: HTMLDialogElement) {
+      this.removeAttribute('open')
+    })
+    for (const [name, value] of Object.entries({ showModal, close })) {
+      Object.defineProperty(proto, name, {
+        value,
+        configurable: true,
+        writable: true,
+      })
+    }
+    render(
+      <StrictMode>
+        <Opener />
+      </StrictMode>,
+    )
+    const user = userEvent.setup()
+    const link = screen.getByRole('button', {
+      name: 'Change currency or network',
+    })
+    await user.click(link)
+    const stay = screen.getByRole('button', { name: 'Stay on this payment' })
+    expect(stay).toHaveFocus()
+    if (how === 'click') await user.click(stay)
+    else fireEvent(screen.getByRole('dialog'), new Event('cancel'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(link).toHaveFocus()
+  },
+)
 
 test('is still shown where there is no showModal', () => {
   expect(proto.showModal).toBeUndefined()
