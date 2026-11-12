@@ -1,0 +1,180 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pay screen proposal</title>
+<style>
+  body { margin:0; padding:32px; background:#f5f5f7; color:#1d1d1f; font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
+  .cap0 { font-size:15px; font-weight:600; margin-bottom:4px; }
+  .cap1 { font-size:13px; color:#6b7280; margin-bottom:24px; }
+  .canvas { display:flex; gap:32px; align-items:flex-start; }
+  .stage .tag { color:#6b7280 !important; }
+</style>
+<style>
+  .pk { --ink:#14161a; --mut:#6b7280; --line:#dfe3e8; background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:22px; overflow:hidden; max-width:940px; font-size:15px; line-height:1.4; text-align:left; box-shadow:0 10px 30px rgba(0,0,0,.06); }
+  .pk * { box-sizing:border-box; }
+  .pk .cols { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); }
+  .pk .left { padding:28px 32px; }
+  .pk .right { padding:28px; border-left:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:14px; }
+  .pk .strip { border-top:1px solid var(--line); padding:14px 32px; display:flex; justify-content:space-between; align-items:center; gap:16px; font-size:13.5px; }
+  .pk .strip a { color:#3b5bdb; text-decoration:underline; white-space:nowrap; }
+
+  .pk .mer { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  .pk .logo { width:44px; height:44px; border-radius:10px; border:1px solid var(--line); background:#f6f7f9; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  .pk .k { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--mut); }
+  .pk .v { font-weight:700; font-size:16px; }
+  .pk .ord { margin-left:auto; text-align:right; }
+
+  .pk .net { background:var(--ink); color:#fff; border-radius:12px; padding:12px 14px; display:flex; gap:12px; align-items:center; margin-bottom:20px; }
+  .pk .net b { display:block; font-size:16px; }
+  .pk .net span { font-size:13px; color:#c9ced4; }
+  .pk .chip { width:30px; height:30px; border-radius:50%; background:#ff060a; color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+  .pk .lbl { font-size:12px; color:var(--mut); font-weight:600; margin-bottom:2px; }
+  .pk .amtrow { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .pk .amt { font-size:40px; font-weight:800; letter-spacing:-.02em; line-height:1.1; font-variant-numeric:tabular-nums; }
+  .pk .sub { color:var(--mut); font-size:13.5px; margin-top:4px; }
+  .pk .btn { border:1px solid #cfd4da; background:#fff; border-radius:10px; padding:8px 12px; font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; display:inline-flex; gap:6px; align-items:center; }
+  .pk .btn svg { width:14px; height:14px; }
+
+  .pk .box { border:1px solid var(--line); background:#fafbfc; border-radius:12px; padding:12px 14px; margin-top:20px; }
+  .pk .boxhead { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .pk .boxhead .lbl { margin-bottom:0; }
+  .pk .addr { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14.5px; font-weight:600; word-break:break-all; }
+
+  .pk .timer { margin-top:20px; font-size:13.5px; }
+  .pk .timer .row { display:flex; justify-content:space-between; align-items:baseline; }
+  .pk .timer b { font-size:18px; font-variant-numeric:tabular-nums; }
+  .pk .bar { height:5px; background:#e6e8eb; border-radius:3px; overflow:hidden; margin-top:6px; }
+  .pk .bar i { display:block; width:85%; height:100%; background:var(--ink); }
+
+  .pk .frame { border:3px solid var(--ink); border-radius:14px; overflow:hidden; }
+  .pk .cap { background:var(--ink); color:#fff; font-size:12.5px; font-weight:800; letter-spacing:.06em; padding:7px 12px; display:flex; gap:8px; align-items:center; justify-content:center; }
+  .pk .cap .chip { width:18px; height:18px; font-size:10px; }
+  .pk .pad { padding:12px; background:#fff; }
+  .pk .qr { position:relative; width:208px; height:208px; background-color:#fff;
+    background-image:
+      conic-gradient(#14161a 25%, transparent 0 50%, #14161a 0 75%, transparent 0),
+      conic-gradient(transparent 25%, #14161a 0 50%, transparent 0 75%, #14161a 0);
+    background-size:8px 8px, 24px 24px; background-position:0 0, 4px 4px; }
+  .pk .qr .f { position:absolute; width:46px; height:46px; background:#fff; border:7px solid #14161a; outline:5px solid #fff; }
+  .pk .qr .f::after { content:''; position:absolute; inset:6px; background:#14161a; }
+  .pk .qr .tl { top:0; left:0; } .pk .qr .tr { top:0; right:0; } .pk .qr .bl { bottom:0; left:0; }
+  .pk .scan b { display:block; font-size:16px; }
+  .pk .scan span { color:var(--mut); font-size:13.5px; }
+
+  .pk.phone { max-width:380px; }
+  .pk.phone .cols { grid-template-columns:1fr; }
+  .pk.phone .left { padding:20px; }
+  .pk.phone .right { border-left:none; border-top:1px solid var(--line); padding:20px; }
+  .pk.phone .amt { font-size:32px; }
+  .pk.phone .amtrow { flex-direction:column; align-items:flex-start; }
+  .pk.phone .strip { flex-direction:column; align-items:flex-start; padding:14px 20px; }
+  .pk.phone .qr { width:176px; height:176px; }
+
+  .stage { display:flex; flex-direction:column; gap:10px; margin-bottom:28px; }
+  .stage .tag { font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); }
+</style>
+<style> .pk { width:940px; } .pk.phone { width:380px; } .stage { margin-bottom:0 !important; } </style>
+</head><body>
+<div class="cap0">Stablecoin Checkout · pay screen proposal (status: awaiting_payment)</div>
+<div class="cap1">Agreed 12 Nov 2026. Details on the left, QR on the right, notice strip along the bottom. The QR pattern is a placeholder drawing.</div>
+<div class="canvas">
+
+
+
+<div class="stage">
+  <div class="tag">Desktop</div>
+  <div class="pk">
+    <div class="cols">
+      <div class="left">
+        <div class="mer">
+          <div class="logo">N</div>
+          <div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div>
+          <div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div>
+        </div>
+
+        <div class="net">
+          <div class="chip">T</div>
+          <div><b>Tron (TRC-20) network</b><span>Send USDT on Tron only. Any other network loses your funds.</span></div>
+        </div>
+
+        <div class="lbl">Send exactly</div>
+        <div class="amtrow">
+          <div class="amt">163.69 USDT</div>
+          <button class="btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"/></svg>Copy amount</button>
+        </div>
+        <div class="sub">162.69 USDT + 1.00 USDT network fee</div>
+
+        <div class="box">
+          <div class="boxhead"><div class="lbl">Tron (TRC-20) address</div><button class="btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"/></svg>Copy Tron address</button></div>
+          <div class="addr">TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e</div>
+        </div>
+
+        <div class="timer">
+          <div class="row"><span>Rate held for</span><b>12:47</b></div>
+          <div class="bar"><i></i></div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="frame">
+          <div class="cap"><span class="chip">T</span>TRON (TRC-20) ONLY</div>
+          <div class="pad"><div class="qr"><i class="f tl"></i><i class="f tr"></i><i class="f bl"></i></div></div>
+        </div>
+        <div class="scan"><b>Scan with your wallet app</b><span>The code holds the address only.<br>Enter the amount yourself.</span></div>
+      </div>
+    </div>
+    <div class="strip">
+      <span><b>Sending from an exchange?</b> Make sure 163.69 USDT arrives after its withdrawal fee.</span>
+      <a>Change currency or network</a>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="tag">Phone</div>
+  <div class="pk phone">
+    <div class="cols">
+      <div class="left">
+        <div class="mer">
+          <div class="logo">N</div>
+          <div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div>
+          <div class="ord"><div class="k">ORD-88213</div><div class="v">€149.90</div></div>
+        </div>
+
+        <div class="net">
+          <div class="chip">T</div>
+          <div><b>Tron (TRC-20) network</b><span>Send USDT on Tron only. Any other network loses your funds.</span></div>
+        </div>
+
+        <div class="lbl">Send exactly</div>
+        <div class="amtrow">
+          <div class="amt">163.69 USDT</div>
+          <button class="btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"/></svg>Copy amount</button>
+        </div>
+        <div class="sub">162.69 USDT + 1.00 USDT network fee</div>
+
+        <div class="box">
+          <div class="boxhead"><div class="lbl">Tron (TRC-20) address</div><button class="btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"/></svg>Copy Tron address</button></div>
+          <div class="addr">TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e</div>
+        </div>
+
+        <div class="timer">
+          <div class="row"><span>Rate held for</span><b>12:47</b></div>
+          <div class="bar"><i></i></div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="frame">
+          <div class="cap"><span class="chip">T</span>TRON (TRC-20) ONLY</div>
+          <div class="pad"><div class="qr"><i class="f tl"></i><i class="f tr"></i><i class="f bl"></i></div></div>
+        </div>
+        <div class="scan"><b>Scan with your wallet app</b><span>The code holds the address only.<br>Enter the amount yourself.</span></div>
+      </div>
+    </div>
+    <div class="strip">
+      <span><b>Sending from an exchange?</b> Make sure 163.69 USDT arrives after its withdrawal fee.</span>
+      <a>Change currency or network</a>
+    </div>
+  </div>
+</div>
+</div>
+</body></html>

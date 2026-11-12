@@ -1,0 +1,250 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Status screens proposal</title>
+<style>
+  :root { --text-secondary:#6b7280; --text-primary:#1d1d1f; }
+  body { margin:0; padding:32px; background:#f5f5f7; color:#1d1d1f; font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
+  .cap0 { font-size:15px; font-weight:600; margin-bottom:4px; }
+  .cap1 { font-size:13px; color:#6b7280; margin-bottom:24px; max-width:1250px; }
+</style>
+<style>
+  .pk { --ink:#14161a; --mut:#6b7280; --line:#dfe3e8; --ok:#15803d; --warn:#b45309; --bad:#b91c1c; background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:22px; overflow:hidden; font-size:15px; line-height:1.4; text-align:left; width:940px; zoom:.62; }
+  .pk * { box-sizing:border-box; }
+  .pk .cols { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); min-height:400px; }
+  .pk .left { padding:28px 32px; }
+  .pk .right { padding:28px; border-left:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:12px; }
+  .pk .strip { border-top:1px solid var(--line); padding:14px 32px; font-size:13.5px; display:flex; justify-content:space-between; gap:16px; align-items:center; }
+  .pk .strip a { color:#3b5bdb; text-decoration:underline; white-space:nowrap; }
+  .pk .mer { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  .pk .logo { width:44px; height:44px; border-radius:10px; border:1px solid var(--line); background:#f6f7f9; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  .pk .k { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--mut); }
+  .pk .v { font-weight:700; font-size:16px; }
+  .pk .ord { margin-left:auto; text-align:right; }
+  .pk .lbl { font-size:12px; color:var(--mut); font-weight:600; margin-bottom:2px; }
+  .pk .amt { font-size:40px; font-weight:800; letter-spacing:-.02em; line-height:1.1; margin-bottom:14px; }
+  .pk .amtrow { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .pk .kv { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid #eef0f2; font-size:14px; }
+  .pk .kv span:first-child { color:var(--mut); }
+  .pk .kv b { font-weight:600; text-align:right; }
+  .pk .mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pk .btn { border:1px solid #cfd4da; background:#fff; border-radius:10px; padding:6px 10px; font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; }
+  .pk .cta { background:var(--ink); color:#fff; border:none; border-radius:999px; padding:13px 20px; font-size:15px; font-weight:700; }
+  .pk .cta.off { background:#d5d9de; color:#fff; }
+  .pk .net { background:var(--ink); color:#fff; border-radius:12px; padding:12px 14px; display:flex; gap:12px; align-items:center; margin-bottom:14px; }
+  .pk .net b { display:block; font-size:16px; } .pk .net span { font-size:13px; color:#c9ced4; }
+  .pk .chip { width:30px; height:30px; border-radius:50%; background:#ff060a; color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .pk .box { border:1px solid var(--line); background:#fafbfc; border-radius:12px; padding:12px 14px; margin-top:6px; }
+  .pk .boxhead { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+  .pk .addr { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14.5px; font-weight:600; }
+  .pk .timer { margin-top:16px; font-size:13.5px; }
+  .pk .timer .row { display:flex; justify-content:space-between; align-items:baseline; }
+  .pk .timer b { font-size:18px; }
+  .pk .bar { height:5px; background:#e6e8eb; border-radius:3px; overflow:hidden; margin-top:6px; }
+  .pk .bar i { display:block; height:100%; background:var(--ink); }
+  .pk .ic { width:56px; height:56px; border-radius:50%; border:3px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:800; }
+  .pk .ic.ok { color:var(--ok); } .pk .ic.warn { color:var(--warn); } .pk .ic.bad { color:var(--bad); } .pk .ic.wait { color:#6b7280; }
+  .pk .h { font-size:22px; font-weight:800; letter-spacing:-.01em; }
+  .pk .p { font-size:14.5px; color:#4b5563; max-width:320px; }
+  .pk .notice { background:#fff7e6; border:1px solid #f3d999; color:#6b4e00; border-radius:12px; padding:12px 14px; font-size:14px; text-align:left; }
+  .pk .notice.top { margin-bottom:14px; }
+  .pk .check { display:flex; gap:8px; align-items:center; font-size:14.5px; font-weight:600; }
+  .pk .check i { width:18px; height:18px; border:2px solid #9aa1ab; border-radius:4px; display:inline-block; }
+  .pk .frame { border:3px solid var(--ink); border-radius:14px; overflow:hidden; }
+  .pk .cap { background:var(--ink); color:#fff; font-size:12.5px; font-weight:800; letter-spacing:.06em; padding:7px 12px; display:flex; gap:8px; align-items:center; justify-content:center; }
+  .pk .cap .chip { width:18px; height:18px; font-size:10px; }
+  .pk .pad { padding:12px; background:#fff; }
+  .pk .qr { position:relative; width:168px; height:168px; background-color:#fff;
+    background-image:conic-gradient(#14161a 25%, transparent 0 50%, #14161a 0 75%, transparent 0), conic-gradient(transparent 25%, #14161a 0 50%, transparent 0 75%, #14161a 0);
+    background-size:8px 8px, 24px 24px; background-position:0 0, 4px 4px; }
+  .pk .qr .f { position:absolute; width:42px; height:42px; background:#fff; border:6px solid #14161a; outline:5px solid #fff; }
+  .pk .qr .f::after { content:''; position:absolute; inset:6px; background:#14161a; }
+  .pk .qr .tl { top:0; left:0; } .pk .qr .tr { top:0; right:0; } .pk .qr .bl { bottom:0; left:0; }
+  .pk.strips { min-height:0; }
+  .pk.strips .strip:first-child { border-top:none; }
+  .pk .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:8px; background:var(--warn); }
+
+  .sheet { display:grid; grid-template-columns:repeat(auto-fit, minmax(590px, 1fr)); gap:22px 18px; align-items:start; }
+  .cell .tag { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); margin-bottom:6px; }
+  .cell .tag b { color:var(--text-primary); }
+</style>
+</head><body>
+<div class="cap0">Stablecoin Checkout · status screens proposal</div>
+<div class="cap1">Agreed 12 Nov 2026. Changed after review the same day: the two connection notices were reworded, the underpaid screen lost its countdown, and a payment that expired after a partial payment no longer offers a new quote. Same card on every screen: facts on the left, what is happening and what to do on the right, notices in the strip. Drawn at reduced size.</div>
+<div class="sheet">
+
+  <div class="cell">
+    <div class="tag"><b>detected / confirming</b> · wait, nothing to do</div>
+    <div class="pk">
+      <div class="cols">
+        <div class="left">
+          <div class="mer"><div class="logo">N</div><div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div><div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div></div>
+          <div class="lbl">Payment seen</div>
+          <div class="amt">163.69 USDT</div>
+          <div class="kv"><span>Network</span><b>Tron (TRC-20)</b></div>
+          <div class="kv"><span>Transaction</span><b class="mono">9d1f4c8a2be7… <button class="btn">Copy</button></b></div>
+          <div class="kv"><span>Seen at</span><b>08:44</b></div>
+        </div>
+        <div class="right">
+          <div class="ic wait">●</div>
+          <div class="h">We've seen your payment</div>
+          <div class="p">Waiting for the network to confirm it. You don't need to send anything else.</div>
+          <div style="width:100%; max-width:300px">
+            <div class="timer" style="margin-top:6px"><div class="row"><span>Confirmations</span><b>0 of 1</b></div><div class="bar"><i style="width:8%"></i></div></div>
+          </div>
+          <div class="p" style="font-size:13px">Usually about 1 minute on Tron.</div>
+        </div>
+      </div>
+      <div class="strip"><span>This page updates by itself.</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="tag"><b>paid</b> · final</div>
+    <div class="pk">
+      <div class="cols">
+        <div class="left">
+          <div class="mer"><div class="logo">N</div><div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div><div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div></div>
+          <div class="lbl">Paid</div>
+          <div class="amt">163.69 USDT</div>
+          <div class="kv"><span>Network</span><b>Tron (TRC-20)</b></div>
+          <div class="kv"><span>Transaction</span><b class="mono">9d1f4c8a2be7… <button class="btn">Copy</button></b></div>
+          <div class="kv"><span>Reference</span><b class="mono">AQH-100306-PMT <button class="btn">Copy</button></b></div>
+          <div class="kv"><span>Settled</span><b>14 Aug 2026, 08:47</b></div>
+        </div>
+        <div class="right">
+          <div class="ic ok">✓</div>
+          <div class="h">Payment complete</div>
+          <div class="p">Nordwind Audio has your payment for order ORD-88213.</div>
+        </div>
+      </div>
+      <div class="strip"><span>Nothing more to do. You can close this page.</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="tag"><b>overpaid</b> · final, with the truth about the extra</div>
+    <div class="pk">
+      <div class="cols">
+        <div class="left">
+          <div class="mer"><div class="logo">N</div><div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div><div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div></div>
+          <div class="lbl">Received</div>
+          <div class="amt">180.00 USDT</div>
+          <div class="kv"><span>Amount due</span><b>163.69 USDT</b></div>
+          <div class="kv"><span>Extra sent</span><b style="color:var(--warn)">16.31 USDT</b></div>
+          <div class="kv"><span>Network</span><b>Tron (TRC-20)</b></div>
+          <div class="kv"><span>Reference</span><b class="mono">AQH-100306-PMT <button class="btn">Copy</button></b></div>
+        </div>
+        <div class="right">
+          <div class="ic ok">✓</div>
+          <div class="h">Payment complete</div>
+          <div class="notice"><b>You sent 16.31 USDT more than was due.</b> This page can't return the extra amount. Contact Nordwind Audio and quote reference AQH-100306-PMT.</div>
+        </div>
+      </div>
+      <div class="strip"><span>Your order is paid. Nothing more to send.</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="tag"><b>underpaid</b> · your move, no clock once money has arrived</div>
+    <div class="pk">
+      <div class="cols">
+        <div class="left">
+          <div class="mer"><div class="logo">N</div><div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div><div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div></div>
+          <div class="notice top"><b>Part of your payment arrived.</b> We received 120.00 of 163.69 USDT.</div>
+          <div class="net"><div class="chip">T</div><div><b>Tron (TRC-20) network</b><span>Send USDT on Tron only. Any other network loses your funds.</span></div></div>
+          <div class="lbl">Send the remaining</div>
+          <div class="amtrow"><div class="amt" style="margin-bottom:0">43.69 USDT</div><button class="btn">Copy amount</button></div>
+          <div class="box"><div class="boxhead"><div class="lbl">Tron (TRC-20) address</div><button class="btn">Copy Tron address</button></div><div class="addr">TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e</div></div>
+          </div>
+        <div class="right">
+          <div class="frame"><div class="cap"><span class="chip">T</span>TRON (TRC-20) ONLY</div><div class="pad"><div class="qr"><i class="f tl"></i><i class="f tr"></i><i class="f bl"></i></div></div></div>
+          <div class="p" style="font-size:13.5px">Same address as before. The code holds the address only.</div>
+        </div>
+      </div>
+      <div class="strip"><span><b>Send the rest in one transfer</b> to the same address.</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="tag"><b>expired</b> · your move, address hidden</div>
+    <div class="pk">
+      <div class="cols">
+        <div class="left">
+          <div class="mer"><div class="logo">N</div><div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div><div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div></div>
+          <div class="lbl">Expired quote</div>
+          <div class="amt" style="color:#9aa1ab">163.69 USDT</div>
+          <div class="kv"><span>Network</span><b>Tron (TRC-20)</b></div>
+          <div class="kv"><span>Expired at</span><b>08:52</b></div>
+          <div class="kv"><span>Address</span><b style="color:var(--mut); font-weight:500">Hidden, so nothing more is sent to it</b></div>
+        </div>
+        <div class="right">
+          <div class="ic wait">◷</div>
+          <div class="h">This quote has expired</div>
+          <div class="p"><b>Already sent?</b> Do not send again. We are still watching for your payment.</div>
+          <div class="check"><i></i>I have not sent a payment</div>
+          <button class="cta off">Get a new quote</button>
+        </div>
+      </div>
+      <div class="strip"><span>Still checking for a late payment.</span><a>Change currency or network</a></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="tag"><b>expired after a partial payment</b> · a dead end, no new quote</div>
+    <div class="pk">
+      <div class="cols">
+        <div class="left">
+          <div class="mer"><div class="logo">N</div><div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div><div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div></div>
+          <div class="lbl">Received before it expired</div>
+          <div class="amt">120.00 USDT</div>
+          <div class="kv"><span>Amount due</span><b>163.69 USDT</b></div>
+          <div class="kv"><span>Missing</span><b style="color:var(--warn)">43.69 USDT</b></div>
+          <div class="kv"><span>Network</span><b>Tron (TRC-20)</b></div>
+          <div class="kv"><span>Reference</span><b class="mono">AQH-100306-PMT <button class="btn">Copy</button></b></div>
+        </div>
+        <div class="right">
+          <div class="ic warn">!</div>
+          <div class="h">The full amount wasn't reached</div>
+          <div class="p">This payment expired before the rest arrived. We are still watching in case it is on its way. <b>Do not send again.</b></div>
+          <div class="notice">This page can't complete this payment or tell you what happens to the 120.00 USDT you sent. Contact Nordwind Audio and quote reference AQH-100306-PMT.</div>
+        </div>
+      </div>
+      <div class="strip"><span>Still checking for a late payment.</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="tag"><b>failed</b> · final, nothing to fix here</div>
+    <div class="pk">
+      <div class="cols">
+        <div class="left">
+          <div class="mer"><div class="logo">N</div><div><div class="k">Payment for</div><div class="v">Nordwind Audio</div></div><div class="ord"><div class="k">Order ORD-88213</div><div class="v">€149.90</div></div></div>
+          <div class="lbl">Payment seen</div>
+          <div class="amt">163.69 USDT</div>
+          <div class="kv"><span>Network</span><b>Tron (TRC-20)</b></div>
+          <div class="kv"><span>Transaction</span><b class="mono">9d1f4c8a2be7… <button class="btn">Copy</button></b></div>
+          <div class="kv"><span>Reference</span><b class="mono">AQH-100306-PMT <button class="btn">Copy</button></b></div>
+        </div>
+        <div class="right">
+          <div class="ic bad">!</div>
+          <div class="h">This payment could not be completed</div>
+          <div class="p">We saw your payment, but the settlement was rejected.</div>
+          <div class="p"><b>Do not send anything more.</b> Contact Nordwind Audio and quote the reference.</div>
+          <div class="p" style="font-size:12px">Reason code: settlement_rejected</div>
+        </div>
+      </div>
+      <div class="strip"><span>This page can't fix this payment.</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="tag"><b>the strip when something is wrong</b> · shown over whatever status we last knew</div>
+    <div class="pk strips">
+      <div class="strip"><span><span class="dot"></span><b>You appear to be offline.</b> We'll pick up as soon as your connection returns.</span></div>
+      <div class="strip"><span><span class="dot"></span><b>We can't reach the payment service.</b> This page may be out of date until we reconnect. Retrying.</span><button class="btn">Try now</button></div>
+      <div class="strip"><span><span class="dot"></span><b>Time's up.</b> Checking with the payment service.</span></div>
+      <div class="strip"><span><span class="dot" style="background:#6b7280"></span><b>This quote is still valid.</b> Your device clock looks wrong, so the timer is hidden.</span></div>
+    </div>
+  </div>
+
+</div>
+
+</body></html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Picker proposal</title>
+<style>
+  body { margin:0; padding:32px; background:#f5f5f7; color:#1d1d1f; font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
+  .cap0 { font-size:15px; font-weight:600; margin-bottom:4px; }
+  .cap1 { font-size:13px; color:#6b7280; margin-bottom:24px; max-width:940px; }
+</style>
+<style>
+  .pk { --ink:#14161a; --mut:#6b7280; --line:#dfe3e8; background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:22px; overflow:hidden; font-size:15px; line-height:1.4; text-align:left; }
+  .pk * { box-sizing:border-box; }
+  .pk .cols { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); }
+  .pk .left { padding:28px 32px; }
+  .pk .right { padding:28px; border-left:1px solid var(--line); display:flex; flex-direction:column; gap:16px; justify-content:center; }
+  .pk .strip { border-top:1px solid var(--line); padding:14px 32px; font-size:13.5px; }
+  .pk .mer { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+  .pk .logo { width:44px; height:44px; border-radius:10px; border:1px solid var(--line); background:#f6f7f9; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  .pk .k { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--mut); }
+  .pk .v { font-weight:700; font-size:16px; }
+  .pk .ord { margin-left:auto; text-align:right; }
+  .pk .t { font-size:22px; font-weight:800; letter-spacing:-.01em; margin-bottom:16px; }
+  .pk .lbl { font-size:12px; color:var(--mut); font-weight:600; margin-bottom:6px; }
+  .pk .chip { width:26px; height:26px; border-radius:50%; color:#fff; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .pk .chip.tron { background:#ff060a; } .pk .chip.eth { background:#627eea; }
+
+  .pk .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+  .pk .tile { border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; }
+  .pk .tile b { display:block; font-size:16px; }
+  .pk .tile span { font-size:12.5px; color:var(--mut); }
+  .pk .on { border-color:var(--ink) !important; box-shadow:0 0 0 1px var(--ink); }
+  .pk .opt { border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; display:grid; grid-template-columns:18px 26px 1fr auto; gap:12px; align-items:center; margin-bottom:10px; }
+  .pk .radio { width:18px; height:18px; border-radius:50%; border:2px solid #b6bcc4; }
+  .pk .on .radio { border-color:var(--ink); background:radial-gradient(circle, var(--ink) 0 42%, #fff 48%); }
+  .pk .stats { display:flex; gap:16px; text-align:right; }
+  .pk .opt b { white-space:nowrap; }
+  .pk .stats div { font-size:13.5px; font-weight:700; white-space:nowrap; }
+  .pk .stats small { display:block; font-size:10.5px; color:var(--mut); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+
+  .pk .sels { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .pk .sel { border:1.5px solid var(--line); border-radius:12px; padding:13px 14px; display:flex; justify-content:space-between; align-items:center; font-weight:700; }
+  .pk .sel span { color:var(--mut); }
+
+  .pk .total { font-size:38px; font-weight:800; letter-spacing:-.02em; line-height:1.1; }
+  .pk .pill { display:inline-flex; align-items:center; gap:8px; background:var(--ink); color:#fff; border-radius:999px; padding:6px 14px 6px 6px; font-weight:700; font-size:14px; width:max-content; }
+  .pk .note { font-size:13.5px; color:var(--mut); }
+  .pk .cta { width:100%; background:var(--ink); color:#fff; border:none; border-radius:999px; padding:14px 18px; font-size:15px; font-weight:700; }
+
+  .pick { max-width:960px; padding:10px; margin-bottom:22px; }
+  .pick .card-body { padding:12px 8px 4px; }
+</style><style>.pk{width:940px}</style>
+</head><body>
+<div class="cap0">Stablecoin Checkout · picker proposal (before any quote exists)</div>
+<div class="cap1">Agreed 12 Nov 2026: two menus, and only what the API gives. The merchant name and fiat amount come with a payment, so they appear from the pay screen onwards. Shown with a choice made; the page opens with nothing selected and the button disabled.</div>
+<div class="pk">
+    <div class="cols">
+      <div class="left">
+        <div class="mer"><div><div class="k">Order</div><div class="v">ORD-88213</div></div></div>
+        <div class="t">Choose how to pay</div>
+
+        <div class="sels">
+          <div><div class="lbl">Currency</div><div class="sel">USDT&nbsp; Tether <span>▾</span></div></div>
+          <div><div class="lbl">Network</div><div class="sel">Tron (TRC-20) <span>▾</span></div></div>
+        </div>
+        <div class="note" style="margin-top:14px">Fee ≈ $1.00 · usually 1 min · 1 confirmation</div>
+      </div>
+
+      <div class="right">
+        
+        <div><div class="lbl">You are paying with</div><div class="pill"><span class="chip tron">T</span>USDT on Tron (TRC-20)</div></div>
+        <div class="note">Your wallet or exchange must be able to send USDT on the Tron network.</div>
+        <button class="cta">Continue with USDT on Tron</button>
+        <div class="note">The amount to send and the address are shown next.</div>
+      </div>
+    </div>
+    <div class="strip"><b>No clock is running yet.</b> The rate is fixed only when you continue.</div>
+  </div>
+</body></html>
