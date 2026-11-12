@@ -144,3 +144,9 @@ This is the task ADR 0002 depended on, and the place where the agents were wrong
 - **A race the plan only half closed.** The plan cancelled a poll already in flight before a requote. A poll that starts during the requote could still write the old quote over the new one. The mock cannot produce this, so no test would have shown it; the implementing agent built a probe that did. The requote now cancels again before it writes.
 - **A count that outlived its payment.** The number of consecutive failed polls carried over from one payment to the next.
 - **A helper in the plan that could not work.** The plan's test helper sent a tab-visibility event that the library never receives, because it listens on the window and the event did not bubble. The implementing agent found it and fixed the helper.
+
+### Task 9
+
+- **A double-click guard with a gap.** The plan said to release the guard when the write finishes. The implementing agent built that, then reported what it leaves open: the write finishes a moment before React re-renders, and a click in that moment runs the old button handler, which still sees no payment and creates a second one. It could not reproduce it and said so. Codex rated it a blocker. The guard is now held until the result has rendered.
+- **A fix with a trap in it.** The obvious way to do that is to release the guard when "submitting" turns false. The planning agent warned that a write which settles instantly never shows "submitting" as true, so the guard would stay locked for good. The release is keyed on a count of settled writes, and a test covers the instant case.
+- **A hook that trusted the screens.** Reading the commit, I found that "change currency" would drop the payment for any status except expired, including one that had received money. No screen offers it there, but the hook should not depend on that. It now drops a payment only while nothing has been sent.
