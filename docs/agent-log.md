@@ -133,3 +133,14 @@ Codex raised fourteen points and all of them held up. The four that mattered mos
 - **A rule with a hole the implementer found.** The design said a quote that expires "straight after" a status with money is a dead end. The implementing agent built it as written, then pointed out what that lets through: money, then a status the page does not know, then expiry, gives the plain expired screen with its new-quote button. An unknown status says nothing about the money, so the rule now skips it when looking back. This tightens a rule I had approved, on the safer side.
 - **Two sentences of mine that disagreed.** The implementer also noticed that one line of the design doc said a new quote is offered "only when the page has seen no money", while another said only the current quote's history counts. The code follows the second. The first is reworded.
 - **A list nobody tested in full.** Codex found that the expired tests did not cover every status that carries money, so dropping `paid` from that list would have gone unnoticed. Each one now has a case.
+
+### Task 8
+
+This is the task ADR 0002 depended on, and the place where the agents were wrong most often.
+
+- **The bet held.** The no-overlap test held one request open and fired seven triggers at it. All seven joined that request; the most ever in flight was one. The fallback in ADR 0002, a hand-written loop, was not needed.
+- **An ADR that stated a library's behaviour from memory.** When the planning agent drafted ADR 0002 it wrote that the library's interval is fixed-rate, and I let it stand. The implementing agent's tests showed the library restarts its timer after every answer, which is fixed-delay. It reported that the ADR was wrong and did not edit it, because the file was outside its task. The ADR is corrected, and says it was corrected.
+- **Polling that did not quite stop.** After a final status the timer stopped, but returning to the tab, reconnecting, or pressing "Try now" each still sent one request. The plan's own settings caused it. The implementing agent flagged it and Codex rated it a blocker. Nothing is sent now once a payment is final or the server does not know it.
+- **A race the plan only half closed.** The plan cancelled a poll already in flight before a requote. A poll that starts during the requote could still write the old quote over the new one. The mock cannot produce this, so no test would have shown it; the implementing agent built a probe that did. The requote now cancels again before it writes.
+- **A count that outlived its payment.** The number of consecutive failed polls carried over from one payment to the next.
+- **A helper in the plan that could not work.** The plan's test helper sent a tab-visibility event that the library never receives, because it listens on the window and the event did not bubble. The implementing agent found it and fixed the helper.
