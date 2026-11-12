@@ -1,4 +1,5 @@
 import type { Payment } from '../api/schemas'
+import { remainingMs } from './countdown'
 import { currentQuote, moneySeen } from './sequence'
 import type { StatusSequence } from './sequence'
 import { carriesMoney } from './status'
@@ -97,7 +98,7 @@ export function deriveScreen(input: ScreenInput): Screen {
 function payInFull(input: ScreenInput): Screen {
   const { payment, now, lastSuccessAt, lastFailureAt } = input
   const deadline = Date.parse(payment.quote.expires_at)
-  const left = deadline - now
+  const left = remainingMs(payment.quote.expires_at, now)
   const pay = { kind: 'pay', mode: 'full', remainingMs: 0 } as const
   if (left > 0) {
     return { ...pay, clock: 'running', showAddress: true, remainingMs: left }

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { remainingMs } from '../domain/countdown'
 import { amountsToSend, fitsDecimals } from '../domain/money'
 import { deriveConnection, deriveScreen } from '../domain/screen'
 import type { Connection, Screen } from '../domain/screen'
@@ -50,7 +51,7 @@ export function usePaymentScreen(
   // At zero the countdown only asks; the server decides. Once per quote, so a re-render never asks again.
   const deadlinePassed =
     current?.status === 'awaiting_payment' &&
-    now >= Date.parse(current.quote.expires_at)
+    remainingMs(current.quote.expires_at, now) <= 0
   const expiresAt = quote?.expires_at
   const checkedQuote = useRef<string | undefined>(undefined)
   useEffect(() => {
