@@ -366,7 +366,7 @@ The tick box belongs to the plain `expired` screen and its cautious reload varia
 Notes on three of them:
 
 - **`overpaid`** is shown as a success with a clear notice, not as plain green and not as an error. The response has a settlement time, so "complete" is true. It says nothing about a refund, so neither does the page.
-- **`failed`** is a dead end on purpose. I do not know what a reason such as `settlement_rejected` means for a second attempt, and a retry could leave more money stuck. If the sequence shows money was seen, the screen says so: "We saw your payment of 163.69 USDT, but it could not be completed."
+- **`failed`** is a dead end on purpose. I do not know what a reason such as `settlement_rejected` means for a second attempt, and a retry could leave more money stuck. If the sequence shows money was seen, the screen says so, "We saw your payment, but it could not be completed", and shows the amount beside it.
 - **`detected`** says "We've seen your payment on the network", not "received" or "complete". Zero confirmations is not settled.
 
 ### 7.3 Connection trouble is a layer, not a status

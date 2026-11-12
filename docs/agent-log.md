@@ -162,3 +162,14 @@ This is the task ADR 0002 depended on, and the place where the agents were wrong
 - **A dialog that was not a dialog.** The test environment has no modal dialog, so the implementing agent opened the "have you already sent a payment?" dialog a simpler way, and said plainly what that cost: in a real browser the page behind stays clickable and focus is not held. Codex rated it major. It now uses the browser's modal where there is one. The implementing agent then checked in a real browser that clicks behind it reach nothing.
 - **A QR code with no margin.** The code had under half the blank border the QR standard asks for, and a test that pinned exactly that. The implementing agent flagged the border itself. It now has the full four modules.
 - **A bar I had drawn that the data cannot fill.** The agreed pay screen shows a progress bar under the countdown. Writing the task, the planning agent noticed the API gives a quote's deadline but not its lifetime, so there is nothing to draw a proportion from. The bar is gone and the time stays.
+- **A browser check in the wrong harness.** The implementing agent had tested the new modal dialog in a real browser, but through a throwaway page that did not use React's Strict Mode. The app does. In development Strict Mode runs every effect twice, so the second attempt to open an already open dialog throws, and in `npm run dev` pressing "Change currency or network" would have broken the page. Codex found it by reading the hook. The fix has a test that renders the dialog in Strict Mode, and the next task pressed the real button in the real app.
+
+### Task 12
+
+- **The page runs end to end.** After this task I started the app from a clean dependency cache and looked at it myself: no console errors, and the pay screen, underpaid, overpaid and expired screens match the agreed drawings, at desktop width and inside real 390 and 320 pixel frames. The eighteen-place ETH amount wraps inside the card.
+- **Two tests that proved nothing, found by their author.** Checking its own tests by breaking the code, the implementing agent found two that passed for the wrong reason: one "mutation" was a syntax error, so the test failed without testing anything, and a test that the check at zero fires once per quote reused one mock across quotes. It reported both and fixed them.
+- **Nothing rejected from Codex but one point.** Codex's only finding was that an empty transaction hash shows no Transaction row. I kept that: an empty hash has nothing to show or copy.
+
+### Task 13, before it was built
+
+- **A feature cut on the way in.** The dev panel was drawn with a live readout of the mock's status and time left, refreshed every two seconds. The planning agent pointed out that this needed a polling hook, a request helper and their tests, about a third of the task, to show what the checkout page beside it already shows. I cut it. The panel sends commands and reads the mock's settings once when it opens.

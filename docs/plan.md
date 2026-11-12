@@ -81,7 +81,7 @@ src/
     NoticeStrip.tsx PaymentView.tsx
   dev/
     mockControl.ts   calls /__mock
-    useMockState.ts  reads the mock's state while the panel is open
+    useMockSettings.ts reads the mock's settings when the panel opens
     DevPanel.tsx
   test/
     setup.ts fixtures.ts
@@ -1478,73 +1478,76 @@ npm run check && git add -A && git commit -m "Add the status screens, the connec
 ### Task 13: The dev panel
 
 **Files:**
-- Create: `src/dev/mockControl.ts`, `src/dev/mockControl.test.ts`, `src/dev/useMockState.ts`, `src/dev/useMockState.test.tsx`, `src/dev/DevPanel.tsx`, `src/dev/DevPanel.test.tsx`
+- Create: `src/dev/mockControl.ts`, `src/dev/mockControl.test.ts`, `src/dev/useMockSettings.ts`, `src/dev/useMockSettings.test.tsx`, `src/dev/DevPanel.tsx`, `src/dev/DevPanel.test.tsx`
 - Modify: `src/App.tsx`
 
+The panel sends commands to the mock. It does not watch the mock: an earlier version of this task polled the mock every two seconds to show its status and time left, which the checkout page beside it already shows. That was cut before it was built.
+
 **Interfaces:**
-- Consumes: `/__mock` routes (Task 3); `PaymentEntry`, `paymentKey` (Task 8); `formatRemaining`.
+- Consumes: `/__mock` routes (Task 3); `PaymentEntry` (Task 8).
 - Produces:
 
 ```ts
 // src/dev/mockControl.ts
 export type MockSettings = { quote_lifetime_seconds: number; delay_ms: number; fault: 'none' | 'http_500' | 'drop'; clock_offset_seconds: number }
-export type MockState = { settings: MockSettings; payments: Array<{ payment_reference: string; status: string; quote: { expires_at: string } }> }
-export function getMockState(signal?: AbortSignal): Promise<MockState>
+export function getMockSettings(signal?: AbortSignal): Promise<MockSettings> // the settings from GET /__mock/state
 export function setMockStatus(reference: string, status: string, confirmations?: number): Promise<void>
 export function updateMockSettings(patch: Partial<MockSettings>): Promise<MockSettings>
 
-// src/dev/useMockState.ts
-export function useMockState(open: boolean): { state: MockState | undefined; refresh(): void }
+// src/dev/useMockSettings.ts
+export function useMockSettings(open: boolean): { settings: MockSettings | undefined; update(patch: Partial<MockSettings>): void }
 
 // src/dev/DevPanel.tsx
-export function DevPanel(props: { reference: string | null }): JSX.Element
+export function DevPanel(props: { reference: string | null; entry: PaymentEntry | undefined }): JSX.Element
 ```
 
-**Behaviour** (layout from `docs/design/dev-panel-proposal.png`):
+**Behaviour** (layout from `docs/design/dev-panel-proposal.png`, without its "server status" and "expires in" lines):
 
 - `mockControl.ts` calls `/__mock` through its own small helper, not through `src/api`. The helper follows the request rules: a 10 s timeout, an abort signal, and `cache: 'no-store'`.
-- `useMockState` reads the state while `open` is true: once at once, then 2 s after each read settles, so reads never overlap. Closing the panel or unmounting aborts the read in flight and clears the timer. `refresh()` aborts the read in flight or cancels the waiting timer, then reads at once, so there is still never more than one read in flight.
-- `DevPanel` holds only whether it is open.
+- `useMockSettings` reads the settings once each time `open` becomes true, so the buttons show what the mock is really set to after a page reload. It does not poll. Closing the panel or unmounting aborts that read. `update(patch)` sends the patch and keeps the settings the mock answers with.
+- `DevPanel` holds only whether it is open. Everything about the payment comes from its `entry` prop, which `App` passes from the checkout hook, so the panel sends no request to learn it.
 - Collapsed at first: a narrow tab on the right edge labelled "DEV". Clicking it opens the panel; "hide" collapses it.
 - Open: docked on the right, 330 px wide, dark background, monospaced. In `App`, the page and the panel sit in a flex row so the panel pushes the card aside. Under 900 px wide it lies over the page instead.
-- While open it shows `useMockState(open).state` and calls `refresh()` after every action.
 - Sections:
-  - **Current payment:** the reference; the server's status from the mock state; "expires in" using `formatRemaining`; and "seen:" followed by the statuses in the page's sequence for that reference, joined with " → ", read from the query cache with `paymentKey`.
-  - **Set status:** eight buttons named by status. The one matching the server's status is highlighted. A stepper "confirmations − n +" that calls `setMockStatus(reference, 'confirming', n)`.
+  - **Current payment:** the reference, and "seen:" followed by the statuses in `entry.sequence`, joined with " → ".
+  - **Set status:** eight buttons named by status. The one matching `entry.payment.status` has `aria-pressed="true"`. A stepper "confirmations − n +", where n is the payment's `confirmations` when its status carries one and 0 otherwise; "+" calls `setMockStatus(reference, 'confirming', n + 1)` and "−" calls it with `n - 1`, never below 0.
   - **New quotes last:** "30 s", "2 min", "15 min" → `quote_lifetime_seconds` 30, 120, 900.
   - **Faults, on every API request:** "no delay", "3 s", "15 s" → `delay_ms` 0, 3000, 15000; "normal", "HTTP 500", "drop" → `fault`.
   - **Server clock offset:** "−5 min", "0", "+5 min" → `clock_offset_seconds` −300, 0, 300.
+  - In the three settings sections, the option matching `settings` has `aria-pressed="true"`.
   - A last line: "Offline: use the browser's own offline switch."
 - With no reference, the status buttons and the stepper are disabled and the payment section reads "No payment yet."
 
-- [ ] **Step 1: Write the failing tests** (mock `./mockControl`)
+- [ ] **Step 1: Write the failing tests** (mock `./mockControl` in the panel and hook tests)
 
 ```ts
+// DevPanel.test.tsx
 test('starts collapsed', ...) // 'DEV' tab present; no button named 'underpaid'
 test('opens to show the eight statuses', ...) // eight buttons, one per status
 test('sets a status for the current payment', ...) // click 'underpaid' -> setMockStatus('AQH-100306-PMT', 'underpaid')
-test('highlights the status the server reports', ...) // aria-pressed true on that button
-test('the stepper sets confirmations', ...) // click '+' -> setMockStatus(ref, 'confirming', 1)
+test('marks the status the page is showing', ...) // entry with status underpaid -> aria-pressed true on 'underpaid' only
+test('the stepper sets confirmations from the payment', ...) // entry confirming 1 of 3: '+' -> setMockStatus(ref, 'confirming', 2); '−' -> 0
 test.each([['30 s', { quote_lifetime_seconds: 30 }], ['15 s', { delay_ms: 15_000 }], ['HTTP 500', { fault: 'http_500' }], ['drop', { fault: 'drop' }], ['+5 min', { clock_offset_seconds: 300 }]])(
   'the %s button updates the settings', ...)
-test('shows the statuses the page has seen', ...) // cache seeded with awaiting_payment -> underpaid: 'awaiting_payment → underpaid'
+test('marks the settings the mock reports', ...) // settings { fault: 'drop' } -> aria-pressed true on 'drop'
+test('shows the statuses the page has seen', ...) // entry with awaiting_payment then underpaid: 'awaiting_payment → underpaid'
 test('disables the status buttons when there is no payment', ...)
-test('refreshes the state after an action', ...)
+test('sends no request while collapsed', ...) // getMockSettings not called
 
-// useMockState.test.tsx
-test('reads at once when opened, then two seconds after each read settles', ...)
-test('never has two reads in flight', ...) // hold a read open for 10 s -> getMockState called once
-test('refresh during a read aborts it and starts another', ...) // first signal aborted; in-flight count never above 1
-test('aborts the read in flight and stops when closed', ...) // signal.aborted true; advance 10 s -> no call; vi.getTimerCount() === 0
-test('aborts and stops on unmount', ...)
+// useMockSettings.test.tsx
+test('reads once when opened and does not poll', ...) // fake timers: advance 60 s -> getMockSettings called once
+test('reads again when reopened', ...)
+test('aborts the read when closed or unmounted', ...) // signal.aborted true
+test('update keeps the settings the mock answers with', ...)
 
 // mockControl.test.ts
 test('sends no-store and an abort signal', ...) // fetch called with { cache: 'no-store', signal: expect.any(AbortSignal) }
 test('gives up after ten seconds', ...)
+test('getMockSettings returns the settings from the state', ...)
 ```
 
 - [ ] **Step 2: Run and see them fail.** Run: `npx vitest run src/dev`. Expected: FAIL.
-- [ ] **Step 3: Implement `mockControl.ts`, `useMockState.ts` and `DevPanel.tsx`, and add the panel to `App`.**
+- [ ] **Step 3: Implement `mockControl.ts`, `useMockSettings.ts` and `DevPanel.tsx`, and add the panel to `App`,** passing it `checkout.reference` and `checkout.payment.entry`.
 - [ ] **Step 4: Run and see them pass**, then gate and commit
 
 ```bash
