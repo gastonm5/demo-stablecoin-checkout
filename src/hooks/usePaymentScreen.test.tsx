@@ -84,6 +84,18 @@ test('a new quote gets its own check at zero', () => {
   expect(checkNow).toHaveBeenCalledTimes(2)
 })
 
+test('does not ask when the server has answered since the deadline', () => {
+  vi.setSystemTime(DEADLINE + 1_000)
+  renderHook(() =>
+    usePaymentScreen(
+      { ...result(withStatus('awaiting_payment')), lastSuccessAt: DEADLINE },
+      catalogue(),
+    ),
+  )
+  advance(30_000)
+  expect(checkNow).not.toHaveBeenCalled()
+})
+
 test('does not ask at zero for a status with no clock', () => {
   mount(withStatus('underpaid'))
   advance(120_000)

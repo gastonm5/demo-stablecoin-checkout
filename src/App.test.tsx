@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { ApiError } from './api/client'
-import { getCurrencies, getPayment } from './api/endpoints'
+import { createPayment, getCurrencies, getPayment } from './api/endpoints'
 import { parseCurrencies } from './api/schemas'
 import App from './App'
 import { getMockSettings } from './dev/mockControl'
@@ -9,6 +10,7 @@ import { CURRENCIES_JSON, makePayment } from './test/fixtures'
 
 vi.mock('./api/endpoints', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./api/endpoints')>()),
+  createPayment: vi.fn(),
   getCurrencies: vi.fn(),
   getPayment: vi.fn(),
 }))
@@ -23,6 +25,7 @@ const currencies = parseCurrencies(CURRENCIES_JSON)
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/')
+  vi.mocked(createPayment).mockReset()
   vi.mocked(getCurrencies).mockReset()
   vi.mocked(getPayment).mockReset()
   vi.mocked(getMockSettings)
@@ -56,6 +59,29 @@ test('gives the dev panel the payment the page is showing', async () => {
 
 afterEach(() => {
   vi.useRealTimers()
+})
+
+// The fixture's deadline is long past on this device, as with a server clock behind it.
+test('a payment created past its deadline sends no check to the query it replaces', async () => {
+  const error = vi.spyOn(console, 'error')
+  vi.mocked(getCurrencies).mockResolvedValue(currencies)
+  vi.mocked(createPayment).mockResolvedValue(makePayment())
+  vi.mocked(getPayment).mockResolvedValue(makePayment())
+  render(<App />)
+  const user = userEvent.setup()
+  await user.selectOptions(
+    await screen.findByRole('combobox', { name: 'Currency' }),
+    'USDT',
+  )
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: 'Network' }),
+    'tron',
+  )
+  await user.click(
+    screen.getByRole('button', { name: 'Continue with USDT on Tron' }),
+  )
+  expect(await screen.findByText(/This quote is still valid/)).toBeVisible()
+  expect(error).not.toHaveBeenCalled()
 })
 
 test('opens on the picker', async () => {

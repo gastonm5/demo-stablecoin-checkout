@@ -53,12 +53,16 @@ export function usePaymentScreen(
     current?.status === 'awaiting_payment' &&
     remainingMs(current.quote.expires_at, now) <= 0
   const expiresAt = quote?.expires_at
+  // The answer in hand is newer than the deadline; and a check fired on the render that changes the reference would go to the previous query.
+  const answeredSince =
+    expiresAt !== undefined && payment.lastSuccessAt >= Date.parse(expiresAt)
   const checkedQuote = useRef<string | undefined>(undefined)
   useEffect(() => {
-    if (!deadlinePassed || checkedQuote.current === expiresAt) return
+    if (!deadlinePassed || answeredSince || checkedQuote.current === expiresAt)
+      return
     checkedQuote.current = expiresAt
     checkNow()
-  }, [deadlinePassed, expiresAt, checkNow])
+  }, [deadlinePassed, answeredSince, expiresAt, checkNow])
 
   return {
     entry,

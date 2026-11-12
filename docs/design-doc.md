@@ -308,6 +308,7 @@ Errors are `application/problem+json` with `type`, `title`, `status` and `detail
 | Countdown reaches zero | Hides the address and QR, shows "Time's up, checking", polls at once |
 | Server says `expired` | Shows the expired screen and the new-quote action |
 | Server says the quote is still live | Brings the address back, hides the timer, shows "this quote is still valid". The device clock is known to be wrong, so the page stops showing a number it cannot trust |
+| The deadline has passed on this device and the server has already answered since | Does not ask again. The answer in hand is newer than the deadline, and the next poll follows as usual |
 | No timer, and the server has not answered for 10 s | Hides the address until a fresh answer arrives. This covers the tab returning from the background and polls that start failing |
 | The check fails | Keeps the address hidden and says it cannot confirm |
 | Server says `expired` while the countdown still shows time | Shows the expired screen. The server wins |
