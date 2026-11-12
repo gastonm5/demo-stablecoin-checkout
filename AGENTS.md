@@ -14,7 +14,7 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 - An amount is a string from the API response to the screen. It is never a `number`.
 - Do not use `Number`, `parseFloat`, `toFixed`, unary `+` or arithmetic on an amount. The page does no maths on money; it shows the totals the server sends.
 - Show crypto amounts exactly as received. Only the fiat amount follows the shopper's locale.
-- Reject a response whose amount is a JSON number, is malformed, or has more decimal places than its currency allows.
+- Reject a response whose amount is a JSON number or is malformed. Reject a crypto amount with more decimal places than its currency's `decimals` allows.
 
 ## The server is the authority
 
@@ -25,14 +25,14 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 ## Shopper safety
 
 - Name the network wherever an address or a QR code appears.
-- Show the address and QR only on `awaiting_payment` and `underpaid`.
-- Never promise an outcome the API does not state. In particular, never promise a refund.
+- Show the address and QR only on `awaiting_payment` and `underpaid`, and never on `awaiting_payment` once money was seen for that quote.
+- Never promise an outcome the API does not state. In particular, never promise a refund, and never say a payment is safe or unaffected because a request failed.
 - A copy button copies the exact string and says what it copies.
 
 ## Requests
 
 - Reads retry themselves. Writes do not: there is no idempotency key, so a retried write can create a second payment.
-- Every request has a timeout and an abort signal.
+- Every request has a timeout and an abort signal, and bypasses the HTTP cache.
 - At most one poll is in flight. Polling runs through TanStack Query only.
 - Clean up every timer and listener you add.
 

@@ -22,12 +22,14 @@ Use TanStack Query's interval on one query per payment reference, and prove ever
 - The interval is a function of the last result: 3 s while active, 15 s on `expired`, off on `paid`, `overpaid` and `failed`, doubling up to 30 s after consecutive failures.
 - The library's built-in retries are off for this query. The next poll is the retry.
 - Polling pauses while the tab is hidden, and one poll fires when it returns.
-- Starting a requote cancels the poll in flight. The requote's response replaces the cached payment.
+- There is one query per payment reference. The interval, the tab returning, the check at zero and "Try now" all go through it, and a trigger that fires during a request joins that request.
+- Starting a requote waits for the poll in flight to be cancelled before it sends. The requote's response replaces the cached payment.
+- Every request bypasses the HTTP cache.
 - Every request carries the query's abort signal and a 10 s timeout.
 
 ## Consequences
 
-- The guarantee rests on this behaviour of the library: a query has at most one request in flight, and an interval tick that lands during a request joins it instead of starting another. That is my understanding of it, so the test suite includes a response slower than the interval and asserts that only one request is ever in flight.
+- The guarantee rests on this behaviour of the library: a query has at most one request in flight, and an interval tick that lands during a request joins it instead of starting another. That is my understanding of it, so the test suite fires every trigger against a response slower than the interval and asserts that only one request is ever in flight.
 - The other tests: no poll after a final status, nothing after unmount, the backoff sequence, the requote race, and the pause while hidden.
 - If a test shows the library does not behave this way, the fallback is the hand-written loop. The rest of the design does not change, because everything downstream reads the cached payment.
 - The interval is fixed-rate, not fixed-delay. Against a slow server, the next request can start soon after the previous one ends. The backoff covers failures; a consistently slow but successful server gets no relief. I accept that for a mock.
