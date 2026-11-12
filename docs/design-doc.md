@@ -195,6 +195,7 @@ Data moves one way. A server response is validated, stored in the query cache wi
 | Selected currency and network | React state in `usePickerChoice` | It belongs to the picker and nothing else reads it |
 | Whether the picker is open for a new quote, a write in progress and its error | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
 | Payment reference, order id | The URL | So a refresh resumes |
+| The order summary shown before a payment exists | A constant beside the URL reader | It stands for data handed to the page; it is for display, and the payment's own values replace it once a payment exists |
 | A ticked box, an open dialog, the open dev panel | React state in that component | View state that nothing else reads |
 | Which screen to show, connection notice, time left | Not stored | Derived on every render |
 
