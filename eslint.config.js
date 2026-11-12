@@ -28,10 +28,13 @@ export default defineConfig([
       ],
       'no-restricted-syntax': [
         'error',
-        {
-          selector: "CallExpression[callee.name='Number']",
-          message: amountsAreStrings,
-        },
+        ...[
+          "CallExpression[callee.name='Number']",
+          "MemberExpression[object.name='Number'][property.name='parseFloat']",
+          "NewExpression[callee.name='Number']",
+          "CallExpression[callee.property.name='toFixed']",
+          "UnaryExpression[operator='+']",
+        ].map((selector) => ({ selector, message: amountsAreStrings })),
       ],
     },
   },
