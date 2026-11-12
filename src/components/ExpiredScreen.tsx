@@ -1,0 +1,143 @@
+import { useState } from 'react'
+import type { ReactNode, Ref } from 'react'
+import type { Payment } from '../api/schemas'
+import { formatDateTime } from '../domain/format'
+import type { Screen } from '../domain/screen'
+import type { SequenceEntry } from '../domain/sequence'
+import { BODY, NOTICE, Row, StatusCard, WARN } from './StatusCard'
+import { headline } from './statusText'
+
+export function ExpiredScreen({
+  payment,
+  screen,
+  money,
+  requoting,
+  error,
+  onRequote,
+  onChange,
+  notice,
+  headingRef,
+}: {
+  payment: Payment
+  screen: Extract<Screen, { kind: 'expired' }>
+  money?: SequenceEntry // the entry that carried money, for the dead end
+  requoting: boolean
+  error: unknown
+  onRequote(): void
+  onChange(): void
+  notice?: ReactNode
+  headingRef?: Ref<HTMLHeadingElement>
+}) {
+  // View state only: whether the shopper has said they sent nothing.
+  const [ticked, setTicked] = useState(false)
+  const { quote, merchant } = payment
+  const sum = (amount: string) => `${amount} ${quote.crypto_currency}`
+  const shared = {
+    payment,
+    money,
+    title: headline(screen),
+    headingRef,
+    strip: 'Still checking for a late payment.',
+    notice,
+  }
+
+  // Money was seen and the API does not say what happens to it: no new quote, no tick box, no change.
+  if (screen.variant === 'dead_end') {
+    const partial = screen.after === 'partial'
+    const received = money?.amount_received
+    return (
+      <StatusCard
+        {...shared}
+        label={partial ? 'Received before it expired' : 'Payment seen'}
+        amount={received && sum(received)}
+        amountRows={
+          partial && (
+            <>
+              <Row label="Amount due">{sum(quote.total_due)}</Row>
+              {money?.amount_outstanding && (
+                <Row label="Missing" className={WARN}>
+                  {sum(money.amount_outstanding)}
+                </Row>
+              )}
+            </>
+          )
+        }
+        icon="warn"
+      >
+        <p className={BODY}>
+          {partial
+            ? 'This payment expired before the rest arrived. We are still watching in case it is on its way.'
+            : 'We saw a payment before it expired.'}{' '}
+          <strong>Do not send again.</strong>
+        </p>
+        <p className={NOTICE}>
+          {`This page can't complete this payment or tell you what happens to the ${received ? sum(received) : 'funds'} you sent. Contact ${merchant.name} and quote reference ${payment.payment_reference}.`}
+        </p>
+      </StatusCard>
+    )
+  }
+
+  const expiredAt = payment.status === 'expired' ? payment.expired_at : null
+  const locked = !ticked || requoting
+  return (
+    <StatusCard
+      {...shared}
+      label="Expired quote"
+      amount={sum(quote.total_due)}
+      muted
+      timeRows={
+        <>
+          {expiredAt && (
+            <Row label="Expired at">{formatDateTime(expiredAt)}</Row>
+          )}
+          <Row label="Address" className="font-medium text-gray-500">
+            Hidden, so nothing more is sent to it
+          </Row>
+        </>
+      }
+      icon="clock"
+      link={
+        <button
+          type="button"
+          disabled={locked}
+          onClick={onChange}
+          className="whitespace-nowrap text-[#3b5bdb] underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
+        >
+          Change currency or network
+        </button>
+      }
+    >
+      <p className={BODY}>
+        <strong>Already sent?</strong> Do not send again. We are still watching
+        for your payment.
+      </p>
+      {screen.variant === 'cautious' && (
+        <p className={BODY}>
+          {`If you sent any funds for this payment, do not get a new quote. Contact ${merchant.name}.`}
+        </p>
+      )}
+      <label className="flex items-center gap-2 text-[14.5px] font-semibold">
+        <input
+          type="checkbox"
+          checked={ticked}
+          onChange={(event) => setTicked(event.target.checked)}
+          className="size-[18px]"
+        />
+        I have not sent a payment
+      </label>
+      <button
+        type="button"
+        disabled={locked}
+        onClick={onRequote}
+        className="rounded-full bg-[#14161a] px-5 py-[13px] text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#d5d9de]"
+      >
+        {requoting ? 'Working…' : 'Get a new quote'}
+      </button>
+      {error != null && (
+        <p role="alert" className="text-sm font-semibold text-red-700">
+          We couldn't get a new quote. Try again.
+        </p>
+      )}
+    </StatusCard>
+  )
+}
