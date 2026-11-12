@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -36,6 +36,13 @@ function renderPicker(overrides: Partial<Props> = {}) {
 
 const currencyMenu = () => screen.getByRole('combobox', { name: 'Currency' })
 const networkMenu = () => screen.getByRole('combobox', { name: 'Network' })
+const networkOptions = () =>
+  within(networkMenu())
+    .getAllByRole('option')
+    .map((option) => option.textContent)
+// A closed select shows the text of its selected option.
+const selectedNetwork = () =>
+  within(networkMenu()).getByRole('option', { selected: true }).textContent
 
 async function choose(currency: string, network?: string) {
   const user = userEvent.setup()
@@ -118,6 +125,7 @@ test('a currency with one network has it filled in', async () => {
   renderPicker()
   await choose('ETH')
   expect(networkMenu()).toHaveValue('ethereum')
+  expect(selectedNetwork()).toBe('Ethereum')
   expect(
     screen.getByRole('button', { name: 'Continue with ETH on Ethereum' }),
   ).toBeEnabled()
@@ -126,16 +134,29 @@ test('a currency with one network has it filled in', async () => {
 test('shows each network with its fee and usual time', async () => {
   renderPicker()
   await choose('USDT')
-  expect(
-    screen.getByRole('option', {
-      name: 'Tron (TRC-20) · fee ≈ $1.00 · usually 1 min',
-    }),
-  ).toBeInTheDocument()
-  expect(
-    screen.getByRole('option', {
-      name: 'Ethereum (ERC-20) · fee ≈ $4.50 · usually 3 min',
-    }),
-  ).toBeInTheDocument()
+  expect(networkOptions()).toEqual([
+    'Choose network',
+    'Tron (TRC-20) · fee ≈ $1.00 · usually 1 min',
+    'Ethereum (ERC-20) · fee ≈ $4.50 · usually 3 min',
+  ])
+})
+
+test('the chosen network shows its name alone and the others keep their fee and time', async () => {
+  renderPicker()
+  const user = await choose('USDT', 'tron')
+  expect(selectedNetwork()).toBe('Tron (TRC-20)')
+  expect(networkOptions()).toEqual([
+    'Choose network',
+    'Tron (TRC-20)',
+    'Ethereum (ERC-20) · fee ≈ $4.50 · usually 3 min',
+  ])
+  await user.selectOptions(networkMenu(), 'ethereum')
+  expect(selectedNetwork()).toBe('Ethereum (ERC-20)')
+  expect(networkOptions()).toEqual([
+    'Choose network',
+    'Tron (TRC-20) · fee ≈ $1.00 · usually 1 min',
+    'Ethereum (ERC-20)',
+  ])
 })
 
 test('requote mode changes the button and offers Back', async () => {

@@ -18,7 +18,19 @@ const STILL_WORKING_AFTER_MS = 4_000
 const label = 'mb-1.5 block text-xs font-semibold text-gray-500'
 const note = 'text-[13.5px] text-gray-500'
 const menu =
-  'w-full rounded-xl border-[1.5px] border-[#dfe3e8] bg-white px-3.5 py-3 font-bold disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500'
+  'peer w-full appearance-none rounded-xl border-[1.5px] border-[#dfe3e8] bg-white py-3 pr-10 pl-3.5 font-bold disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500'
+const chevron = (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 12 12"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    className="pointer-events-none absolute top-1/2 right-3.5 size-3 -translate-y-1/2 peer-disabled:text-gray-500"
+  >
+    <path d="M2.5 4.5 6 8l3.5-3.5" />
+  </svg>
+)
 
 export function Picker({
   orderId,
@@ -72,43 +84,52 @@ export function Picker({
               <label htmlFor={`${id}-currency`} className={label}>
                 Currency
               </label>
-              <select
-                id={`${id}-currency`}
-                className={menu}
-                value={picked.currencyCode}
-                disabled={submitting}
-                onChange={(event) => picked.setCurrency(event.target.value)}
-              >
-                <option value="" disabled>
-                  Choose currency
-                </option>
-                {currencies.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {`${c.code}\u00a0 ${c.name}`}
+              <div className="relative">
+                <select
+                  id={`${id}-currency`}
+                  className={menu}
+                  value={picked.currencyCode}
+                  disabled={submitting}
+                  onChange={(event) => picked.setCurrency(event.target.value)}
+                >
+                  <option value="" disabled>
+                    Choose currency
                   </option>
-                ))}
-              </select>
+                  {currencies.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {`${c.code}\u00a0 ${c.name}`}
+                    </option>
+                  ))}
+                </select>
+                {chevron}
+              </div>
             </div>
             <div>
               <label htmlFor={`${id}-network`} className={label}>
                 Network
               </label>
-              <select
-                id={`${id}-network`}
-                className={menu}
-                value={picked.networkId}
-                disabled={submitting || !currency}
-                onChange={(event) => picked.setNetwork(event.target.value)}
-              >
-                <option value="" disabled>
-                  Choose network
-                </option>
-                {currency?.networks.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {`${n.name} · fee ${formatUsdFee(n.network_fee)} · usually ${usualTime(n.avg_confirmation_seconds)}`}
+              <div className="relative">
+                <select
+                  id={`${id}-network`}
+                  className={menu}
+                  value={picked.networkId}
+                  disabled={submitting || !currency}
+                  onChange={(event) => picked.setNetwork(event.target.value)}
+                >
+                  <option value="" disabled>
+                    Choose network
                   </option>
-                ))}
-              </select>
+                  {currency?.networks.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {/* The closed menu shows the selected option's text, so the chosen one has the name alone to fit; its fee and time are on the line below. */}
+                      {n.id === picked.networkId
+                        ? n.name
+                        : `${n.name} · fee ${formatUsdFee(n.network_fee)} · usually ${usualTime(n.avg_confirmation_seconds)}`}
+                    </option>
+                  ))}
+                </select>
+                {chevron}
+              </div>
             </div>
           </div>
           {network && (

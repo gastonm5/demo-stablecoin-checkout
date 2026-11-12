@@ -482,7 +482,7 @@ These were not discussed one by one. I set them while writing this document, and
 - **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens, and focus returns to the link when it closes.
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".
 - **`expired` straight after `detected` or `confirming`:** this should not happen on a real server, but the dev panel can force it. It gets the same dead end as after a partial payment, with the headline "This payment expired".
-- **Picker menus:** the browser's own, with the fee and usual time in each option's text. A currency with one network (ETH) has it filled in.
+- **Picker menus:** the browser's own, with the fee and usual time in each option's text. Once a network is chosen its menu shows the name alone, so it is not cut off, and the fee and usual time are on the line under the menus. A currency with one network (ETH) has it filled in.
 - **Payment not found on resume:** back to the picker with a notice.
 - **Copy buttons:** show "Copied" for two seconds, announced to screen readers.
 - **Dates and times:** formatted for the shopper's locale and time zone.
