@@ -470,9 +470,10 @@ These were not discussed one by one. I set them while writing this document, and
 
 Checked during the build: a dropped connection from the mock mounted in the dev server arrives as no HTTP response at all, not as a 500. Through `npm run dev`, `curl` printed status `000` and exited with code 52 ("Empty reply from server"). Node's `fetch` rejects on it in the mock's tests. I have not watched it in a browser.
 
-Two things I still have to verify during the build:
+Checked during the build: TanStack Query never starts a second request for a payment while one is in flight. The polling test holds a request open and fires every trigger at it: ten seconds of interval ticks, "Check now" twice, the tab hidden and shown, and the browser going offline and back. The seven fetches those triggers made all joined the open request, and no more than one request was ever in flight.
 
-- That TanStack Query never overlaps requests for one query, whichever trigger fires, which the polling tests will prove or disprove.
+One thing I still have to verify during the build:
+
 - That TypeScript's typings accept a string in the number formatter. Node formats it exactly; I checked that.
 
 ## 12. One thing I would defend
