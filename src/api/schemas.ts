@@ -41,11 +41,17 @@ const quote = z.object({
 })
 export type Quote = z.infer<typeof quote>
 
+const merchant = z.object({ name: z.string(), logo_url: z.string().nullable() })
+const order = z.object({ currency: z.string(), amount: decimalString })
+
+const orderSummary = z.object({ order_id: z.string(), merchant, order })
+export type OrderSummary = z.infer<typeof orderSummary>
+
 const paymentBase = z.object({
   payment_reference: z.string(),
   order_id: z.string(),
-  merchant: z.object({ name: z.string(), logo_url: z.string().nullable() }),
-  order: z.object({ currency: z.string(), amount: decimalString }),
+  merchant,
+  order,
   quote,
 })
 export type PaymentBase = z.infer<typeof paymentBase>
@@ -106,6 +112,10 @@ export type Problem = z.infer<typeof problem>
 
 export function parseCurrencies(json: unknown): Currency[] {
   return z.object({ currencies: z.array(currency) }).parse(json).currencies
+}
+
+export function parseOrderSummary(json: unknown): OrderSummary {
+  return orderSummary.parse(json)
 }
 
 export function parsePayment(json: unknown): Payment {

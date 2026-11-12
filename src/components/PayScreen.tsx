@@ -53,11 +53,7 @@ export function PayScreen({
     <CheckoutCard
       left={
         <>
-          <OrderHeader
-            orderId={payment.order_id}
-            merchantName={payment.merchant.name}
-            fiat={payment.order}
-          />
+          <OrderHeader order={payment} />
           {remaining && (
             <p className="mb-3.5 rounded-xl border border-[#f3d999] bg-[#fff7e6] px-3.5 py-3 text-sm text-[#6b4e00]">
               <strong>Part of your payment arrived.</strong>{' '}

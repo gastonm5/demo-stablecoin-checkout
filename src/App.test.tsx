@@ -89,6 +89,8 @@ test('opens on the picker', async () => {
   render(<App />)
   const main = screen.getByRole('main')
   expect(main).toHaveTextContent('Loading payment options…')
+  expect(main).toHaveTextContent('Nordwind Audio')
+  expect(main).toHaveTextContent('€149.90')
   expect(
     await screen.findByRole('heading', { name: 'Choose how to pay' }),
   ).toBeInTheDocument()
@@ -108,6 +110,8 @@ test('offers Try again when the options cannot be loaded', async () => {
   expect(
     screen.getByText("We couldn't load the payment options."),
   ).toBeInTheDocument()
+  expect(screen.getByText('Nordwind Audio')).toBeInTheDocument()
+  expect(screen.getByText('€149.90')).toBeInTheDocument()
   vi.mocked(getCurrencies).mockResolvedValue(currencies)
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
   await act(() => vi.advanceTimersByTimeAsync(0))

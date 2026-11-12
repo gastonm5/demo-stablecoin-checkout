@@ -94,11 +94,7 @@ export function StatusCard({
     <CheckoutCard
       left={
         <>
-          <OrderHeader
-            orderId={payment.order_id}
-            merchantName={payment.merchant.name}
-            fiat={payment.order}
-          />
+          <OrderHeader order={payment} />
           {amount && (
             <>
               <p className="mb-0.5 text-xs font-semibold text-gray-500">

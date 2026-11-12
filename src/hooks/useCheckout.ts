@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPayment, isNotFound, isQuoteNotExpired } from '../api/endpoints'
 import type { Choice } from '../api/endpoints'
+import type { OrderSummary } from '../api/schemas'
 import { currentQuote, moneySeen } from '../domain/sequence'
 import { runRequote, seedCreatedPayment } from './paymentCache'
 import { readUrl, writeReference } from './url'
@@ -17,7 +18,7 @@ export type CheckoutView =
   | { kind: 'payment' }
 
 export type UseCheckoutResult = {
-  orderId: string
+  order: OrderSummary // for display; only its order_id is sent
   reference: string | null
   view: CheckoutView
   payment: UsePaymentResult
@@ -76,7 +77,7 @@ export function useCheckout(): UseCheckoutResult {
       // A payment that exists is requoted, never replaced: a new one would leave its address live.
       if (reference === null) {
         const created = await createPayment({
-          order_id: url.orderId,
+          order_id: url.order.order_id,
           ...choice,
         })
         seedCreatedPayment(client, created, Date.now())
@@ -99,7 +100,7 @@ export function useCheckout(): UseCheckoutResult {
   }
 
   return {
-    orderId: url.orderId,
+    order: url.order,
     reference,
     view:
       reference === null

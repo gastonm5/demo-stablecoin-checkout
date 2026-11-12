@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { parseCurrencies } from '../api/schemas'
+import { ASSUMED_ORDER } from '../hooks/url'
 import { CURRENCIES_JSON } from '../test/fixtures'
 import { Picker } from './Picker'
 
@@ -16,7 +17,7 @@ afterEach(() => {
 
 function renderPicker(overrides: Partial<Props> = {}) {
   const props: Props = {
-    orderId: 'ORD-88213',
+    order: ASSUMED_ORDER,
     currencies,
     mode: 'create',
     notice: null,
@@ -228,15 +229,9 @@ test('shows the not-found notice', () => {
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
 })
 
-test('shows the order reference and no fiat amount', async () => {
-  renderPicker()
-  expect(screen.getByText('ORD-88213')).toBeVisible()
-  expect(screen.getByText('Order')).toBeVisible()
-  await choose('USDT', 'tron')
-  // The order's amount and merchant come only with a payment, so none of them may appear here.
-  for (const fiat of ['149.90', 'EUR', '€', '$149']) {
-    expect(document.body).not.toHaveTextContent(fiat)
-  }
-  expect(screen.queryByText(/payment for/i)).not.toBeInTheDocument()
-  expect(document.body).not.toHaveTextContent('Nordwind')
+test('shows the order summary it is given', () => {
+  renderPicker({ order: { ...ASSUMED_ORDER, order_id: 'ORD-1' } })
+  expect(screen.getByText('Nordwind Audio')).toBeVisible()
+  expect(screen.getByText('Order ORD-1')).toBeVisible()
+  expect(screen.getByText('€149.90')).toBeVisible()
 })

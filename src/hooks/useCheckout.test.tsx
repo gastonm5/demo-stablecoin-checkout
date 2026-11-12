@@ -17,6 +17,7 @@ import { createTestClient, withClient } from '../test/query'
 import { resetVisibility, setVisibility } from '../test/visibility'
 import { paymentKey } from './paymentCache'
 import type { PaymentEntry } from './paymentCache'
+import { ASSUMED_ORDER } from './url'
 import { useCheckout } from './useCheckout'
 import { useCurrencies } from './useCurrencies'
 
@@ -130,7 +131,7 @@ afterEach(() => {
 test('opens on the picker with the default order', async () => {
   const { result } = await mount()
   expect(result.current).toMatchObject({
-    orderId: 'ORD-88213',
+    order: ASSUMED_ORDER,
     reference: null,
     view: { kind: 'picker', mode: 'create', notice: null },
     submitting: false,
@@ -267,7 +268,7 @@ test('a reference in the URL resumes the payment', async () => {
   const { result } = await mount(`?order_id=ORD-1&payment=${REFERENCE}`)
   expect(getPayment).toHaveBeenCalledWith(REFERENCE, expect.anything())
   expect(result.current).toMatchObject({
-    orderId: 'ORD-1',
+    order: { ...ASSUMED_ORDER, order_id: 'ORD-1' },
     reference: REFERENCE,
     view: { kind: 'payment' },
   })

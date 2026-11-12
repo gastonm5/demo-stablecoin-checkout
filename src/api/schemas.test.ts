@@ -1,6 +1,35 @@
 import { expect, test } from 'vitest'
 import { CURRENCIES_JSON, paymentJson, STATE_FIXTURES } from '../test/fixtures'
-import { parseCurrencies, parsePayment, parseProblem } from './schemas'
+import {
+  parseCurrencies,
+  parseOrderSummary,
+  parsePayment,
+  parseProblem,
+} from './schemas'
+
+const SUMMARY = {
+  order_id: 'ORD-88213',
+  merchant: { name: 'Nordwind Audio', logo_url: null },
+  order: { currency: 'EUR', amount: '149.90' },
+}
+
+test('parses an order summary', () => {
+  expect(parseOrderSummary(SUMMARY)).toEqual(SUMMARY)
+})
+
+test('rejects an order summary with a numeric amount', () => {
+  expect(() =>
+    parseOrderSummary({
+      ...SUMMARY,
+      order: { currency: 'EUR', amount: 149.9 },
+    }),
+  ).toThrow()
+})
+
+test('rejects an order summary with no merchant', () => {
+  const { order_id, order } = SUMMARY
+  expect(() => parseOrderSummary({ order_id, order })).toThrow()
+})
 
 test.each(Object.keys(STATE_FIXTURES))('parses the %s fixture', (status) => {
   const p = parsePayment(paymentJson({ status, ...STATE_FIXTURES[status] }))

@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import type { Choice } from '../api/endpoints'
-import type { Currency } from '../api/schemas'
+import type { Currency, OrderSummary } from '../api/schemas'
 import {
   confirmationsLabel,
   formatUsdFee,
@@ -33,7 +33,7 @@ const chevron = (
 )
 
 export function Picker({
-  orderId,
+  order,
   currencies,
   mode,
   notice,
@@ -42,7 +42,7 @@ export function Picker({
   onSubmit,
   onCancel,
 }: {
-  orderId: string
+  order: OrderSummary
   currencies: Currency[]
   mode: 'create' | 'requote'
   notice: 'payment_not_found' | null
@@ -67,7 +67,7 @@ export function Picker({
     <CheckoutCard
       left={
         <>
-          <OrderHeader orderId={orderId} />
+          <OrderHeader order={order} />
           {notice === 'payment_not_found' && (
             <p
               role="status"

@@ -94,13 +94,7 @@ export function PaymentView({
       case 'pay_loading':
         return (
           <CheckoutCard
-            left={
-              <OrderHeader
-                orderId={current.order_id}
-                merchantName={current.merchant.name}
-                fiat={current.order}
-              />
-            }
+            left={<OrderHeader order={current} />}
             right={
               <div className="flex flex-col items-center gap-3 text-center text-[14.5px]">
                 {detailsProblem ? (

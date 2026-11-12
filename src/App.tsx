@@ -20,7 +20,7 @@ function Checkout({ checkout }: { checkout: UseCheckoutResult }) {
   if (catalogue.currencies) {
     return (
       <Picker
-        orderId={checkout.orderId}
+        order={checkout.order}
         currencies={catalogue.currencies}
         mode={view.mode}
         notice={view.notice}
@@ -34,7 +34,7 @@ function Checkout({ checkout }: { checkout: UseCheckoutResult }) {
 
   return (
     <CheckoutCard
-      left={<OrderHeader orderId={checkout.orderId} />}
+      left={<OrderHeader order={checkout.order} />}
       right={
         <div className="flex flex-col items-center gap-3 text-center text-[14.5px]">
           {catalogue.error != null ? (

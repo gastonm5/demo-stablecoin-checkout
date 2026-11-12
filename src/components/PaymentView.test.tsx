@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { parseCurrencies } from '../api/schemas'
 import type { Payment } from '../api/schemas'
 import { recordStatus, startSequence } from '../domain/sequence'
+import { ASSUMED_ORDER } from '../hooks/url'
 import type { UseCheckoutResult } from '../hooks/useCheckout'
 import type { Catalogue } from '../hooks/useCurrencies'
 import type { UsePaymentResult } from '../hooks/usePayment'
@@ -49,7 +50,7 @@ function checkoutWith(
   over: Partial<UseCheckoutResult> = {},
 ): UseCheckoutResult {
   return {
-    orderId: 'ORD-88213',
+    order: ASSUMED_ORDER,
     reference: 'AQH-100306-PMT',
     view: { kind: 'payment' },
     payment,

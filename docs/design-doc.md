@@ -31,7 +31,7 @@ The page has three screens inside one card. The card keeps the same shape throug
 
 ![Pay screen](design/pay-screen-proposal.png)
 
-The drawings are the designs I agreed before the build, and they are kept as agreed. The build differs from them in six small ways. Two changed while building: the pay screen has no bar under the countdown (section 5), and the dev panel has no live readout (section 8). Four changed when I went over the finished screens: the picker has no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, and the network menu shows the chosen network's name alone (section 11).
+The drawings are the designs I agreed before the build, and they are kept as agreed. The build differs from them in seven small ways. Two changed while building: the pay screen has no bar under the countdown (section 5), and the dev panel has no live readout (section 8). Five changed when I went over the finished screens: the picker has the same header as the pay screen, with the merchant and the amount, and no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, and the network menu shows the chosen network's name alone (section 11).
 
 **Choose first, then quote.** The page opens on the picker with nothing selected. No payment exists and no clock runs. Only when the shopper presses "Continue with USDT on Tron" does the page call `POST /api/payments` and show an address.
 
@@ -46,7 +46,7 @@ The API forces part of this. `POST /api/payments/:reference/requote` returns 409
 - **Once any money was seen** (`underpaid`, `detected` and later): there is no way to change. The remainder has to go to the same address on the same network.
 - **If the server ends a partial payment** (`expired` straight after `underpaid`): there is no change and no new quote. The page sends the shopper to the merchant ([ADR 0003](adr/0003-partial-and-late-payments.md)).
 
-**What the picker can show.** The API returns the merchant name and the order amount only inside a payment. On the picker no payment exists, so it shows the order reference and the choices, and the merchant name and fiat amount appear from the pay screen onwards. I did not add an order endpoint to the mock to fill this in; see section 9.
+**The order summary on the picker.** The API returns the merchant name and the order amount only inside a payment, and on the picker no payment exists. The page already assumed it is handed an order id by whatever sent the shopper here. It now assumes the rest of the order comes with it: an order summary of `{ order_id, merchant, order }`, in the same shape a payment carries them. The build keeps that object as a constant and uses it for display only, so the picker has the same header as every later screen. Nothing in it is sent to the API except the order id. Once a payment exists, the header shows that payment's own values, not the assumed ones. I did not add an order endpoint to the mock for this; see section 9.
 
 **Refresh.** After a payment is created, its reference goes in the URL (`?payment=AQH-100306-PMT`). On load, a reference in the URL makes the page fetch that payment and resume on the right screen. The page replaces the current history entry instead of adding one, so Back does not walk through earlier payments. This departs from the brief, which lists persistence as out of scope; the reasoning is in [ADR 0005](adr/0005-resume-from-url-reference.md).
 
@@ -444,7 +444,7 @@ These are places where the brief is silent or does not fit together. Each is a q
 |---|---|---|
 | Number of statuses | "There are six more states" beyond the four in the diagram | The API defines four more. I built for eight in total |
 | Fee unit | The catalogue lists a `network_fee` of `3.20` for ETH; the one example quote, for USDT on Tron, adds the fee in the crypto's own units | The catalogue is served exactly as given. I read its fees as USD. Each quote carries the fee converted into the crypto's units, one to one for USDT and USDC. The brief shows no ETH quote, so I defined one: `3.20` USD at 3,000 USD per ETH is a fee of `0.001066666666666667` ETH. This is an assumption, not something the brief states |
-| Order details before a payment | Merchant and order amount come only inside a payment | The picker shows the order reference only. I did not invent an order endpoint |
+| Order details before a payment | Merchant and order amount come only inside a payment | The page is handed an order summary, `{ order_id, merchant, order }`, by whatever sent the shopper here: the merchant's checkout, or a call made before this page. The build keeps it as a constant, and `?order_id=` in the URL can replace the id. It is for display only, and the server never confirms it: if it disagreed with the payment the server creates, the pay screen would show the server's values. I did not invent an order endpoint |
 | What `GET` returns | "Returns the payment with an updated status, plus the fields below" | The whole payment, plus the status fields |
 | Repeated `POST /api/payments` | Not stated | A new payment with a new reference each time |
 | Deadline on `underpaid` | The response has no deadline field | There is none. Once any money has arrived, the mock does not expire the payment and the page shows no countdown. If a server reports `expired` after `underpaid` anyway, the page treats it as a dead end |
@@ -461,7 +461,7 @@ These are places where the brief is silent or does not fit together. Each is a q
 Things I left out on purpose, and what each would need:
 
 - **Wallet payment links in the QR.** A standard link would prefill the amount in the shopper's wallet. Token links need each token's contract address, which the API does not return. ([ADR 0004](adr/0004-qr-holds-address-only.md))
-- **Merchant name and amount on the picker.** Needs an endpoint that returns the order before a payment exists.
+- **Loading the order summary.** The picker's header comes from an assumed object. A real page needs it from the merchant's checkout, or from an endpoint that returns the order before a payment exists.
 - **Fees in the order's currency.** The picker shows catalogue fees in USD while the order is in EUR.
 - **A server time source for the countdown.** A time field in the response body would remove the device-clock error. ([ADR 0001](adr/0001-server-decides-expiry.md))
 - **Full resume after a reload.** The status sequence restarts on reload, so the page forgets that money was seen. Keeping the sequence in session storage would restore the exact wording, and even a single stored "money was seen" flag per payment would close the gap on the same device. ([ADR 0005](adr/0005-resume-from-url-reference.md))
@@ -478,7 +478,7 @@ Things I left out on purpose, and what each would need:
 These were not discussed one by one. I set them while writing this document, and each is easy to change.
 
 - **Timings:** poll every 3 s, 15 s on `expired`, backoff doubling to 30 s, request timeout 10 s, "still working" hint at 4 s, connection notice after two failed polls in a row.
-- **Order id:** read from `?order_id=` in the URL, falling back to `ORD-88213` so the page runs with no setup.
+- **Order summary:** the assumed object is order `ORD-88213` for Nordwind Audio, EUR 149.90, the same values the mock returns. `?order_id=` in the URL replaces the id and nothing else.
 - **Exchange rate:** shown under the amount, exactly as sent ("1 USDT = 0.9214 EUR").
 - **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens, and focus returns to the link when it closes.
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".

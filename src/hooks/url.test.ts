@@ -1,23 +1,25 @@
 import { afterEach, expect, test } from 'vitest'
-import { readUrl, writeReference } from './url'
+import { ASSUMED_ORDER, readUrl, writeReference } from './url'
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
 })
 
+const ORDER_1 = { ...ASSUMED_ORDER, order_id: 'ORD-1' }
+
 test.each([
-  ['', { orderId: 'ORD-88213', reference: null }],
-  ['?order_id=ORD-1', { orderId: 'ORD-1', reference: null }],
+  ['', { order: ASSUMED_ORDER, reference: null }],
+  ['?order_id=ORD-1', { order: ORDER_1, reference: null }],
   [
     '?payment=AQH-100306-PMT',
-    { orderId: 'ORD-88213', reference: 'AQH-100306-PMT' },
+    { order: ASSUMED_ORDER, reference: 'AQH-100306-PMT' },
   ],
   [
     '?order_id=ORD-1&payment=AQH-1-PMT',
-    { orderId: 'ORD-1', reference: 'AQH-1-PMT' },
+    { order: ORDER_1, reference: 'AQH-1-PMT' },
   ],
   // An empty reference names no payment, so there is nothing to fetch.
-  ['?payment=', { orderId: 'ORD-88213', reference: null }],
+  ['?payment=', { order: ASSUMED_ORDER, reference: null }],
 ])('readUrl(%j)', (search, expected) => {
   expect(readUrl(search)).toEqual(expected)
 })
