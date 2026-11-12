@@ -4,11 +4,12 @@ import { CheckoutCard } from './components/CheckoutCard'
 import { OrderHeader } from './components/OrderHeader'
 import { PaymentView } from './components/PaymentView'
 import { Picker } from './components/Picker'
+import { DevPanel } from './dev/DevPanel'
 import { useCheckout } from './hooks/useCheckout'
+import type { UseCheckoutResult } from './hooks/useCheckout'
 import { useCurrencies } from './hooks/useCurrencies'
 
-function Checkout() {
-  const checkout = useCheckout()
+function Checkout({ checkout }: { checkout: UseCheckoutResult }) {
   const catalogue = useCurrencies()
   const { view } = checkout
 
@@ -58,13 +59,24 @@ function Checkout() {
   )
 }
 
+// The panel sits beside the page in a row, so at desktop width it pushes the card aside instead of covering it.
+function Page() {
+  const checkout = useCheckout()
+  return (
+    <div className="flex">
+      <main className="min-h-screen min-w-0 flex-1 bg-[#f5f5f7] px-4 py-8 text-[#14161a] md:py-16">
+        <Checkout checkout={checkout} />
+      </main>
+      <DevPanel reference={checkout.reference} entry={checkout.payment.entry} />
+    </div>
+  )
+}
+
 export default function App() {
   const [client] = useState(() => new QueryClient())
   return (
     <QueryClientProvider client={client}>
-      <main className="min-h-screen bg-[#f5f5f7] px-4 py-8 text-[#14161a] md:py-16">
-        <Checkout />
-      </main>
+      <Page />
     </QueryClientProvider>
   )
 }
