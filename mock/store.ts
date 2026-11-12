@@ -7,7 +7,7 @@ import {
   PAIRS,
   TX_HASH,
   type Pair,
-} from './fixtures'
+} from './fixtures.ts'
 
 export type Fault = 'none' | 'http_500' | 'drop'
 export type MockSettings = {

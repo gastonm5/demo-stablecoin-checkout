@@ -1,13 +1,41 @@
 import express from 'express'
 import type { ErrorRequestHandler, Express, Response } from 'express'
-import { CURRENCIES } from './fixtures'
-import { createStore, type MockStore } from './store'
+import { CURRENCIES } from './fixtures.ts'
+import { createStore, type MockSettings, type MockStore } from './store.ts'
 
 const PROBLEMS = {
   'quote-not-expired': [409, 'Quote has not expired'],
   'payment-not-found': [404, 'Payment not found'],
   'invalid-request': [422, 'Invalid request'],
+  internal: [500, 'Internal server error'],
 } as const
+
+const STATUSES: unknown[] = [
+  'awaiting_payment',
+  'detected',
+  'confirming',
+  'paid',
+  'underpaid',
+  'overpaid',
+  'expired',
+  'failed',
+]
+const FAULTS: unknown[] = ['none', 'http_500', 'drop']
+
+const isCount = (value: unknown) =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0
+
+const SETTINGS: Record<keyof MockSettings, (value: unknown) => boolean> = {
+  quote_lifetime_seconds: isCount,
+  delay_ms: isCount,
+  // May be negative: the panel can put the server clock behind the device's.
+  clock_offset_seconds: Number.isInteger,
+  fault: (value) => FAULTS.includes(value),
+}
+
+// hasOwn keeps inherited names such as `constructor` and `__proto__` out of the settings.
+const isSetting = ([key, value]: [string, unknown]) =>
+  Object.hasOwn(SETTINGS, key) && SETTINGS[key as keyof MockSettings](value)
 
 function problem(
   res: Response,
@@ -51,6 +79,16 @@ export function createMockApp(store: MockStore = createStore()): Express {
   api.use((_req, res, next) => {
     res.set('Cache-Control', 'no-store')
     next()
+  })
+  api.use((req, res, next) => {
+    setTimeout(() => {
+      const { fault } = store.settings
+      // Destroying the socket sends no status at all, so the client sees a network error.
+      if (fault === 'drop') req.socket.destroy()
+      else if (fault === 'http_500')
+        problem(res, 'internal', 'The mock is set to fail every API request.')
+      else next()
+    }, store.settings.delay_ms)
   })
   api.use(express.json())
 
@@ -103,7 +141,45 @@ export function createMockApp(store: MockStore = createStore()): Express {
 
   api.use(rejectUnparsableBody)
 
+  const control = express.Router()
+  control.use(express.json())
+
+  control.get('/state', (_req, res) => {
+    res.json({ settings: store.settings, payments: store.listPayments() })
+  })
+
+  control.post('/payments/:reference/status', (req, res) => {
+    const { reference } = req.params
+    const { status, confirmations } = req.body ?? {}
+    if (
+      !STATUSES.includes(status) ||
+      !(confirmations === undefined || isCount(confirmations))
+    )
+      return problem(
+        res,
+        'invalid-request',
+        `status must be one of ${STATUSES.join(', ')}, and confirmations a whole number of 0 or more.`,
+      )
+    const payment = store.setStatus(reference, status, confirmations)
+    if (!payment) return notFound(res, reference)
+    res.json(payment)
+  })
+
+  control.post('/settings', (req, res) => {
+    const patch = req.body ?? {}
+    if (!Object.entries(patch).every(isSetting))
+      return problem(
+        res,
+        'invalid-request',
+        'quote_lifetime_seconds and delay_ms take a whole number of 0 or more, clock_offset_seconds a whole number, and fault one of none, http_500 or drop.',
+      )
+    res.json(store.updateSettings(patch))
+  })
+
+  control.use(rejectUnparsableBody)
+
   const app = express()
   app.use('/api', api)
+  app.use('/__mock', control)
   return app
 }

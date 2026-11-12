@@ -468,9 +468,10 @@ These were not discussed one by one. I set them while writing this document, and
 - **Tools:** Vite, React and TypeScript in strict mode; Tailwind; TanStack Query; zod; `qrcode.react` for the QR; Express for the mock; Vitest and React Testing Library; ESLint and Prettier; npm.
 - **Browsers:** current Chrome, Safari, Firefox and Edge.
 
-Three things I still have to verify during the build:
+Checked during the build: a dropped connection from the mock mounted in the dev server arrives as no HTTP response at all, not as a 500. Through `npm run dev`, `curl` printed status `000` and exited with code 52 ("Empty reply from server"). Node's `fetch` rejects on it in the mock's tests. I have not watched it in a browser.
 
-- That a dropped connection from a mock mounted in the dev server reaches the browser as a network error and not as a 500.
+Two things I still have to verify during the build:
+
 - That TanStack Query never overlaps requests for one query, whichever trigger fires, which the polling tests will prove or disprove.
 - That TypeScript's typings accept a string in the number formatter. Node formats it exactly; I checked that.
 
