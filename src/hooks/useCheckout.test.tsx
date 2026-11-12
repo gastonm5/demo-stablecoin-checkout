@@ -22,7 +22,7 @@ import { createTestClient, withClient } from '../test/query'
 import { resetVisibility, setVisibility } from '../test/visibility'
 import { paymentKey } from './paymentCache'
 import type { PaymentEntry } from './paymentCache'
-import { ASSUMED_ORDER } from './url'
+import { ASSUMED_ORDER } from '../config/checkout'
 import { useCheckout } from './useCheckout'
 import { useCurrencies } from './useCurrencies'
 

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { parseCurrencies } from '../api/schemas'
-import { ASSUMED_ORDER } from '../hooks/url'
+import { ASSUMED_ORDER } from '../config/checkout'
 import { CURRENCIES_JSON } from '../test/fixtures'
 import { PickerScreen } from './PickerScreen'
 

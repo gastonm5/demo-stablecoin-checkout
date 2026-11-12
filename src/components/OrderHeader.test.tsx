@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, test } from 'vitest'
-import { ASSUMED_ORDER } from '../hooks/url'
+import { ASSUMED_ORDER } from '../config/checkout'
 import { OrderHeader } from './OrderHeader'
 
 const LOGO = 'https://cdn.example/nordwind.png'

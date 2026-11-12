@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from 'vitest'
-import { ASSUMED_ORDER, readUrl, writeReference } from './url'
+import { ASSUMED_ORDER } from '../config/checkout'
+import { readUrl, writeReference } from './url'
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
