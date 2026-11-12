@@ -1703,6 +1703,65 @@ Expected: both pass.
 
 ---
 
+### Task 16: Sort the source folders into screens, components and config
+
+Added on 12 Nov 2026, after Task 15, at my request. An organisational refactor: no payment behaviour, screen, API contract or safety rule changes.
+
+**Why.** `src/components` held two different things: whole checkout screens and the small pieces they are built from. The assumed order summary sat in the URL helper, which is not where a reader looks for configuration.
+
+**Target structure:**
+
+```
+src/
+  main.tsx
+  App.tsx
+  api/          HTTP client, response schemas and endpoint functions
+  domain/       Pure payment, history, money and presentation derivation
+  screens/      Complete checkout screens and screen-specific helpers
+  components/   Reusable rendering components
+  hooks/        Checkout orchestration and browser effects
+  config/       Initial checkout configuration
+  dev/          Browser-side mock controls
+  test/         Shared test helpers and fixtures
+mock/           Express mock server and its fixtures
+docs/           Current specifications and historical material
+```
+
+**Moves** (with `git mv`, so history follows the files):
+
+| From `src/components/` | To `src/screens/` |
+| --- | --- |
+| `PaymentView.tsx`, `PaymentView.test.tsx` | same names |
+| `Picker.tsx`, `Picker.test.tsx` | `PickerScreen.tsx`, `PickerScreen.test.tsx`; the component is renamed `PickerScreen` |
+| `PayScreen.tsx`, `PayScreen.test.tsx` | same names |
+| `WaitingScreen.tsx`, `CompleteScreen.tsx`, `ExpiredScreen.tsx`, `FailedScreen.tsx`, `CheckingScreen.tsx` | same names |
+| `statusText.ts`, `StatusScreens.test.tsx` | same names |
+
+Staying in `src/components/`, with their tests: `CheckoutCard`, `StatusCard`, `OrderHeader`, `CopyButton`, `NetworkBanner`, `NetworkChip`, `QrFrame`, `ConfirmChangeDialog`, `NoticeStrip`.
+
+`ASSUMED_ORDER` moves from `src/hooks/url.ts` to a new `src/config/checkout.ts`, with the same values, the same validation through `parseOrderSummary` and the same initialisation at module load. `url.ts` keeps reading and writing the URL and imports the constant.
+
+**Rules:**
+
+- No behaviour change. No string, condition, request or amount changes. Existing assertions and coverage stay.
+- No barrel files, no path aliases, no new layer, no new dependency, no compatibility re-exports.
+- Nothing else is renamed. `usePickerChoice` keeps its name.
+- No test that only asserts a folder name.
+- `paymentCache.ts` stays beside the hooks that use it.
+- Out of scope, each needing its own change and tests: the amounts-after-a-requote currency question, the history model, polling and error policy, focus behaviour, slow-request feedback.
+
+- [ ] **Step 1: Baseline.** Record `git status` and the head commit. Run `npm run check` and `npm run build`; both pass before anything moves.
+
+- [ ] **Step 2: Move the screens.** `git mv` the files in the table, rename `Picker` to `PickerScreen` everywhere it is used, and fix every import and `vi.mock` path. Run `npm run check`. Commit: "Move the checkout screens into src/screens".
+
+- [ ] **Step 3: Move the assumed order.** Create `src/config/checkout.ts`, update `url.ts` and every importer. Run `npm run check`. Commit: "Keep the assumed order in src/config".
+
+- [ ] **Step 4: Documents.** `docs/design-doc.md` section 4 (diagram, layers, state table), a project-structure section in `README.md`, the Structure section of `AGENTS.md`, and a note that separates current specifications from historical records. Old plan tasks, log entries and ADR narratives keep the paths they were written with. Commit: "Describe the new folder structure".
+
+- [ ] **Step 5: Verify.** `npm run check && npm run build`; start the app and look at the picker, the pay screen and a few status screens; search the source and the active documents for the old paths; read the whole diff for anything that is not a move, an import or the rename.
+
+---
+
 ## How this plan is executed
 
 - **Tasks 1 to 13** are implemented one at a time, in order, each by a fresh implementer on Opus that is given this plan, the spec and its own task.
@@ -1711,4 +1770,5 @@ Expected: both pass.
 - **After Task 13,** Codex reviews the whole branch, and the full gate runs once more.
 - **Task 14** is done with the human.
 - **Task 15** was added after the walk-through and is built like Tasks 1 to 13: one implementer on Opus, then a Codex review of its commits.
+- **Task 16** is a folder refactor added after Task 15: one implementer on Opus in a separate worktree, a Codex review of the moves, then a Codex pass over the whole change.
 - Nothing is pushed until the human says so.
