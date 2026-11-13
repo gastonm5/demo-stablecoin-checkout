@@ -108,7 +108,7 @@ The rows for `awaiting_payment` are in the order the function checks them.
 | `awaiting_payment` | time left on the device clock | Pay | shown | shown | 3 s |
 | `awaiting_payment` | past the device's deadline; the last answer arrived after it and is no more than 10 s old | Pay, "This quote is still valid. Your device clock looks wrong, so the timer is hidden." | shown | hidden | 3 s |
 | `awaiting_payment` | past the device's deadline; the last request failed, after the deadline and after the last answer | Pay, "We can't confirm this quote is still live. Don't send until this page reconnects." | hidden | hidden | backing off |
-| `awaiting_payment` | past the device's deadline, otherwise | Pay, "Time's up. Checking with the payment service." | hidden | hidden | one check at once, then 3 s |
+| `awaiting_payment` | past the device's deadline, otherwise | Pay, "Time's up. Checking with the payment service." | hidden | hidden | one check at once, unless an answer has arrived since the deadline; then 3 s |
 | `underpaid` | details checked | Pay, the remaining amount | shown | none | 3 s |
 | `underpaid` | details not checked | The same loading card as for `awaiting_payment` | hidden | none | 3 s |
 | `detected`, `confirming` | | Waiting | hidden | none | 3 s |
@@ -199,7 +199,7 @@ In `App.tsx`, `Page` calls `useCheckout` and `Checkout` calls `useCurrencies`, a
 | `src/hooks` | `useCheckout`, `usePayment`, `usePaymentScreen`, `useCurrencies`, `useNow`, `useOnline`, and small ones for the picker's selection, copying and the dialog. The URL reader and the payment cache helpers sit beside the hooks that use them | Own all behaviour and timing |
 | `src/screens` | Whole checkout screens: `PickerScreen`, and `PaymentView`, which shows one of `PayScreen`, `WaitingScreen`, `CompleteScreen`, `ExpiredScreen`, `FailedScreen` or `CheckingScreen`, or the shared loading card while a payment's details are being checked. Each screen receives the payment narrowed to the statuses that can produce it. Also the wording those screens share | Render only. A screen is one state of the checkout and is used once |
 | `src/components` | The pieces screens are built from: the card, the status card, the loading card, the order header, the copy button, the network banner and chip, the QR frame, the notice strip, the change dialog | Render only, and do not know which screen they are in. A screen or a component may keep view state that nothing else reads, such as a ticked box or an open dialog |
-| `src/config` | The assumed input the page starts with: the order summary it is handed before a payment exists | For display only. Once a payment is loaded, its own values are the authority for what the header shows |
+| `src/config` | The assumed input the page starts with: the order summary it is handed before a payment exists | For display, apart from the order id, which is sent when a payment is created. Once a payment is loaded, its own values are the authority for what the header shows |
 | `src/dev` | The dev panel and its own small request helper | The only code that knows the mock exists. It calls the mock's control endpoints itself and never goes through `src/api` |
 | `src/test` | Fixtures and helpers the tests share | |
 | `mock/` | The Express app, fixtures, control endpoints | |
@@ -215,8 +215,8 @@ The folders took this shape in Task 16 of the plan, after the build. Before it, 
 | Payment, currencies, status sequence | TanStack Query cache | It is server data, or derived from it at the boundary |
 | Selected currency and network | React state in `usePickerChoice` | It belongs to the picker and nothing else reads it |
 | Whether the picker is open for a new quote, a write in progress and its error | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
-| Payment reference, order id | The URL | So a refresh resumes |
-| The order summary shown before a payment exists | A constant in `src/config/checkout.ts` | It stands for data handed to the page; it is for display, and the payment's own values replace it once a payment exists |
+| Payment reference, and the order id when `?order_id=` is given | The URL | So a refresh resumes. Without the parameter, the order id is the assumed one |
+| The order summary shown before a payment exists | A constant in `src/config/checkout.ts` | It stands for data handed to the page. Apart from its order id, which is sent when a payment is created, it is for display, and the payment's own values replace it once a payment exists |
 | A ticked box, an open dialog, the open dev panel | React state in that component | View state that nothing else reads |
 | Which screen to show, connection notice, time left | Not stored | Derived on every render |
 
@@ -231,7 +231,7 @@ Reads retry themselves. Writes ask the shopper. The API has no idempotency key, 
 | `GET /api/currencies` | Loading state, give up at 10 s | Full-card error | Automatic, two more tries with backoff, then "Try again". Until the list arrives, it also asks again when the tab regains focus or the connection returns |
 | `POST /api/payments` | Progress on the button, "still working" after 4 s, give up at 10 s | Error beside the button, choices intact | Manual only |
 | `GET /api/payments/:ref` | Give up at 10 s, counts as a failed poll | Last status stays, notice after two failures in a row | The next poll is the retry |
-| `POST …/requote` | As for create | Error on the expired screen | Manual only, then re-read the payment in case it went through |
+| `POST …/requote` | From the picker, as for create. From the expired screen's button, the button reads "Working…" at once and there is no later hint. Give up at 10 s | Error where it was pressed: on the expired screen, or beside the picker's button | Manual only, then re-read the payment in case it went through |
 
 Further rules:
 
@@ -356,7 +356,7 @@ Without a timer the page has no local deadline to rely on, which is why the unti
 
 ![While the server says awaiting_payment, the pay screen has four states: counting down, time's up and checking, quote still valid, and can't confirm. An expired answer from the server at any point leads to the expired screen.](diagrams/countdown-at-zero.svg)
 
-In the figure, "silent 10 s" points at "can't confirm". More exactly, the address hides as "checking" while the page waits and as "can't confirm" once a request has failed. The figure shows the four states of the pay screen itself. The loading card and the "We're checking your payment" screen of 3.4 are also possible on `awaiting_payment`, are decided before the clock is looked at, and are not drawn.
+After ten seconds without a fresh answer the address hides again: as "checking" while the page only waits, and as "can't confirm" if a request has failed since the last answer. The figure shows the four states of the pay screen itself. The loading card and the "We're checking your payment" screen of 3.4 are also possible on `awaiting_payment`, are decided before the clock is looked at, and are not drawn.
 
 The clock errors behave differently, and I accept all three:
 
@@ -462,7 +462,7 @@ The mock is a small Express app mounted inside the dev server, so `npm run dev` 
 | Control | Options |
 |---|---|
 | Set status | Eight buttons, usable in any order, plus a confirmations stepper |
-| Quote lifetime | 30 s, 2 min, 15 min, applied to new quotes |
+| New quotes last | 30 s, 2 min, 15 min, applied to new quotes |
 | Faults, on every API request | Delay of 3 s or 15 s; HTTP 500; dropped connection. The control endpoints are exempt |
 | Server clock offset | −5 min, 0, +5 min, to see the clock-difference handling without changing the system clock |
 

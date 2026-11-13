@@ -62,14 +62,14 @@ docs/           Current specifications and historical material
 
 - **Screens and components only render.** A screen is one whole state of the checkout; a component is a piece screens share. Behaviour lives in `hooks/`, and decisions live in `domain/` as pure functions.
 - **`api/` is the only code that talks to the payment API** or checks the shape of an answer.
-- **`config/` holds what the page assumes it is handed** before a payment exists: the order summary shown on the first screen. It is for display. Once a payment is loaded, the server's values are what the page shows.
+- **`config/` holds what the page assumes it is handed** before a payment exists: the order summary shown on the first screen. Apart from the order id, which is sent when a payment is created, it is for display. Once a payment is loaded, the server's values are what the page shows.
 - **Only `dev/` knows the mock exists.** It calls the mock's control endpoints itself.
 
 ## Trigger each payment state
 
 ### With the dev panel
 
-Click the **DEV** tab on the right edge of the page. The panel sits beside the checkout card, so you can change something and watch the page react.
+Click the **DEV** tab on the right edge of the page. From 900 px wide the panel sits beside the checkout card, so you can change something and watch the page react. On a narrower window it opens over the page.
 
 | To see                      | Do this                                                                                            |
 | --------------------------- | -------------------------------------------------------------------------------------------------- |

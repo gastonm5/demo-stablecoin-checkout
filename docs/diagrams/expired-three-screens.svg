@@ -74,7 +74,7 @@
           <text class="t-lbl" x="570" y="172" text-anchor="middle">yes</text>
           <rect class="node move" x="620" y="150" width="316" height="60" rx="8"/>
           <text class="t-title" x="636" y="176">Expired, cautious wording</text>
-          <text class="t-sub" x="636" y="194">"if you sent any funds, do not get a new quote"</text>
+          <text class="t-sub" x="636" y="194">adds a warning for anyone who already sent funds</text>
 
           <path class="edge" d="M375,210 V252 H620" marker-end="url(#ex-arrow)"/>
           <text class="t-lbl" x="385" y="240">no</text>

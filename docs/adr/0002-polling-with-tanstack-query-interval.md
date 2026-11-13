@@ -19,7 +19,7 @@ TanStack Query is already in the project for every other request.
 
 Use TanStack Query's interval on one query per payment reference, and prove every guarantee with a test.
 
-- The interval is a function of the last result: 3 s while active, 15 s on `expired`, off on `paid`, `overpaid` and `failed`, doubling up to 30 s after consecutive failures.
+- The interval is a function of the last result: 3 s while active, 15 s on `expired`, off on `paid`, `overpaid` and `failed`. While requests fail it grows: it is the larger of that interval and 3 s doubled for each failure in a row, capped at 30 s. That is 6, 12, 24 and then 30 s on an active status, and 15, 15, 24 and then 30 s on `expired`.
 - After a final status or a not-found error, no request of any kind is sent: not by the interval, the tab returning, a reconnect or "Try now".
 - The library's built-in retries are off for this query. The next poll is the retry.
 - Polling pauses while the tab is hidden, and one poll fires when it returns.
@@ -34,4 +34,5 @@ Use TanStack Query's interval on one query per payment reference, and prove ever
 - The other tests: no poll after a final status, nothing after unmount, the backoff sequence, the requote race, and the pause while hidden.
 - If a test shows the library does not behave this way, the fallback is the hand-written loop. The rest of the design does not change, because everything downstream reads the cached payment.
 - The library restarts its timer after every answer, so the next poll starts one full interval after the previous answer arrived. That is fixed-delay in effect, and a slow server is never asked again before it has answered. When I first wrote this record I said the interval was fixed-rate; the polling tests showed otherwise.
+- The backoff doubles from 3 s, not from the status's own interval, so on `expired` the first two failures change nothing. This record first said only that the interval doubles after failures; comparing the documents with the code claim by claim showed the difference.
 - An abandoned tab on the `expired` screen polls every 15 s for as long as it is visible. A hidden tab does not poll.

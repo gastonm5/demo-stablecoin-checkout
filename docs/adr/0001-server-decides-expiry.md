@@ -26,7 +26,7 @@ The API hints at the second one. Requote returns 409 `quote-not-expired` when th
 
 1. **The countdown uses the device clock.** It is recomputed from `expires_at` on every tick, never decremented.
 2. **The server decides expiry.** The countdown reaching zero only triggers a check:
-   - The page hides the address and QR, shows "Time's up, checking", and polls at once.
+   - The page hides the address and QR, shows "Time's up. Checking with the payment service.", and asks the server once.
    - `expired` from the server shows the expired screen.
    - If the server says the quote is still live, the address comes back, the timer is hidden, and the page says the quote is still valid.
    - If the check fails, the address stays hidden and the page says it cannot confirm.

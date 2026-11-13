@@ -104,7 +104,7 @@
 
           <rect class="node move" x="490" y="30" width="160" height="60" rx="8"/>
           <text class="t-name" x="570" y="55" text-anchor="middle">useCurrencies</text>
-          <text class="t-sub" x="570" y="74" text-anchor="middle">the list, fetched once</text>
+          <text class="t-sub" x="570" y="74" text-anchor="middle">the currency list</text>
 
           <rect class="node move" x="720" y="30" width="120" height="46" rx="8"/>
           <text class="t-name" x="780" y="50" text-anchor="middle">useNow</text>

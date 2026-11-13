@@ -23,7 +23,7 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 - The page never decides a payment's status. No timer and no failed request may show `expired` or `failed`.
 - The screen is derived by pure functions from the server's answer, the sequence of statuses seen, the time, the times of the last answer and the last failed request, and whether the payment's details passed the check against the currency list. The connection notice is derived from the browser's online state and the count of failed polls.
 - The clock runs only while the status is `awaiting_payment`, and a stopped clock has no value. The time used is the later of the clock and the last answer, so a new quote cannot inherit an old reading.
-- A status the page does not know is not an error. It shows the "we're checking" screen and keeps polling.
+- A status the page does not know is not an error. It shows the "We're checking your payment" screen and keeps polling.
 
 ## Shopper safety
 
@@ -38,15 +38,15 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 - Reads retry themselves. Writes do not: there is no idempotency key, so a retried write can create a second payment.
 - Every request has a timeout and an abort signal, and bypasses the HTTP cache.
 - At most one poll is in flight. Polling runs through TanStack Query only.
-- An answer must be about what was asked: the same reference, order and pair. Check it in `src/api`.
+- An answer must be about what was asked: a create answer the same order and pair, a requote answer the same reference and pair, a poll answer the same reference. Check it in `src/api`.
 - Clean up every timer and listener you add.
 
 ## Structure
 
 - Screens and components render. `src/screens` holds whole checkout screens. `src/components` holds the reusable pieces they are built from, which do not import from `src/screens`. Hooks own behaviour. `src/domain` is pure functions. `src/api` is the only place that talks to the payment API or validates a response's shape.
 - A screen or a component may hold view state that nothing else reads: a ticked box, an open dialog, an open panel. Timers, requests, subscriptions, clipboard access and anything derived from server data live in a hook or in `src/domain`.
-- `src/config` holds the assumed input the page starts with. It is for display before a payment exists. Once a payment is loaded, its own values are the authority for what the page shows.
-- No state library. Local state lives in React state inside a custom hook.
+- `src/config` holds the assumed input the page starts with. Apart from the order id, which is sent when a payment is created, it is for display before a payment exists. Once a payment is loaded, its own values are the authority for what the page shows.
+- No state library. State lives in React state: inside a custom hook, or in the screen or component for the view state described above.
 - Do not add a dependency without asking.
 - The app's request code must not know the mock exists. Only the dev panel calls the mock's control endpoints.
 
