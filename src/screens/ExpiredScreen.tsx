@@ -90,7 +90,7 @@ export function ExpiredScreen({
       icon="clock"
       link={
         <Button
-          variant="link"
+          variant="secondary"
           disabled={locked}
           onClick={onChange}
           className="whitespace-nowrap"
