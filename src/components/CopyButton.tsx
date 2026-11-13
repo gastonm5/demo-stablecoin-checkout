@@ -42,11 +42,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
         aria-live="polite"
         className={`w-0 min-w-full text-left text-small font-normal wrap-anywhere text-ink-muted ${failed ? 'mt-1' : ''}`}
       >
-        {failed && (
-          <span className="entrance [--entrance-duration:150ms] [--entrance-rise:0px]">
-            {FAILED}
-          </span>
-        )}
+        {failed && <span className="entrance entrance-fade">{FAILED}</span>}
       </span>
     </span>
   )

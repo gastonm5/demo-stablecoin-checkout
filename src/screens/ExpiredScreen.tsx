@@ -128,7 +128,7 @@ export function ExpiredScreen({
       {error != null && (
         <p
           role="alert"
-          className="entrance text-small font-semibold text-bad [--entrance-duration:150ms] [--entrance-rise:0px]"
+          className="entrance entrance-fade text-small font-semibold text-bad"
         >
           We couldn't get a new quote. Try again.
         </p>
