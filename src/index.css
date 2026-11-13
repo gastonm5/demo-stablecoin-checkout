@@ -34,10 +34,14 @@
   --color-warn-ink: #6b4e00;
   --color-bad: #b91c1c;
   --color-pending: #6b7280;
-  --color-network-tron: #ff060a;
+  --color-network-tron: #dc062b;
   --color-network-ethereum: #627eea;
+  /* For a filled control: white text on #627eea is 3.69:1, on this 4.53:1. */
+  --color-network-ethereum-fill: #5770d0;
   --color-network-polygon: #8247e5;
-  --color-network-solana: #14b8a6;
+  --color-network-solana: #14f195;
+  /* For a border or a radio: #14f195 is 1.50:1 on white, this 3.19:1 on white and 3.02:1 on Solana's 10% tint. */
+  --color-network-solana-line: #0ea566;
   --color-network-other: #6b7280;
 
   /* Size only: line height comes from the card unless an element sets its own. */

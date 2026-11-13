@@ -1,11 +1,6 @@
-// Decoration only: the network's name is always in text beside the chip.
-const COLOURS: Record<string, string> = {
-  tron: 'bg-network-tron',
-  ethereum: 'bg-network-ethereum',
-  polygon: 'bg-network-polygon',
-  solana: 'bg-network-solana',
-}
+import { networkColours } from './networkColours'
 
+// Decoration only: the network's name is always in text beside the chip.
 export function NetworkChip({
   networkId,
   networkName,
@@ -15,10 +10,11 @@ export function NetworkChip({
   networkName: string
   className: string
 }) {
+  const { chip, onFill } = networkColours(networkId)
   return (
     <span
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center rounded-full font-extrabold text-ink-inverse ${COLOURS[networkId] ?? 'bg-network-other'} ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-full font-extrabold ${chip} ${onFill} ${className}`}
     >
       {[...networkName][0]}
     </span>
