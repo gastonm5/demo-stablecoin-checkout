@@ -56,7 +56,7 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 - Use `Button`, `Notice` and `StatusIcon`. Do not hand-write a button.
 - A network's colours come from `networkColours`. Text on a network's fill uses its `onFill`. A network's colour is never used for a status.
 - Text wraps inside the card down to 320 px wide. A currency code never splits across lines.
-- Things may fade in. Nothing the server takes away is animated out. The picker's sections and a copy button close with the shopper's own action. Never animate a change of amount or a tick of the countdown, or the removal of an address, a QR, a notice or a screen.
+- Things may fade in. Nothing the server takes away is animated out. The picker's sections and a copy button close with the shopper's own action. Never animate a change of amount or the countdown's digits, or the removal of an address, a QR, a notice or a screen. The countdown's bar may move steadily between ticks.
 - One rule in `src/index.css` handles reduced motion for the checkout. Do not add per-component handling there.
 - The tests have no layout. Check a change to layout or motion in a real browser at 1200, 768, 390 and 320 px, and say that you did.
 

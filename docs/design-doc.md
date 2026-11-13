@@ -33,7 +33,7 @@ The page cannot see the blockchain and does not control the outcome. It reports 
 
 ## 2. The flow
 
-The page has three screens inside one card. The card keeps the same shape throughout: the payment's facts on the left, what is happening and what to do on the right, and a strip along the bottom for notices.
+The page has three screens inside one card. The picker is one column. Once there is a payment, the card keeps one shape: the payment's facts on the left, what is happening and what to do on the right, and a strip along the bottom for notices.
 
 | Screen | When | Agreed design |
 |---|---|---|
@@ -215,7 +215,7 @@ The folders took this shape in Task 16 of the plan, after the build. Before it, 
 | Payment, currencies, status sequence | TanStack Query cache | It is server data, or derived from it at the boundary |
 | Selected currency and network | React state in `usePickerChoice` | It belongs to the picker and nothing else reads it |
 | Whether the picker is open for a new quote, a write in progress and its error | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
-| Payment reference, and the order id when `?order_id=` is given | The URL | So a refresh resumes. Without the parameter, the order id is the assumed one |
+| Payment reference, and the order id when `?order_id=` is given | React state in `useCheckout`, read from the URL when the page loads. The reference is written back to the URL when it changes | So a refresh resumes. Without the parameter, the order id is the assumed one |
 | The order summary shown before a payment exists | A constant in `src/config/checkout.ts` | It stands for data handed to the page. Apart from its order id, which is sent when a payment is created, it is for display, and the payment's own values replace it once a payment exists |
 | A ticked box, an open dialog, which picker section the shopper reopened | React state in that component | View state that nothing else reads |
 | The open dev panel | React state in the panel, copied to `sessionStorage` | So it is still open after the reload its Start over buttons cause |
@@ -559,7 +559,7 @@ Added on 13 Nov 2026, after I asked for a review of the rendered page at 1200, 7
 
 No colour code and no other text size or radius appears in `src/screens` or `src/components`. The dev panel keeps its own colours, so it never looks like part of the checkout.
 
-Three pieces are reused across screens: `Button` (a black pill for the main action, a bordered control for copy and "Try now", and an underlined one that looks like a link; all three are buttons), `Notice` (the amber box) and `StatusIcon` (the pending, clock, check and alert marks, drawn as SVG).
+Three pieces are reused across screens: `Button` (a pill for the main action, black everywhere except the picker's Continue, which takes the chosen chain's colour; a bordered control for copy, "Try now" and "Change currency or network"; and an underlined one that looks like a link; all three are buttons), `Notice` (the amber box) and `StatusIcon` (the pending, clock, check and alert marks, drawn as SVG).
 
 **Nothing is cut off.** Down to 320 px wide, a long merchant name, network name, order id or amount wraps inside the card. A currency code is never split across two lines: the amount breaks at the space before it. Under 480 px the order id and the fiat amount take a row of their own under the merchant. From 768 px up, the card's two columns are at least 460 px tall, so a short screen does not make the card jump.
 
@@ -574,7 +574,7 @@ Three pieces are reused across screens: `Button` (a black pill for the main acti
 | What | Motion |
 |---|---|
 | A new screen's content, in its one or two columns | Fades in and rises 8 px, 180 ms. The strip under it does not move |
-| The card's width, between the picker and a payment | Moves between 520 and 940 px over 200 ms |
+| The card's width, between the picker and a payment | The most it can be moves between 520 and 940 px over 200 ms. A narrower window gets a narrower card |
 | A picker section opening or closing | Its height moves over 200 ms, and a chosen option takes its colour over 120 ms |
 | A copy button after a successful copy | Narrows to "Copied" and widens back, 180 ms each way |
 | The picker's fee line and wallet sentence, when a network is first chosen | Fade in and rise 6 px, 160 ms |
@@ -604,7 +604,7 @@ Added on 13 Nov 2026. After the look had been reviewed I chose a different picke
 
 What the agreed drawing has and the picker no longer does: two menus, a right-hand column, a "You are paying with" pill, and the sentence "The amount to send and the address are shown next."
 
-**The card's width** belongs to one element around the checkout, which stays mounted: 520 px while the picker or its loading card is showing, 940 px while a payment is. It moves between the two over 200 ms. A page loaded on a payment starts at 940 px and does not move. The height is not animated.
+**The card's width** belongs to one element around the checkout, which stays mounted. It sets the most the card can be wide: 520 px while the picker or its loading card is showing, 940 px while a payment is. A narrower window gets a narrower card. That limit moves between the two over 200 ms. A page loaded on a payment starts at the 940 px limit and does not move. The height is not animated.
 
 **The chains' colours** are mine. Two of them cannot be used everywhere as they are, and the table says what each needs.
 
