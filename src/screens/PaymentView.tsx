@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toSend } from '../domain/money'
 import type { Screen } from '../domain/screen'
@@ -47,9 +47,8 @@ export function PaymentView({
     payment,
     catalogue,
   )
-  const headingRef = useFocusOnChange<HTMLHeadingElement>(
-    screen?.kind ?? 'loading',
-  )
+  const kind = screen?.kind ?? 'loading'
+  const headingRef = useFocusOnChange<HTMLHeadingElement>(kind)
   const notice = connectionNotice(connection, payment.checkNow)
   // Only a live quote with its address on screen may be dropped.
   const changeOffered =
@@ -135,7 +134,8 @@ export function PaymentView({
       <p role="status" aria-live="polite" className="sr-only">
         {entry && screen ? announcement(screen) : ''}
       </p>
-      {body()}
+      {/* A new kind of screen gets new nodes, so its entrance plays; a new answer of the same kind keeps them. */}
+      <Fragment key={kind}>{body()}</Fragment>
       <ConfirmChangeDialog
         open={confirming}
         onConfirm={() => {
