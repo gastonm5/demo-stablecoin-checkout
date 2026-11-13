@@ -42,7 +42,7 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 
 ## Structure
 
-- Screens and components render. `src/screens` holds whole checkout screens. `src/components` holds the reusable pieces they are built from, which do not import from `src/screens`. Hooks own behaviour. `src/domain` is pure functions. `src/api` is the only place that talks to the server or validates a response's shape.
+- Screens and components render. `src/screens` holds whole checkout screens. `src/components` holds the reusable pieces they are built from, which do not import from `src/screens`. Hooks own behaviour. `src/domain` is pure functions. `src/api` is the only place that talks to the payment API or validates a response's shape.
 - A screen or a component may hold view state that nothing else reads: a ticked box, an open dialog, an open panel. Timers, requests, subscriptions, clipboard access and anything derived from server data live in a hook or in `src/domain`.
 - `src/config` holds the assumed input the page starts with. It is for display before a payment exists. Once a payment is loaded, its own values are the authority for what the page shows.
 - No state library. Local state lives in React state inside a custom hook.

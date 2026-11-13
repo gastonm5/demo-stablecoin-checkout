@@ -181,13 +181,13 @@ Data moves one way. A server response is validated, stored in the query cache wi
 
 | Folder | Holds | Rule |
 |---|---|---|
-| `src/api` | Request functions, timeouts, zod schemas | The only code that talks to the server or validates a response's shape |
+| `src/api` | Request functions, timeouts, zod schemas | The only code that talks to the payment API or validates a response's shape |
 | `src/domain` | Status groups, `deriveScreen`, the status sequence, countdown maths, the amount guard | Pure functions, no React, no I/O |
 | `src/hooks` | `useCheckout`, `usePayment`, `usePaymentScreen`, `useCurrencies`, `useNow`, `useOnline`, and small ones for the picker's selection, copying and the dialog. The URL reader and the payment cache helpers sit beside the hooks that use them | Own all behaviour and timing |
 | `src/screens` | Whole checkout screens: `PickerScreen`, and `PaymentView`, which shows one of `PayScreen`, `WaitingScreen`, `CompleteScreen`, `ExpiredScreen`, `FailedScreen` or `CheckingScreen`. Also the wording those screens share | Render only. A screen is one state of the checkout and is used once |
 | `src/components` | The pieces screens are built from: the card, the status card, the order header, the copy button, the network banner and chip, the QR frame, the notice strip, the change dialog | Render only, and do not know which screen they are in. A screen or a component may keep view state that nothing else reads, such as a ticked box or an open dialog |
 | `src/config` | The assumed input the page starts with: the order summary it is handed before a payment exists | For display only. Once a payment is loaded, its own values are the authority for what the header shows |
-| `src/dev` | The dev panel | The only code that knows the mock exists |
+| `src/dev` | The dev panel and its own small request helper | The only code that knows the mock exists. It calls the mock's control endpoints itself and never goes through `src/api` |
 | `src/test` | Fixtures and helpers the tests share | |
 | `mock/` | The Express app, fixtures, control endpoints | |
 

@@ -1750,7 +1750,7 @@ Staying in `src/components/`, with their tests: `CheckoutCard`, `StatusCard`, `O
 - Nothing else is renamed. `usePickerChoice` keeps its name.
 - No test that only asserts a folder name.
 - `paymentCache.ts` stays beside the hooks that use it.
-- Out of scope, each needing its own change and tests: the historical-currency bug identified earlier, the history model, polling and error policy, focus behaviour, slow-request feedback.
+- Out of scope, each needing its own change and tests: the amounts-after-a-requote currency question, the history model, polling and error policy, focus behaviour, slow-request feedback.
 
 - [ ] **Step 1: Baseline.** Record `git status` and the head commit. Run `npm run check` and `npm run build`; both pass before anything moves.
 
@@ -1758,9 +1758,11 @@ Staying in `src/components/`, with their tests: `CheckoutCard`, `StatusCard`, `O
 
 - [ ] **Step 3: Move the assumed order.** Create `src/config/checkout.ts`, update `url.ts` and every importer. Run `npm run check`. Commit: "Keep the assumed order in src/config".
 
-- [ ] **Step 4: Documents.** `docs/design-doc.md` section 4 (diagram, layers, state table), a project-structure section in `README.md`, the Structure section of `AGENTS.md`, and a new `docs/README.md` that separates current specifications from historical records. Old plan tasks, log entries and ADR narratives keep the paths they were written with. Commit: "Describe the new folder structure".
+- [ ] **Step 4: Documents.** `docs/design-doc.md` section 4 (diagram, layers, state table), a project-structure section in `README.md`, the Structure section of `AGENTS.md`, and a note that separates current specifications from historical records. Old plan tasks, log entries and ADR narratives keep the paths they were written with. Commit: "Describe the new folder structure".
 
 - [ ] **Step 5: Verify.** `npm run check && npm run build`; start the app and look at the picker, the pay screen and a few status screens; search the source and the active documents for the old paths; read the whole diff for anything that is not a move, an import or the rename.
+
+> **Corrections, added after the task was planned.** In the rules above, "the amounts-after-a-requote currency question" was the planning agent's guess at a bug it had not seen described; my brief called it "the previously identified historical-currency bug", and that is all this task knows about it. Step 4's note became a new file, `docs/README.md`.
 
 ---
 
