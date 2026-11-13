@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { remainingMs } from '../domain/countdown'
-import { amountsToSend, fitsDecimals } from '../domain/money'
+import { detailsMatch } from '../domain/details'
 import { deriveConnection, deriveScreen } from '../domain/screen'
 import type { Connection, Screen } from '../domain/screen'
 import { lastMoney } from '../domain/sequence'
@@ -29,17 +29,14 @@ export function usePaymentScreen(
   const { entry, checkNow } = payment
   const current = entry?.payment
   const quote = current?.quote
-  const currency = catalogue.currencies?.find(
-    (c) => c.code === quote?.crypto_currency,
-  )
-  const network = currency?.networks.find((n) => n.id === quote?.network)
+  // Looked up apart from the check: a status screen shows the usual time without waiting for it.
+  const network = catalogue.currencies
+    ?.find((c) => c.code === quote?.crypto_currency)
+    ?.networks.find((n) => n.id === quote?.network)
   const detailsChecked =
     current !== undefined &&
-    currency !== undefined &&
-    network?.name === current.quote.network_name &&
-    amountsToSend(current).every((amount) =>
-      fitsDecimals(amount, currency.decimals),
-    )
+    catalogue.currencies !== undefined &&
+    detailsMatch(current, catalogue.currencies)
   const toPay =
     current?.status === 'awaiting_payment' || current?.status === 'underpaid'
   // A list still loading is not a problem yet: until it arrives the pay screen waits.

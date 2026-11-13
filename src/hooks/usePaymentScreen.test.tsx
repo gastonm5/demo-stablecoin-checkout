@@ -168,6 +168,19 @@ test('a catalogue that is still loading is not a problem yet', () => {
   expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
 })
 
+// A failed refetch keeps the list it already had, and that list still checks the quote.
+test('a catalogue that has both currencies and an error still gives the pay screen', () => {
+  const hook = mount(
+    withStatus('awaiting_payment'),
+    catalogue({ error: new Error('down') }),
+  )
+  expect(hook.result.current.screen).toMatchObject({
+    kind: 'pay',
+    mode: 'full',
+    showAddress: true,
+  })
+})
+
 test('a checked quote gets the pay screen, the usual time and the connection', () => {
   const hook = mount(withStatus('awaiting_payment'))
   const state = hook.result.current
