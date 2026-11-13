@@ -2173,6 +2173,8 @@ Added on 13 Nov 2026, after I saw drawings of the options and chose. Nothing her
 
 **What follows from Solana's green,** worked out by the planning agent and not asked of me: white text on `#14F195` is 1.50:1, so text on a Solana fill is the page's near-black, 12.11:1. As a border on white the green is 1.50:1, under the 3:1 a border needs, so Solana's border and radio use a darker green, `#0ea566`, 3.19:1 on white and 3.02:1 on its own tint. The fill, the chip and the tint stay `#14F195`.
 
+**After I tested the branch:** the fee line under the Network section is shown only while the section is closed. Open, every option already carries its fee and time.
+
 **Rules for every task below:**
 
 - Every rule of Tasks 19 to 27 still holds: every digit of every amount stays visible; the address and QR are shown exactly when they are now; shopper-facing words change only where a task says so; the dev panel's colours are not touched; tests keep their assertions, or assert the same fact another way.

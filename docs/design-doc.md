@@ -530,7 +530,7 @@ These were not discussed one by one. I set them while writing this document, and
 - **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens. Staying, or pressing Escape, returns focus to the "Change currency or network" button. Confirming opens the picker.
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".
 - **`expired` straight after `detected` or `confirming`:** this should not happen on a real server, but the dev panel can force it. It gets the same dead end as after a partial payment, with the headline "This payment expired".
-- **Picker sections:** two groups of radio buttons, Currency and then Network, described in section 11.2. Each network option shows its fee and usual time. A section closes to one row once something is chosen in it, and the chosen network's fee, usual time and confirmations go on a line under the Network section. A currency with one network (ETH) has it filled in.
+- **Picker sections:** two groups of radio buttons, Currency and then Network, described in section 11.2. Each network option shows its fee and usual time. A section closes to one row once something is chosen in it. While the Network section is closed, the chosen network's fee, usual time and confirmations are on a line under it. A currency with one network (ETH) has it filled in.
 - **Payment not found on resume:** back to the picker with a notice.
 - **Copy buttons:** on the pay screen each sits under the value it copies, at its left edge. A successful copy reads "Copied" for two seconds: the button narrows to fit the word and widens back, inside a space that does not change. A failed one keeps the label and puts "Copy failed. Select the text and copy it." on a line under the button for four seconds. Both are announced to screen readers. The feedback belongs to the value that was copied: if the value beside the button changes, the feedback goes at once, so "Copied" never sits beside an amount that is not on the clipboard.
 - **Dates and times:** formatted for the shopper's locale and time zone.
@@ -577,7 +577,7 @@ Three pieces are reused across screens: `Button` (a pill for the main action, bl
 | The card's width, between the picker and a payment | The most it can be moves between 520 and 940 px over 200 ms. A narrower window gets a narrower card |
 | A picker section opening or closing | Its height moves over 200 ms, and a chosen option takes its colour over 120 ms |
 | A copy button after a successful copy | Narrows to "Copied" and widens back, 180 ms each way |
-| The picker's fee line and wallet sentence, when a network is first chosen | Fade in and rise 6 px, 160 ms |
+| The picker's fee line, each time the Network section closes on a network, and the wallet sentence, when a network is first chosen | Fade in and rise 6 px, 160 ms |
 | "Still working…", a create or requote error, the copy failure line, a connection notice, and the address and QR coming back | Fades in, 150 ms |
 | The confirmations bar | Moves to the server's count over 300 ms, in either direction |
 | The countdown bar | Follows each second over 1 s, so it moves steadily |
@@ -594,10 +594,10 @@ The fades use the browser's `@starting-style`. A browser without it shows the co
 
 Added on 13 Nov 2026. After the look had been reviewed I chose a different picker and the chains' own colours from a second set of drawings. Tasks 29 to 34 of the plan did the work.
 
-**The picker** is one card, one column, at most 520 px wide at every window width. From top to bottom: the order header, "Choose how to pay", the Currency section, the Network section, a line with the chosen network's fee, usual time and confirmations, the Continue button, and under it the sentence saying which currency and network the shopper's wallet must be able to send.
+**The picker** is one card, one column, at most 520 px wide at every window width. From top to bottom: the order header, "Choose how to pay", the Currency section, the Network section, a line with the chosen network's fee, usual time and confirmations while that section is closed, the Continue button, and under it the sentence saying which currency and network the shopper's wallet must be able to send.
 
 - Each section is a group of radio buttons. A network option shows its chip, its name, and under the name its fee and usual time, so every network's cost is visible before one is chosen.
-- A section closes to one row once something is chosen in it: the chosen name and a "Change" button. The Network section does not appear until a currency is chosen. Changing the currency opens it again with nothing chosen, and a currency with one network has it filled in, as before.
+- A section closes to one row once something is chosen in it: the chosen name and a "Change" button. The fee line under the Network section is shown only while that section is closed. Open, every option carries its own fee and time, so the line would say it twice. The Network section does not appear until a currency is chosen. Changing the currency opens it again with nothing chosen, and a currency with one network has it filled in, as before.
 - Nothing is chosen and nothing has focus when the page loads.
 - With a keyboard, Tab reaches the first option without choosing it. The arrow keys choose, as radio buttons do, and a choice closes the section. Focus then goes to the first network, or to the Continue button once both are chosen. "Change" opens the section again with focus on the chosen option. If the server lists a currency with no networks, focus goes to that currency's "Change" button. Focus never rests on something hidden: the form of a section that is not showing is inert.
 - While a create or a new quote is in flight, the radio buttons and the "Change" buttons are disabled.

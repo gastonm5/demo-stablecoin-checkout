@@ -196,8 +196,8 @@ export function PickerScreen({
             onChoose={chooseNetwork}
             onReopen={() => reopen('network')}
           />
-          {/* Each entrance on this screen plays when its element mounts, so changing the network afterwards does not replay it. */}
-          {network && (
+          {/* Each entrance on this screen plays when its element mounts. Open, every option shows its own fee, so this line mounts, and its entrance plays, each time the section closes on a network. */}
+          {network && networkForm === 'closed' && (
             <p className={`mt-3.5 ${note} entrance entrance-settle`}>
               {`Fee ${formatUsdFee(network.network_fee)} · usually ${usualTime(network.avg_confirmation_seconds)} · ${confirmationsLabel(network.required_confirmations)}`}
             </p>

@@ -270,16 +270,23 @@ test('the chosen network shows its name alone, and Change brings back every fee 
   expect(shownText('Fee ≈ $1.00 · usually 1 min')).not.toBeInTheDocument()
 })
 
-test('the fee line appears once a network is chosen and changes with it in place', async () => {
+test('the fee line shows only while the network section is closed on a network', async () => {
   renderPicker()
   const user = await choose('USDC')
   expect(feeLine()).not.toBeInTheDocument()
   await user.click(radio('Network', 'polygon'))
-  const line = screen.getByText('Fee ≈ $0.10 · usually 30 s · 6 confirmations')
+  expect(
+    screen.getByText('Fee ≈ $0.10 · usually 30 s · 6 confirmations'),
+  ).toBeVisible()
   await user.click(changeButton('Network'))
+  expect(feeLine()).not.toBeInTheDocument()
+  expect(radio('Network', 'solana')).toHaveAccessibleName(
+    'Solana Fee ≈ $0.01 · usually 15 s',
+  )
   await user.click(radio('Network', 'solana'))
-  expect(feeLine()).toBe(line)
-  expect(line).toHaveTextContent('Fee ≈ $0.01 · usually 15 s · 1 confirmation')
+  expect(
+    screen.getByText('Fee ≈ $0.01 · usually 15 s · 1 confirmation'),
+  ).toBeVisible()
 })
 
 test('the wallet sentence appears once both are chosen and names them', async () => {
