@@ -143,6 +143,8 @@ test('a new quote after a stopped clock counts down from the time of its answer'
     clock: 'running',
     showAddress: true,
     remainingMs: Date.parse(NEXT_QUOTE.expires_at) - Date.now(),
+    // The fixture's sequence begins at device time zero.
+    lifetimeMs: Date.parse(NEXT_QUOTE.expires_at),
   })
 })
 
@@ -178,6 +180,7 @@ test('a new quote after the device clock went back counts down from its answer a
     clock: 'running',
     showAddress: true,
     remainingMs: deadline - Date.now(),
+    lifetimeMs: deadline,
   })
   expect(checkNow).not.toHaveBeenCalled()
   advance(15 * 60_000 - 1_000)

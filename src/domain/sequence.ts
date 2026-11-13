@@ -13,6 +13,7 @@ export type StatusSequence = {
   startedFrom: 'creation' | 'reload'
   quoteExpiresAt: string // the expires_at of the quote the latest entries belong to
   quoteStartIndex: number // index of the first entry of the current quote
+  quoteStartedAt: number | null // device time the page saw the current quote begin; null after a reload, until a new quote
   entries: SequenceEntry[]
 }
 
@@ -35,6 +36,7 @@ export function startSequence(
     startedFrom,
     quoteExpiresAt: payment.quote.expires_at,
     quoteStartIndex: 0,
+    quoteStartedAt: startedFrom === 'creation' ? at : null,
     entries: [toEntry(payment, at)],
   }
 }
@@ -52,6 +54,7 @@ export function recordStatus(
       ...sequence,
       quoteExpiresAt: payment.quote.expires_at,
       quoteStartIndex: entries.length,
+      quoteStartedAt: at,
       entries: [...entries, entry],
     }
   }
