@@ -105,6 +105,13 @@ test('starts collapsed', () => {
   ).not.toBeInTheDocument()
 })
 
+// Guards a layout fact jsdom cannot measure: under the tab's vertical writing mode inset-y sets left and right, so the tab fell below the window.
+test('the tab is pinned top and bottom with physical offsets', () => {
+  renderPanel()
+  expect(button('DEV')).toHaveClass('top-0', 'bottom-0')
+  expect(button('DEV')).not.toHaveClass('inset-y-0')
+})
+
 test('sends no request while collapsed', () => {
   render(<DevPanel reference={REFERENCE} entry={entryOf('awaiting_payment')} />)
   expect(getMockSettings).not.toHaveBeenCalled()

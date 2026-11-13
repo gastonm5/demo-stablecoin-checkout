@@ -295,13 +295,14 @@ export function DevPanel({
           </p>
         </aside>
         {/* Over the content, so it fades out over it while the panel widens and back in while it narrows. */}
+        {/* top-0 bottom-0, not inset-y-0: under a vertical writing mode inset-y is the horizontal pair. */}
         <button
           ref={tab}
           type="button"
           inert={open}
           aria-hidden={open}
           onClick={() => toggle(true)}
-          className={`absolute inset-y-0 left-0 w-[34px] border-l border-black bg-[#101318] font-mono text-xs font-bold tracking-[.1em] text-[#fbbf24] transition-opacity duration-200 ease-[cubic-bezier(.2,0,0,1)] [writing-mode:vertical-rl] motion-reduce:transition-none ${open ? 'opacity-0' : ''}`}
+          className={`absolute top-0 bottom-0 left-0 w-[34px] border-l border-black bg-[#101318] font-mono text-xs font-bold tracking-[.1em] text-[#fbbf24] transition-opacity duration-200 ease-[cubic-bezier(.2,0,0,1)] [writing-mode:vertical-rl] motion-reduce:transition-none ${open ? 'opacity-0' : ''}`}
         >
           <span aria-hidden="true">« </span>DEV
         </button>
