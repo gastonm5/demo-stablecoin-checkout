@@ -1,6 +1,6 @@
 # Stablecoin Checkout: design doc
 
-**Status:** written before the build on 12 Nov 2026, revised the same day after two reviews, and revised again after the build so that it describes what exists. Where the build departed from the first design, the text says so. The decisions with a real trade-off are in [`adr/`](adr/).
+**Status:** written before the build on 12 Nov 2026, revised the same day after two reviews, and revised again after the build so that it describes what exists. Where the build departed from the first design, the text says so. The decisions with a real trade-off are in [`adr/`](adr/). This document and the ADRs are the current specification; the plan, the log and the drawings are records of how the work went, and [`docs/README.md`](README.md) says which is which.
 
 ## 1. What this is
 
@@ -46,7 +46,7 @@ The API forces part of this. `POST /api/payments/:reference/requote` returns 409
 - **Once any money was seen** (`underpaid`, `detected` and later): there is no way to change. The remainder has to go to the same address on the same network.
 - **If the server ends a partial payment** (`expired` straight after `underpaid`): there is no change and no new quote. The page sends the shopper to the merchant ([ADR 0003](adr/0003-partial-and-late-payments.md)).
 
-**The order summary on the picker.** The API returns the merchant name and the order amount only inside a payment, and when the picker first opens no payment exists. The page already assumed it is handed an order id by whatever sent the shopper here. It now assumes the rest of the order comes with it: an order summary of `{ order_id, merchant, order }`, in the same shape a payment carries them. The build keeps that object as a constant and uses it for display only, so the picker has the same header as every later screen. Nothing in it is sent to the API except the order id. Once a payment exists, the header shows that payment's own values, not the assumed ones. I did not add an order endpoint to the mock for this; see section 9.
+**The order summary on the picker.** The API returns the merchant name and the order amount only inside a payment, and when the picker first opens no payment exists. The page already assumed it is handed an order id by whatever sent the shopper here. It now assumes the rest of the order comes with it: an order summary of `{ order_id, merchant, order }`, in the same shape a payment carries them. The build keeps that object as a constant in `src/config` and uses it for display only, so the picker has the same header as every later screen. Nothing in it is sent to the API except the order id. Once a payment exists, the header shows that payment's own values, not the assumed ones. I did not add an order endpoint to the mock for this; see section 9.
 
 **Refresh.** After a payment is created, its reference goes in the URL (`?payment=AQH-100306-PMT`). On load, a reference in the URL makes the page fetch that payment and resume on the right screen. The page replaces the current history entry instead of adding one, so Back does not walk through earlier payments. This departs from the brief, which lists persistence as out of scope; the reasoning is in [ADR 0005](adr/0005-resume-from-url-reference.md).
 
@@ -155,7 +155,8 @@ It does **not** stop on `expired`, which the brief might count as terminal. A sh
 ```mermaid
 flowchart LR
     URL["URL: order_id, payment"] --> UC["useCheckout"]
-    UC --> PK["Picker"]
+    CFG["src/config: assumed order summary"] --> UC
+    UC --> PK["PickerScreen"]
     UC --> PV["PaymentView"]
     UC --> UP["usePayment: poll + status sequence"]
     UP --> PS["usePaymentScreen"]
@@ -182,10 +183,17 @@ Data moves one way. A server response is validated, stored in the query cache wi
 |---|---|---|
 | `src/api` | Request functions, timeouts, zod schemas | The only code that talks to the server or validates a response's shape |
 | `src/domain` | Status groups, `deriveScreen`, the status sequence, countdown maths, the amount guard | Pure functions, no React, no I/O |
-| `src/hooks` | `useCheckout`, `usePayment`, `usePaymentScreen`, `useCurrencies`, `useNow`, `useOnline`, and small ones for the picker's selection, copying and the dialog | Own all behaviour and timing |
-| `src/components` | The card, picker, pay screen, status screens, strip | Render only. A component may keep view state that nothing else reads, such as a ticked box or an open dialog |
+| `src/hooks` | `useCheckout`, `usePayment`, `usePaymentScreen`, `useCurrencies`, `useNow`, `useOnline`, and small ones for the picker's selection, copying and the dialog. The URL reader and the payment cache helpers sit beside the hooks that use them | Own all behaviour and timing |
+| `src/screens` | Whole checkout screens: `PickerScreen`, and `PaymentView`, which shows one of `PayScreen`, `WaitingScreen`, `CompleteScreen`, `ExpiredScreen`, `FailedScreen` or `CheckingScreen`. Also the wording those screens share | Render only. A screen is one state of the checkout and is used once |
+| `src/components` | The pieces screens are built from: the card, the status card, the order header, the copy button, the network banner and chip, the QR frame, the notice strip, the change dialog | Render only, and do not know which screen they are in. A screen or a component may keep view state that nothing else reads, such as a ticked box or an open dialog |
+| `src/config` | The assumed input the page starts with: the order summary it is handed before a payment exists | For display only. Once a payment is loaded, its own values are the authority for what the header shows |
 | `src/dev` | The dev panel | The only code that knows the mock exists |
+| `src/test` | Fixtures and helpers the tests share | |
 | `mock/` | The Express app, fixtures, control endpoints | |
+
+Screens and components are both rendering code, and the split between them is by reuse, not by importance. Behaviour stays in hooks and decisions stay in `src/domain`, whichever folder draws the result.
+
+The folders took this shape in Task 16 of the plan, after the build. Before it, the screens lived in `src/components`, `PickerScreen` was called `Picker`, and the assumed order sat in `src/hooks/url.ts`. Older plan tasks and log entries name files where they were at the time.
 
 ### 4.2 State
 
@@ -195,7 +203,7 @@ Data moves one way. A server response is validated, stored in the query cache wi
 | Selected currency and network | React state in `usePickerChoice` | It belongs to the picker and nothing else reads it |
 | Whether the picker is open for a new quote, a write in progress and its error | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
 | Payment reference, order id | The URL | So a refresh resumes |
-| The order summary shown before a payment exists | A constant beside the URL reader | It stands for data handed to the page; it is for display, and the payment's own values replace it once a payment exists |
+| The order summary shown before a payment exists | A constant in `src/config/checkout.ts` | It stands for data handed to the page; it is for display, and the payment's own values replace it once a payment exists |
 | A ticked box, an open dialog, the open dev panel | React state in that component | View state that nothing else reads |
 | Which screen to show, connection notice, time left | Not stored | Derived on every render |
 
@@ -445,7 +453,7 @@ These are places where the brief is silent or does not fit together. Each is a q
 |---|---|---|
 | Number of statuses | "There are six more states" beyond the four in the diagram | The API defines four more. I built for eight in total |
 | Fee unit | The catalogue lists a `network_fee` of `3.20` for ETH; the one example quote, for USDT on Tron, adds the fee in the crypto's own units | The catalogue is served exactly as given. I read its fees as USD. Each quote carries the fee converted into the crypto's units, one to one for USDT and USDC. The brief shows no ETH quote, so I defined one: `3.20` USD at 3,000 USD per ETH is a fee of `0.001066666666666667` ETH. This is an assumption, not something the brief states |
-| Order details before a payment | Merchant and order amount come only inside a payment | The page is handed an order summary, `{ order_id, merchant, order }`, by whatever sent the shopper here: the merchant's checkout, or a call made before this page. The build keeps it as a constant, and `?order_id=` in the URL can replace the id. It is for display only, and the server never confirms it: if it disagreed with the payment the server creates, the pay screen would show the server's values. I did not invent an order endpoint |
+| Order details before a payment | Merchant and order amount come only inside a payment | The page is handed an order summary, `{ order_id, merchant, order }`, by whatever sent the shopper here: the merchant's checkout, or a call made before this page. The build keeps it as a constant in `src/config/checkout.ts`, and `?order_id=` in the URL can replace the id. It is for display only, and the server never confirms it: if it disagreed with the payment the server creates, the pay screen would show the server's values. I did not invent an order endpoint |
 | What `GET` returns | "Returns the payment with an updated status, plus the fields below" | The whole payment, plus the status fields |
 | Repeated `POST /api/payments` | Not stated | A new payment with a new reference each time |
 | Deadline on `underpaid` | The response has no deadline field | There is none. Once any money has arrived, the mock does not expire the payment and the page shows no countdown. If a server reports `expired` after `underpaid` anyway, the page treats it as a dead end |

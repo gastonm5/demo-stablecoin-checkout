@@ -4,6 +4,8 @@ A running record of where the coding agent and I disagreed, and where it got som
 
 Each entry: what the agent proposed, what was decided, and why.
 
+Entries are not edited afterwards. File paths and component names in an entry are the ones in use when it was written.
+
 ## 12 Nov 2026: design session
 
 The whole design was decided in one long conversation before any code. The agent read the brief, raised each decision in turn with options and a recommendation, and I chose.
@@ -220,3 +222,7 @@ The plan's last task is a list of twenty checks to walk before submitting. The p
 - **A field the header ignored.** The API's merchant has a `logo_url`. The header showed the first letter of the name whether or not a logo existed. It now shows the logo when there is one and falls back to the letter when there is none or it fails to load. The brief's merchant has no logo, so the running page still shows the letter.
 - **A reason the planning agent overstated.** It told the implementing agent the logo image must send no referrer because the page's URL carries the payment reference. The implementing agent pointed out that browsers already send only the origin to another host, not the full URL. The attribute stays, because it withholds the origin as well, but the commit message repeats the overstated reason, and history is not rewritten.
 - **The new header showed the wrong order in one place.** Codex reviewed the task and found that the picker reopened from an expired payment showed the assumed summary, not that payment's own merchant and amount. The test fixtures carried the same values as the assumed object, so the two could not be told apart and every test passed. The implementing agent had already reported that no test could tell them apart; it had not seen that one screen was wrong. The fix was one line, and the tests now use a payment for a different merchant, order and amount. Codex's second look found nothing more.
+
+## 12 Nov 2026: the folder refactor
+
+- **A bug the planning agent described without having seen it.** My brief for this refactor listed things to leave alone, among them "the previously identified historical-currency bug". The planning agent had not seen that bug described in its session, and in the plan it wrote its own guess at what the bug was. The plan now uses my words. Nothing was built on the guess.

@@ -2,13 +2,23 @@
 
 The hosted payment page a shopper lands on after choosing "Pay with crypto", with the mock API behind it. Built for Triple-A's frontend take-home.
 
-| Document                                   | What it is                                                                        |
-| ------------------------------------------ | --------------------------------------------------------------------------------- |
-| [`docs/design-doc.md`](docs/design-doc.md) | What I built and why                                                              |
-| [`docs/adr/`](docs/adr/)                   | The five decisions with a real trade-off                                          |
-| [`AGENTS.md`](AGENTS.md)                   | The rules the coding agents worked under                                          |
-| [`docs/agent-log.md`](docs/agent-log.md)   | Where the agents and I disagreed, and what they got wrong, written as it happened |
-| [`docs/plan.md`](docs/plan.md)             | The task plan the build followed                                                  |
+Current specification:
+
+| Document                                   | What it is                               |
+| ------------------------------------------ | ---------------------------------------- |
+| [`docs/design-doc.md`](docs/design-doc.md) | What I built and why                     |
+| [`docs/adr/`](docs/adr/)                   | The five decisions with a real trade-off |
+| [`AGENTS.md`](AGENTS.md)                   | The rules the coding agents worked under |
+
+Records of how the work went, kept as written:
+
+| Document                                 | What it is                                                                        |
+| ---------------------------------------- | --------------------------------------------------------------------------------- |
+| [`docs/agent-log.md`](docs/agent-log.md) | Where the agents and I disagreed, and what they got wrong, written as it happened |
+| [`docs/plan.md`](docs/plan.md)           | The task plan the build followed                                                  |
+| [`docs/design/`](docs/design/)           | The screen drawings agreed before the build                                       |
+
+[`docs/README.md`](docs/README.md) says more about which is which.
 
 ## Run it
 
@@ -31,6 +41,29 @@ Two URL parameters:
 
 - `?order_id=ORD-1` sets the order id. Without it the page uses `ORD-88213`. The merchant and the amount in the header before a payment exists come from an assumed order summary; the design doc's section 9 says where a real page would get it.
 - `?payment=AQH-100306-PMT` appears once a payment exists. Reloading resumes that payment.
+
+## Project structure
+
+```
+src/
+  main.tsx
+  App.tsx
+  api/          HTTP client, response schemas and endpoint functions
+  domain/       Pure payment, history, money and presentation derivation
+  screens/      Complete checkout screens and screen-specific helpers
+  components/   Reusable rendering components
+  hooks/        Checkout orchestration and browser effects
+  config/       Initial checkout configuration
+  dev/          Browser-side mock controls
+  test/         Shared test helpers and fixtures
+mock/           Express mock server and its fixtures
+docs/           Current specifications and historical material
+```
+
+- **Screens and components only render.** A screen is one whole state of the checkout; a component is a piece screens share. Behaviour lives in `hooks/`, and decisions live in `domain/` as pure functions.
+- **`api/` is the only code that talks to the server** or checks the shape of an answer.
+- **`config/` holds what the page assumes it is handed** before a payment exists: the order summary shown on the first screen. It is for display. Once a payment is loaded, the server's values are what the page shows.
+- **Only `dev/` knows the mock exists.**
 
 ## Trigger each payment state
 

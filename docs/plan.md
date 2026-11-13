@@ -1,5 +1,7 @@
 # Stablecoin Checkout Implementation Plan
 
+> **Status: a record, not a specification.** This is the plan the build followed, with later tasks appended. Tasks are kept as they were written, so the file paths and names in each are the ones in use when it was planned; Task 16 moved some of them. The page as it is now is described in `docs/design-doc.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the hosted crypto payment page and its mock API described in `docs/design-doc.md`.
@@ -1748,7 +1750,7 @@ Staying in `src/components/`, with their tests: `CheckoutCard`, `StatusCard`, `O
 - Nothing else is renamed. `usePickerChoice` keeps its name.
 - No test that only asserts a folder name.
 - `paymentCache.ts` stays beside the hooks that use it.
-- Out of scope, each needing its own change and tests: the amounts-after-a-requote currency question, the history model, polling and error policy, focus behaviour, slow-request feedback.
+- Out of scope, each needing its own change and tests: the historical-currency bug identified earlier, the history model, polling and error policy, focus behaviour, slow-request feedback.
 
 - [ ] **Step 1: Baseline.** Record `git status` and the head commit. Run `npm run check` and `npm run build`; both pass before anything moves.
 
@@ -1756,7 +1758,7 @@ Staying in `src/components/`, with their tests: `CheckoutCard`, `StatusCard`, `O
 
 - [ ] **Step 3: Move the assumed order.** Create `src/config/checkout.ts`, update `url.ts` and every importer. Run `npm run check`. Commit: "Keep the assumed order in src/config".
 
-- [ ] **Step 4: Documents.** `docs/design-doc.md` section 4 (diagram, layers, state table), a project-structure section in `README.md`, the Structure section of `AGENTS.md`, and a note that separates current specifications from historical records. Old plan tasks, log entries and ADR narratives keep the paths they were written with. Commit: "Describe the new folder structure".
+- [ ] **Step 4: Documents.** `docs/design-doc.md` section 4 (diagram, layers, state table), a project-structure section in `README.md`, the Structure section of `AGENTS.md`, and a new `docs/README.md` that separates current specifications from historical records. Old plan tasks, log entries and ADR narratives keep the paths they were written with. Commit: "Describe the new folder structure".
 
 - [ ] **Step 5: Verify.** `npm run check && npm run build`; start the app and look at the picker, the pay screen and a few status screens; search the source and the active documents for the old paths; read the whole diff for anything that is not a move, an import or the rename.
 
