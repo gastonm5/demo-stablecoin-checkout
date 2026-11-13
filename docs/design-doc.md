@@ -2,6 +2,18 @@
 
 **Status:** written before the build on 12 Nov 2026, revised the same day after two reviews, and revised again after the build so that it describes what exists. Where the build departed from the first design, the text says so. The decisions with a real trade-off are in [`adr/`](adr/). This document and the ADRs are the current specification; the plan, the log and the drawings are records of how the work went, and [`docs/README.md`](README.md) says which is which.
 
+**Diagrams in this document.** Each is shown in the section it explains. The six SVG files are in [`diagrams/`](diagrams/).
+
+| Diagram | What it shows | Section |
+|---|---|---|
+| [Lifecycle](diagrams/lifecycle.svg) | The eight statuses, grouped by what the shopper can do, and the transitions expected between them | [3.2](#32-state-chart) |
+| [From a status to a screen](diagrams/status-to-screen.svg) | The four inputs to `deriveScreen` and the six screens it can return | [3.4](#34-from-status-to-screen) |
+| [The three expired screens](diagrams/expired-three-screens.svg) | How the statuses seen before decide which `expired` screen appears | [3.5](#35-the-status-sequence) |
+| Components and data flow | Every part of the system, including the mock and the dev panel. Drawn in the text | [4](#4-component-structure-and-data-flow) |
+| [How the hooks interact](diagrams/hook-interaction.svg) | What each hook passes to the next | [4](#4-component-structure-and-data-flow) |
+| [Polling cadence](diagrams/polling-cadence.svg) | When the page asks the server, to scale over one minute | [4.4](#44-polling) |
+| [What happens at zero](diagrams/countdown-at-zero.svg) | The pay screen's states when the countdown ends | [5](#5-how-the-countdown-stays-correct) |
+
 ## 1. What this is
 
 A hosted payment page. A shopper who chose "Pay with crypto" picks a currency and a network, gets a quote (an exact amount, an address, a QR code and a countdown), sends the money from their own wallet, and the page follows the payment until the server reports a final result.
@@ -164,6 +176,12 @@ flowchart LR
 ```
 
 Data moves one way. A server response is validated, stored in the query cache with the status sequence, turned into a screen by a pure function, and rendered. Shopper actions go back out through `useCheckout` as two writes, create and requote, whose responses re-enter by the same path.
+
+The same flow at the level of the hooks, with what each one passes to the next:
+
+![How the hooks pass data. The URL gives useCheckout the payment reference, and useCheckout hands it to usePayment, which polls the API and keeps the payment and its status sequence in the query cache. usePaymentScreen receives that entry with the clock from useNow, the connection from useOnline and the currency list from useCurrencies, passes four inputs to deriveScreen, and PaymentView shows the screen that comes back. PickerScreen sends the shopper's choice to useCheckout, which creates or requotes. One dashed arrow goes back up: usePaymentScreen asks usePayment to check once at zero.](diagrams/hook-interaction.svg)
+
+`App` calls `useCheckout` and `useCurrencies` and passes their results down as props, which is why `usePaymentScreen` receives the poll result instead of calling the polling hook itself. Six more hooks each serve one screen or component and talk to no other hook: `usePickerChoice`, `useDelayedFlag`, `useFocusOnChange`, `useCopy`, `useModalDialog`, and `useMockSettings` in the dev panel.
 
 ### 4.1 Layers
 

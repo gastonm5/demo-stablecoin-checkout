@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 1048 538" width="1048" height="538" role="img" aria-label="How the hooks pass data. The URL gives useCheckout the payment reference, and useCheckout hands it to usePayment, which polls the API and keeps the payment and its status sequence in the query cache. usePaymentScreen receives that entry together with the clock from useNow, the connection from useOnline and the currency list from useCurrencies, passes four inputs to the pure function deriveScreen, and PaymentView shows the screen that comes back. PickerScreen sends the shopper's choice to useCheckout, which creates or requotes through the API. usePaymentScreen calls back into usePayment once, to check at zero.">
+<title>How the hooks pass data. The URL gives useCheckout the payment reference, and useCheckout hands it to usePayment, which polls the API and keeps the payment and its status sequence in the query cache. usePaymentScreen receives that entry together with the clock from useNow, the connection from useOnline and the currency list from useCurrencies, passes four inputs to the pure function deriveScreen, and PaymentView shows the screen that comes back. PickerScreen sends the shopper's choice to useCheckout, which creates or requotes through the API. usePaymentScreen calls back into usePayment once, to check at zero.</title>
+<style>
+  svg {
+    --surface: #ffffff; --fg: #14161a; --muted: #586170; --line: #7b8594; --bg: #f5f6f9;
+    --move: #2a55cf; --move-bg: #e6edfd; --wait: #9a5b00; --wait-bg: #fbefd6;
+    --final: #4a5567; --final-bg: #e8ebf1; --stop: #b3261e; --stop-bg: #fbe8e6;
+    --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    color: var(--line);
+  }
+  @media (prefers-color-scheme: dark) {
+    svg {
+      --surface: #171b22; --fg: #e9ecf1; --muted: #9ca6b4; --line: #7f8a99; --bg: #0f1217;
+      --move: #93b2ff; --move-bg: #1a2742; --wait: #f0b65a; --wait-bg: #33270f;
+      --final: #b1bac8; --final-bg: #232a34; --stop: #ff8f85; --stop-bg: #3a1c1a;
+    }
+  }
+  .card { fill: var(--surface); stroke: none; }
+  .t-name { font-family: var(--mono); font-size: 13px; font-weight: 500; fill: var(--fg); }
+  .t-title { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--fg); }
+  .t-sub { font-family: var(--sans); font-size: 11.5px; fill: var(--muted); }
+  .t-lbl { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+  .t-band { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; font-weight: 600; }
+  .t-band.move { fill: var(--move); } .t-band.wait { fill: var(--wait); } .t-band.final { fill: var(--final); }
+  .edge { fill: none; stroke: currentColor; stroke-width: 1.4; }
+  .edge.rare { stroke-dasharray: 5 4; }
+  .band { stroke: none; opacity: .6; }
+  .band.move { fill: var(--move-bg); } .band.wait { fill: var(--wait-bg); } .band.final { fill: var(--final-bg); }
+  .node { stroke-width: 1.5; }
+  .node.move { fill: var(--surface); stroke: var(--move); }
+  .node.wait { fill: var(--surface); stroke: var(--wait); }
+  .node.final { fill: var(--surface); stroke: var(--final); }
+  .node.plain { fill: var(--surface); stroke: var(--line); }
+  .node.stop { fill: var(--stop-bg); stroke: var(--stop); }
+  .node.fn { fill: var(--fg); stroke: var(--fg); }
+  .t-fn { font-family: var(--mono); font-size: 15px; font-weight: 600; fill: var(--bg); }
+  .t-fnsub { font-family: var(--sans); font-size: 11.5px; fill: var(--bg); opacity: .75; }
+  .dot { fill: var(--move); stroke: none; }
+  .frame { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-dasharray: 3 5; }
+  .axis { stroke: currentColor; stroke-width: 1; opacity: .5; }
+  .poll { fill: var(--move); stroke: none; }
+  .poll.fail { fill: var(--surface); stroke: var(--stop); stroke-width: 1.6; }
+</style>
+<rect class="card" x="-14" y="-14" width="1048" height="538" rx="14"/>
+          <defs>
+            <marker id="hk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+          <path class="edge" d="M490,50 H170" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="330" y="44" text-anchor="middle">currencies</text>
+          <path class="edge" d="M170,70 H300 V140" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="178" y="86">submit(choice)</text>
+          <path class="edge" d="M150,162 H250" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="200" y="156" text-anchor="middle">reference</text>
+          <path class="edge" d="M250,180 H150" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="200" y="196" text-anchor="middle">writes it back</text>
+          <path class="edge" d="M335,200 V290" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="345" y="250">reference</text>
+          <path class="edge" d="M335,350 V420" marker-start="url(#hk-arrow)" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="345" y="390">entry</text>
+          <path class="edge" d="M420,335 H565 V420" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="430" y="351">GET on the interval</text>
+          <path class="edge" d="M270,200 V230 H222 V494 H565 V466" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="232" y="486">create, requote · answers go into the cache</text>
+          <path class="edge" d="M420,305 H640 V200 H700" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="430" y="297">entry, last answer, failures</text>
+          <path class="edge rare" d="M700,222 H660 V320 H420" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="668" y="268">checkNow()</text>
+          <text class="t-lbl" x="668" y="284">at zero</text>
+          <path class="edge" d="M620,90 V130 H740 V180" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="680" y="122" text-anchor="middle">catalogue</text>
+          <path class="edge" d="M780,76 V180" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="788" y="128">now</text>
+          <path class="edge" d="M930,76 V150 H870 V180" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="938" y="116">online</text>
+          <path class="edge" d="M800,240 V310" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="810" y="280">four inputs</text>
+          <path class="edge" d="M800,356 V420" marker-end="url(#hk-arrow)"/>
+          <text class="t-lbl" x="810" y="392">screen</text>
+          <rect class="node plain" x="20" y="40" width="150" height="40" rx="8"/>
+          <text class="t-name" x="95" y="65" text-anchor="middle">PickerScreen</text>
+
+          <rect class="node final" x="6" y="147" width="144" height="46" rx="8"/>
+          <text class="t-title" x="20" y="167">URL</text>
+          <text class="t-sub" x="20" y="183">?payment · ?order_id</text>
+
+          <rect class="node move" x="250" y="140" width="170" height="60" rx="8"/>
+          <text class="t-name" x="335" y="165" text-anchor="middle">useCheckout</text>
+          <text class="t-sub" x="335" y="184" text-anchor="middle">which view · the two writes</text>
+
+          <rect class="node move" x="250" y="290" width="170" height="60" rx="8"/>
+          <text class="t-name" x="335" y="315" text-anchor="middle">usePayment</text>
+          <text class="t-sub" x="335" y="334" text-anchor="middle">one polling query</text>
+
+          <rect class="node final" x="250" y="420" width="170" height="46" rx="8"/>
+          <text class="t-title" x="335" y="440" text-anchor="middle">Query cache</text>
+          <text class="t-sub" x="335" y="456" text-anchor="middle">payment + status sequence</text>
+
+          <rect class="node final" x="490" y="420" width="150" height="46" rx="8"/>
+          <text class="t-name" x="565" y="440" text-anchor="middle">src/api</text>
+          <text class="t-sub" x="565" y="456" text-anchor="middle">fetch · timeout · zod</text>
+
+          <rect class="node move" x="490" y="30" width="160" height="60" rx="8"/>
+          <text class="t-name" x="570" y="55" text-anchor="middle">useCurrencies</text>
+          <text class="t-sub" x="570" y="74" text-anchor="middle">the list, fetched once</text>
+
+          <rect class="node move" x="720" y="30" width="120" height="46" rx="8"/>
+          <text class="t-name" x="780" y="50" text-anchor="middle">useNow</text>
+          <text class="t-sub" x="780" y="66" text-anchor="middle">ticks each second</text>
+
+          <rect class="node move" x="860" y="30" width="140" height="46" rx="8"/>
+          <text class="t-name" x="930" y="50" text-anchor="middle">useOnline</text>
+          <text class="t-sub" x="930" y="66" text-anchor="middle">online or offline</text>
+
+          <rect class="node move" x="700" y="180" width="200" height="60" rx="8"/>
+          <text class="t-name" x="800" y="205" text-anchor="middle">usePaymentScreen</text>
+          <text class="t-sub" x="800" y="224" text-anchor="middle">details check · asks at zero</text>
+
+          <rect class="node fn" x="720" y="310" width="160" height="46" rx="8"/>
+          <text class="t-fn" x="800" y="331" text-anchor="middle">deriveScreen</text>
+          <text class="t-fnsub" x="800" y="347" text-anchor="middle">src/domain · pure</text>
+
+          <rect class="node plain" x="720" y="420" width="160" height="46" rx="8"/>
+          <text class="t-name" x="800" y="440" text-anchor="middle">PaymentView</text>
+          <text class="t-sub" x="800" y="456" text-anchor="middle">shows one screen</text>
+          <rect class="node move" x="640" y="484" width="14" height="14" rx="3"/>
+          <text class="t-lbl" x="660" y="496">hook</text>
+          <rect class="node plain" x="706" y="484" width="14" height="14" rx="3"/>
+          <text class="t-lbl" x="726" y="496">screen</text>
+          <rect class="node final" x="784" y="484" width="14" height="14" rx="3"/>
+          <text class="t-lbl" x="804" y="496">outside React</text>
+          <rect class="node fn" x="900" y="484" width="14" height="14" rx="3"/>
+          <text class="t-lbl" x="920" y="496">pure function</text>
+        </svg>
