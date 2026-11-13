@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { CopyButton } from './CopyButton'
 
@@ -44,18 +44,48 @@ function expectFailedUnder({ button, regions }: Clicked) {
 
 type Clicked = Awaited<ReturnType<typeof clickCopy>>
 
+// The text people see and hear: the unseen copies that hold the widths are left out.
+const seen = { ignore: '[aria-hidden="true"], [aria-hidden="true"] *' }
+
 test('says Copied, then goes back to its label', async () => {
   vi.useFakeTimers()
   setClipboard({ writeText: writeText.mockResolvedValue(undefined) })
   await clickCopy()
   expect(writeText).toHaveBeenCalledExactlyOnceWith('163.69')
   expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
-  expect(screen.getByText('Copied')).toHaveAttribute('aria-live', 'polite')
-  // The unseen label that holds the button's width is not read out.
-  expect(screen.getByText('Copy amount')).toHaveAttribute('aria-hidden', 'true')
+  expect(screen.getByText('Copied', seen)).toHaveAttribute(
+    'aria-live',
+    'polite',
+  )
+  // The unseen labels that hold the widths are not read out.
+  for (const copy of screen.getAllByText('Copy amount'))
+    expect(copy).toHaveAttribute('aria-hidden', 'true')
   act(() => vi.advanceTimersByTime(2_000))
   expect(screen.getByRole('button', { name: 'Copy amount' })).toBeVisible()
-  expect(screen.queryByText('Copied')).not.toBeInTheDocument()
+  expect(screen.queryByText('Copied', seen)).not.toBeInTheDocument()
+})
+
+test('its unseen copies are hidden from assistive technology and take no focus', () => {
+  const { container } = render(
+    <CopyButton value="163.69" label="Copy amount" />,
+  )
+  const button = screen.getByRole('button', { name: 'Copy amount' })
+  expect(screen.getByText('Copy amount', seen)).toHaveAttribute(
+    'aria-live',
+    'polite',
+  )
+  // One in the button, which it narrows from; one outside, which holds the button's space in the row.
+  const copies = screen
+    .getAllByText('Copy amount')
+    .filter((copy) => copy.getAttribute('aria-hidden') === 'true')
+  expect(copies).toHaveLength(2)
+  expect(copies.filter((copy) => button.contains(copy))).toHaveLength(1)
+  // The width it narrows to.
+  expect(within(button).getByText('Copied')).toHaveAttribute(
+    'aria-hidden',
+    'true',
+  )
+  expect(container.querySelectorAll('button, [tabindex]')).toHaveLength(1)
 })
 
 test('says copying failed when the clipboard rejects', async () => {
