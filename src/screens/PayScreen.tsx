@@ -133,10 +133,10 @@ export function PayScreen({
         )
       }
       strip={
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           {notice ??
             (clockText && (
-              <span>
+              <span className="min-w-0 grow basis-full md:basis-0">
                 <strong>{clockText[0]}</strong> {clockText[1]}
               </span>
             ))}
@@ -144,7 +144,7 @@ export function PayScreen({
             <Button
               variant="link"
               onClick={onChange}
-              className="ml-auto whitespace-nowrap"
+              className="whitespace-nowrap"
             >
               Change currency or network
             </Button>

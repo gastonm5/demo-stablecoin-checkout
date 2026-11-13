@@ -3,6 +3,7 @@ import type { Payment } from '../api/schemas'
 import type { SequenceEntry } from '../domain/sequence'
 import { CheckoutCard } from './CheckoutCard'
 import { CopyButton } from './CopyButton'
+import { STRIP, STRIP_TEXT } from './NoticeStrip'
 import { OrderHeader } from './OrderHeader'
 import { StatusIcon } from './StatusIcon'
 import type { StatusIconKind } from './StatusIcon'
@@ -137,8 +138,8 @@ export function StatusCard({
       }
       strip={
         (notice ?? strip ?? link) && (
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            {notice ?? <span>{strip}</span>}
+          <div className={STRIP}>
+            {notice ?? <span className={STRIP_TEXT}>{strip}</span>}
             {link}
           </div>
         )
