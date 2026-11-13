@@ -74,10 +74,10 @@ export function PayScreen({
             >
               {remaining ? 'Send the remaining' : 'Send exactly'}
             </p>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="min-w-0 text-amount leading-[1.1] font-extrabold tracking-[-.02em] tabular-nums wrap-anywhere">
-                {amount} <span className="whitespace-nowrap">{currency}</span>
-              </p>
+            <p className="text-amount leading-[1.1] font-extrabold tracking-[-.02em] tabular-nums wrap-anywhere">
+              {amount} <span className="whitespace-nowrap">{currency}</span>
+            </p>
+            <div className="mt-3 flex">
               <CopyButton value={amount} label="Copy amount" />
             </div>
           </div>
@@ -89,18 +89,18 @@ export function PayScreen({
           {/* For the address and the QR coming back on a quote that is still valid; when they go, they go at once. */}
           {screen.showAddress && (
             <div className="mt-5 rounded-control border border-line bg-surface-sunken px-3.5 py-3 entrance entrance-fade">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2.5">
-                <p
-                  className={`min-w-0 wrap-anywhere ${label}`}
-                >{`${networkName} address`}</p>
+              <p
+                className={`mb-2 wrap-anywhere ${label}`}
+              >{`${networkName} address`}</p>
+              <p className="font-mono text-small font-semibold break-all">
+                {address}
+              </p>
+              <div className="mt-2.5 flex">
                 <CopyButton
                   value={address}
                   label={`Copy ${networkShortName(networkName)} address`}
                 />
               </div>
-              <p className="font-mono text-small font-semibold break-all">
-                {address}
-              </p>
             </div>
           )}
           {screen.clock === 'running' && (
