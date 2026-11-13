@@ -39,14 +39,14 @@ export function WaitingScreen({
       <p className={BODY}>
         Waiting for it to be confirmed. You don't need to send anything else.
       </p>
-      <div className="w-full max-w-[300px] text-[13.5px]">
+      <div className="w-full max-w-[300px] text-small">
         <div className="flex items-baseline justify-between">
           <span>Confirmations</span>
-          <span className="text-lg font-bold">{`${payment.confirmations} of ${required}`}</span>
+          <span className="text-figure font-bold">{`${payment.confirmations} of ${required}`}</span>
         </div>
         <div
           aria-hidden="true"
-          className="mt-1.5 h-[5px] overflow-hidden rounded-[3px] bg-track"
+          className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-track"
         >
           <div
             className="h-full bg-surface-inverse"
@@ -55,7 +55,7 @@ export function WaitingScreen({
         </div>
       </div>
       {usualSeconds !== undefined && (
-        <p className="max-w-full text-[13px] text-ink-muted wrap-anywhere">
+        <p className="max-w-full text-small text-ink-muted wrap-anywhere">
           {`Usually about ${usualTime(usualSeconds)} on ${networkShortName(quote.network_name)}.`}
         </p>
       )}

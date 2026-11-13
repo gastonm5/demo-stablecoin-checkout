@@ -4,12 +4,14 @@ import { networkShortName } from '../domain/format'
 import { toSend } from '../domain/money'
 import type { ClockState, Screen } from '../domain/screen'
 import { CheckoutCard } from '../components/CheckoutCard'
+import { Button } from '../components/Button'
 import { CopyButton } from '../components/CopyButton'
 import { NetworkBanner } from '../components/NetworkBanner'
+import { Notice } from '../components/Notice'
 import { OrderHeader } from '../components/OrderHeader'
 import { QrFrame } from '../components/QrFrame'
 
-const label = 'text-xs font-semibold text-ink-subtle'
+const label = 'text-label font-semibold text-ink-subtle'
 
 export function PayScreen({
   screen,
@@ -49,10 +51,10 @@ export function PayScreen({
         <>
           <OrderHeader order={payment} />
           {remaining && (
-            <p className="mb-3.5 rounded-xl border border-warn-line bg-warn-surface px-3.5 py-3 text-sm wrap-anywhere text-warn-ink">
+            <Notice className="mb-3.5">
               <strong>Part of your payment arrived.</strong>{' '}
               {`We received ${remaining.amount_received} of ${quote.total_due} ${currency}.`}
-            </p>
+            </Notice>
           )}
           <NetworkBanner
             currency={currency}
@@ -69,12 +71,12 @@ export function PayScreen({
             <CopyButton value={amount} label="Copy amount" />
           </div>
           {!remaining && (
-            <p className="mt-1 text-[13.5px] wrap-anywhere text-ink-subtle">
+            <p className="mt-1 text-small wrap-anywhere text-ink-subtle">
               {`${quote.crypto_amount} ${currency} + ${quote.network_fee} ${currency} network fee · 1 ${currency} = ${quote.exchange_rate} ${payment.order.currency}`}
             </p>
           )}
           {screen.showAddress && (
-            <div className="mt-5 rounded-xl border border-line bg-surface-sunken px-3.5 py-3">
+            <div className="mt-5 rounded-control border border-line bg-surface-sunken px-3.5 py-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2.5">
                 <p
                   className={`min-w-0 wrap-anywhere ${label}`}
@@ -84,15 +86,15 @@ export function PayScreen({
                   label={`Copy ${networkShortName(networkName)} address`}
                 />
               </div>
-              <p className="font-mono text-[14.5px] font-semibold break-all">
+              <p className="font-mono text-small font-semibold break-all">
                 {address}
               </p>
             </div>
           )}
           {screen.clock === 'running' && (
-            <div className="mt-5 flex items-baseline justify-between text-[13.5px]">
+            <div className="mt-5 flex items-baseline justify-between text-small">
               <span>Rate held for</span>
-              <span role="timer" className="text-lg font-bold tabular-nums">
+              <span role="timer" className="text-figure font-bold tabular-nums">
                 {formatRemaining(screen.remainingMs)}
               </span>
             </div>
@@ -125,7 +127,7 @@ export function PayScreen({
             }
           />
         ) : (
-          <p className="text-center text-[14.5px] text-ink-muted">
+          <p className="text-center text-small text-ink-muted">
             The address is hidden until we can confirm this quote.
           </p>
         )
@@ -139,13 +141,13 @@ export function PayScreen({
               </span>
             ))}
           {onChange && (
-            <button
-              type="button"
+            <Button
+              variant="link"
               onClick={onChange}
-              className="ml-auto whitespace-nowrap text-link underline"
+              className="ml-auto whitespace-nowrap"
             >
               Change currency or network
-            </button>
+            </Button>
           )}
         </div>
       }

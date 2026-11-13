@@ -14,12 +14,12 @@ export function QrFrame({
 }) {
   return (
     <div className="flex flex-col items-center gap-3.5 text-center">
-      <div className="overflow-hidden rounded-[14px] border-[3px] border-surface-inverse">
-        <div className="flex items-center justify-center gap-2 bg-surface-inverse px-3 py-[7px] text-[12.5px] font-extrabold tracking-[.06em] text-ink-inverse">
+      <div className="overflow-hidden rounded-control border-[3px] border-surface-inverse">
+        <div className="flex items-center justify-center gap-2 bg-surface-inverse px-3 py-[7px] text-label font-extrabold tracking-[.06em] text-ink-inverse">
           <NetworkChip
             networkId={networkId}
             networkName={networkName}
-            className="size-[18px] text-[10px]"
+            className="size-[18px] text-label"
           />
           <span className="min-w-0 wrap-anywhere">{`${networkName.toUpperCase()} ONLY`}</span>
         </div>
@@ -33,8 +33,8 @@ export function QrFrame({
         />
       </div>
       <div>
-        <p className="text-base font-bold">Scan with your wallet app</p>
-        <p className="text-[13.5px] text-balance text-ink-subtle">{note}</p>
+        <p className="text-lead font-bold">Scan with your wallet app</p>
+        <p className="text-small text-balance text-ink-subtle">{note}</p>
       </div>
     </div>
   )

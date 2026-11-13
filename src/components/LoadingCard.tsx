@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { OrderSummary } from '../api/schemas'
+import { Button } from './Button'
 import { CheckoutCard } from './CheckoutCard'
 import { OrderHeader } from './OrderHeader'
 
@@ -20,17 +21,13 @@ export function LoadingCard({
     <CheckoutCard
       left={<OrderHeader order={order} />}
       right={
-        <div className="flex flex-col items-center gap-3 text-center text-[14.5px]">
+        <div className="flex flex-col items-center gap-3 text-center text-small">
           {problem != null ? (
             <>
               <p className="font-semibold">{problem}</p>
-              <button
-                type="button"
-                onClick={onRetry}
-                className="rounded-full bg-action px-5 py-3 font-bold text-ink-inverse"
-              >
+              <Button variant="primary" onClick={onRetry}>
                 Try again
-              </button>
+              </Button>
             </>
           ) : (
             <p className="text-ink-muted">{loading}</p>

@@ -4,19 +4,11 @@ import type { SequenceEntry } from '../domain/sequence'
 import { CheckoutCard } from './CheckoutCard'
 import { CopyButton } from './CopyButton'
 import { OrderHeader } from './OrderHeader'
+import { StatusIcon } from './StatusIcon'
+import type { StatusIconKind } from './StatusIcon'
 
-export const BODY = 'max-w-[320px] text-[14.5px] wrap-anywhere text-ink-muted'
-export const NOTICE =
-  'rounded-xl border border-warn-line bg-warn-surface px-3.5 py-3 text-left text-sm wrap-anywhere text-warn-ink'
+export const BODY = 'max-w-[320px] text-small wrap-anywhere text-ink-muted'
 export const WARN = 'text-warn'
-
-const ICONS = {
-  wait: ['text-pending', '●'],
-  clock: ['text-pending', '◷'],
-  ok: ['text-ok', '✓'],
-  warn: [WARN, '!'],
-  bad: ['text-bad', '!'],
-} as const
 
 export function Row({
   label,
@@ -28,7 +20,7 @@ export function Row({
   className?: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-line-faint py-[9px] text-sm">
+    <div className="flex items-center justify-between gap-3 border-t border-line-faint py-[9px] text-small">
       <dt className="shrink-0 text-ink-subtle">{label}</dt>
       <dd
         className={`min-w-0 text-right font-semibold wrap-anywhere ${className}`}
@@ -82,7 +74,7 @@ export function StatusCard({
   muted?: boolean
   amountRows?: ReactNode
   timeRows?: ReactNode
-  icon: keyof typeof ICONS
+  icon: StatusIconKind
   title: string
   headingRef?: Ref<HTMLHeadingElement>
   children: ReactNode
@@ -91,7 +83,6 @@ export function StatusCard({
   link?: ReactNode
 }) {
   const hash = 'tx_hash' in payment ? payment.tx_hash : money?.tx_hash
-  const [tone, glyph] = ICONS[icon]
   return (
     <CheckoutCard
       left={
@@ -99,7 +90,7 @@ export function StatusCard({
           <OrderHeader order={payment} />
           {amount && (
             <>
-              <p className="mb-0.5 text-xs font-semibold text-ink-subtle">
+              <p className="mb-0.5 text-label font-semibold text-ink-subtle">
                 {label}
               </p>
               <p
@@ -133,16 +124,11 @@ export function StatusCard({
       }
       right={
         <div className="flex flex-col items-center gap-3 text-center">
-          <span
-            aria-hidden="true"
-            className={`flex size-14 items-center justify-center rounded-full border-[3px] border-current text-[28px] font-extrabold ${tone}`}
-          >
-            {glyph}
-          </span>
+          <StatusIcon kind={icon} />
           <h1
             ref={headingRef}
             tabIndex={-1}
-            className="text-[22px] font-extrabold tracking-[-.01em] outline-none"
+            className="text-title font-extrabold tracking-[-.01em] outline-none"
           >
             {title}
           </h1>

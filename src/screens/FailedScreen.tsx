@@ -45,7 +45,7 @@ export function FailedScreen({
         <strong>Do not send anything more.</strong>
         {` Contact ${merchant.name} and quote the reference.`}
       </p>
-      <p className="text-xs text-ink-muted">{`Reason code: ${reason}`}</p>
+      <p className="text-label text-ink-muted">{`Reason code: ${reason}`}</p>
     </StatusCard>
   )
 }

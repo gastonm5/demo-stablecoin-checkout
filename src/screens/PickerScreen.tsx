@@ -9,16 +9,18 @@ import {
 } from '../domain/format'
 import { useDelayedFlag } from '../hooks/useDelayedFlag'
 import { usePickerChoice } from '../hooks/usePickerChoice'
+import { Button } from '../components/Button'
 import { CheckoutCard } from '../components/CheckoutCard'
 import { NetworkChip } from '../components/NetworkChip'
+import { Notice } from '../components/Notice'
 import { OrderHeader } from '../components/OrderHeader'
 
 const STILL_WORKING_AFTER_MS = 4_000
 
-const label = 'mb-1.5 block text-xs font-semibold text-ink-subtle'
-const note = 'text-[13.5px] wrap-anywhere text-ink-subtle'
+const label = 'mb-1.5 block text-label font-semibold text-ink-subtle'
+const note = 'text-small wrap-anywhere text-ink-subtle'
 const menu =
-  'peer w-full appearance-none rounded-xl border-[1.5px] border-line bg-surface py-3 pr-10 pl-3.5 font-bold disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-subtle'
+  'peer w-full appearance-none rounded-control border-[1.5px] border-line bg-surface py-3 pr-10 pl-3.5 font-bold disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-subtle'
 const chevron = (
   <svg
     aria-hidden="true"
@@ -69,14 +71,11 @@ export function PickerScreen({
         <>
           <OrderHeader order={order} />
           {notice === 'payment_not_found' && (
-            <p
-              role="status"
-              className="mb-4 rounded-xl border border-warn-line bg-warn-surface px-3.5 py-2.5 text-sm"
-            >
+            <Notice role="status" className="mb-4">
               We couldn't find that payment. Choose how to pay to start again.
-            </p>
+            </Notice>
           )}
-          <h1 className="mb-4 text-[22px] font-extrabold tracking-[-.01em]">
+          <h1 className="mb-4 text-title font-extrabold tracking-[-.01em]">
             Choose how to pay
           </h1>
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
@@ -145,11 +144,11 @@ export function PickerScreen({
             <>
               <div>
                 <div className={label}>You are paying with</div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-surface-inverse py-1.5 pr-3.5 pl-1.5 text-sm font-bold text-ink-inverse">
+                <div className="inline-flex items-center gap-2 rounded-full bg-surface-inverse py-1.5 pr-3.5 pl-1.5 text-small font-bold text-ink-inverse">
                   <NetworkChip
                     networkId={network.id}
                     networkName={network.name}
-                    className="size-[26px] text-[13px]"
+                    className="size-[26px] text-small"
                   />
                   <span className="min-w-0 wrap-anywhere">{`${currency.code} on ${network.name}`}</span>
                 </div>
@@ -159,23 +158,24 @@ export function PickerScreen({
               </p>
             </>
           )}
-          <button
-            type="button"
-            className="w-full rounded-full bg-action px-[18px] py-3.5 text-[15px] font-bold text-ink-inverse disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-ink-muted wrap-anywhere"
-            disabled={submitting || !choice}
+          <Button
+            variant="primary"
+            busy={submitting}
+            disabled={!choice}
+            className="w-full wrap-anywhere"
             onClick={() => {
               if (choice) onSubmit(choice)
             }}
           >
             {button}
-          </button>
+          </Button>
           {stillWorking && (
             <p role="status" className={note}>
               Still working…
             </p>
           )}
           {error != null && (
-            <p role="alert" className="text-sm font-semibold text-bad">
+            <p role="alert" className="text-small font-semibold text-bad">
               We couldn't reach the payment service. Try again.
             </p>
           )}
@@ -183,14 +183,14 @@ export function PickerScreen({
             The amount to send and the address are shown next.
           </p>
           {mode === 'requote' && onCancel && (
-            <button
-              type="button"
-              className="self-start text-sm font-semibold text-link underline underline-offset-2 disabled:cursor-not-allowed disabled:text-ink-subtle"
+            <Button
+              variant="link"
+              className="self-start"
               disabled={submitting}
               onClick={onCancel}
             >
               Back
-            </button>
+            </Button>
           )}
         </>
       }

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import type { OrderSummary } from '../api/schemas'
 import { formatFiat } from '../domain/format'
 
-const key = 'text-[11px] tracking-[.06em] text-ink-subtle uppercase'
-const value = 'text-base font-bold'
+const key = 'text-label tracking-[.06em] text-ink-subtle uppercase'
+const value = 'text-lead font-bold'
 
 export function OrderHeader({ order }: { order: OrderSummary }) {
   const { merchant } = order
@@ -17,7 +17,7 @@ export function OrderHeader({ order }: { order: OrderSummary }) {
     <div className="mb-[22px] flex flex-wrap items-center gap-3 min-[480px]:flex-nowrap">
       <div
         aria-hidden="true"
-        className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-line bg-surface-sunken font-bold"
+        className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-control border border-line bg-surface-sunken font-bold"
       >
         {logo ? (
           <img
