@@ -43,7 +43,7 @@ The page has three screens inside one card. The card keeps the same shape throug
 
 ![Pay screen](design/pay-screen-proposal.png)
 
-The drawings are the designs I agreed before the build, and they are kept as agreed. The build differs from them in nine small ways. Two changed while building: the bar under the countdown is drawn only when the page saw the quote begin, and not after a reload (section 5), and the dev panel has no live readout (section 8). Six changed when I went over the finished screens: the picker has the same header as the pay screen, with the merchant and the amount, and no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, the failed screen has no line under the card, and the network menu shows the chosen network's name alone (section 11). One was added later: the dev panel has a Start over section and slides open and closed (section 8). After the build, a review of the rendered page changed the look of every screen and none of its words: sizes, colours and corners come from one small set, the status marks are drawn and not typed, and a few things fade in (section 11.1).
+The drawings are the designs I agreed before the build, and they are kept as agreed. The build has moved away from them in four rounds. Two things changed while building: the bar under the countdown is drawn only when the page saw the quote begin, and not after a reload (section 5), and the dev panel has no live readout (section 8). Five changed when I went over the finished screens: the picker has the same header as the pay screen, with the merchant and the amount, and no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, and the failed screen has no line under the card (section 11). One was added later: the dev panel has a Start over section and slides open and closed (section 8). After the build, a review of the rendered page changed the look of every screen and none of its words: sizes, colours and corners come from one small set, the status marks are drawn and not typed, and a few things fade in (section 11.1). Last, I chose a different picker and the chains' own colours from a second set of drawings, which are not in this folder: the picker is two sections of radio buttons in one narrow card, where the drawing above has two menus and a right-hand column, and the pay screen's banner and QR frame are in the chain's colour (section 11.2).
 
 **Choose first, then quote.** The page opens on the picker with nothing selected. No payment exists and no clock runs. Only when the shopper presses "Continue with USDT on Tron" does the page call `POST /api/payments` and show an address.
 
@@ -198,7 +198,7 @@ In `App.tsx`, `Page` calls `useCheckout` and `Checkout` calls `useCurrencies`, a
 | `src/domain` | Status groups, `deriveScreen` and `deriveConnection`, the status sequence, countdown maths, the decimals check, the check of a payment against the currency list (`detailsMatch`), and the amount and address to pay (`toSend`) | Pure functions, no React, no I/O |
 | `src/hooks` | `useCheckout`, `usePayment`, `usePaymentScreen`, `useCurrencies`, `useNow`, `useOnline`, and small ones for the picker's selection, copying and the dialog. The URL reader and the payment cache helpers sit beside the hooks that use them | Own all behaviour and timing |
 | `src/screens` | Whole checkout screens: `PickerScreen`, and `PaymentView`, which shows one of `PayScreen`, `WaitingScreen`, `CompleteScreen`, `ExpiredScreen`, `FailedScreen` or `CheckingScreen`, or the shared loading card while a payment's details are being checked. Each screen receives the payment narrowed to the statuses that can produce it. Also the wording those screens share | Render only. A screen is one state of the checkout and is used once |
-| `src/components` | The pieces screens are built from: the card, the status card, the loading card, the order header, the copy button, the network banner and chip, the QR frame, the notice strip, the change dialog, and three reused across screens: the button, the notice box and the status icon | Render only, and do not know which screen they are in. A screen or a component may keep view state that nothing else reads, such as a ticked box or an open dialog |
+| `src/components` | The pieces screens are built from: the card, the status card, the loading card, the order header, the copy button, the network banner and chip, the QR frame, the notice strip, the change dialog, the picker's collapsible section, the function that gives a network its colours, and three reused across screens: the button, the notice box and the status icon | Render only, and do not know which screen they are in. A screen or a component may keep view state that nothing else reads, such as a ticked box or an open dialog |
 | `src/config` | The assumed input the page starts with: the order summary it is handed before a payment exists | For display, apart from the order id, which is sent when a payment is created. Once a payment is loaded, its own values are the authority for what the header shows |
 | `src/dev` | The dev panel and its own small request helper | The only code that knows the mock exists. It calls the mock's control endpoints itself and never goes through `src/api` |
 | `src/test` | Fixtures and helpers the tests share | |
@@ -217,7 +217,7 @@ The folders took this shape in Task 16 of the plan, after the build. Before it, 
 | Whether the picker is open for a new quote, a write in progress and its error | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
 | Payment reference, and the order id when `?order_id=` is given | The URL | So a refresh resumes. Without the parameter, the order id is the assumed one |
 | The order summary shown before a payment exists | A constant in `src/config/checkout.ts` | It stands for data handed to the page. Apart from its order id, which is sent when a payment is created, it is for display, and the payment's own values replace it once a payment exists |
-| A ticked box, an open dialog | React state in that component | View state that nothing else reads |
+| A ticked box, an open dialog, which picker section the shopper reopened | React state in that component | View state that nothing else reads |
 | The open dev panel | React state in the panel, copied to `sessionStorage` | So it is still open after the reload its Start over buttons cause |
 | Which screen to show, connection notice, time left | Not stored | Derived on every render |
 
@@ -236,7 +236,7 @@ Reads retry themselves. Writes ask the shopper. The API has no idempotency key, 
 
 Further rules:
 
-- One create is in flight at a time, and the menus are disabled while it is.
+- One create is in flight at a time, and the picker's radio buttons and "Change" buttons are disabled while it is.
 - A 4xx with a problem body is an answer, not an outage. The currency list and the two writes do not retry it. For the payment poll only a 404 ends polling; any other failed answer counts as a failed poll, and the next poll asks again on the backed-off interval.
 - A requote that returns 409 `quote-not-expired` makes the page re-read the payment and show what the server says.
 - A response that fails validation counts as a failed request.
@@ -530,9 +530,9 @@ These were not discussed one by one. I set them while writing this document, and
 - **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens. Staying, or pressing Escape, returns focus to the "Change currency or network" button. Confirming opens the picker.
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".
 - **`expired` straight after `detected` or `confirming`:** this should not happen on a real server, but the dev panel can force it. It gets the same dead end as after a partial payment, with the headline "This payment expired".
-- **Picker menus:** the browser's own, with the fee and usual time in each option's text. Once a network is chosen its menu shows the name alone, so it is not cut off, and the fee and usual time are on the line under the menus. A currency with one network (ETH) has it filled in.
+- **Picker sections:** two groups of radio buttons, Currency and then Network, described in section 11.2. Each network option shows its fee and usual time. A section closes to one row once something is chosen in it, and the chosen network's fee, usual time and confirmations go on a line under the Network section. A currency with one network (ETH) has it filled in.
 - **Payment not found on resume:** back to the picker with a notice.
-- **Copy buttons:** keep the width of their normal label. A successful copy reads "Copied" inside the button for two seconds. A failed one keeps the label and puts "Copy failed. Select the text and copy it." on a line under the button for four seconds. Both are announced to screen readers. The feedback belongs to the value that was copied: if the value beside the button changes, the feedback goes at once, so "Copied" never sits beside an amount that is not on the clipboard.
+- **Copy buttons:** on the pay screen each sits under the value it copies, at its left edge. A successful copy reads "Copied" for two seconds: the button narrows to fit the word and widens back, inside a space that does not change. A failed one keeps the label and puts "Copy failed. Select the text and copy it." on a line under the button for four seconds. Both are announced to screen readers. The feedback belongs to the value that was copied: if the value beside the button changes, the feedback goes at once, so "Copied" never sits beside an amount that is not on the clipboard.
 - **Dates and times:** formatted for the shopper's locale and time zone.
 - **Accessibility:** a change of screen is announced. Within a payment, focus moves to the new screen's heading when the kind of screen changes, except onto the pay screen and the loading card, which have no heading and leave focus where it is. The picker does not take focus. The countdown is not read out every second, and colour is never the only signal. Keyboard focus shows as an outline on every control in the checkout (section 11.1).
 - **Mock control endpoints:** `GET /__mock/state`, `POST /__mock/payments/:reference/status`, `POST /__mock/payments/:reference/restart`, `POST /__mock/settings`.
@@ -553,7 +553,7 @@ Added on 13 Nov 2026, after I asked for a review of the rendered page at 1200, 7
 
 | Kind | Values |
 |---|---|
-| Colour | Named by role, not by shade: `page`, `surface`, `ink` and its three lighter steps, `line`, `action`, `link`, `focus`, and `ok`, `warn`, `bad` and `pending` for status. The network colours are used by the network chip alone |
+| Colour | Named by role, not by shade: `page`, `surface`, `ink` and its three lighter steps, `line`, `action`, `link`, `focus`, and `ok`, `warn`, `bad` and `pending` for status. The four chains' colours and what each needs to stay readable are in section 11.2 |
 | Text size | 12, 14, 15, 16, 18 and 22 px, and one fluid size for the large crypto amount on a screen, from 28 to 40 px with the window's width |
 | Radius | 22 px for the card and the dialog, 12 px for controls and boxes, and fully round |
 
@@ -563,9 +563,9 @@ Three pieces are reused across screens: `Button` (a black pill for the main acti
 
 **Nothing is cut off.** Down to 320 px wide, a long merchant name, network name, order id or amount wraps inside the card. A currency code is never split across two lines: the amount breaks at the space before it. Under 480 px the order id and the fiat amount take a row of their own under the merchant. From 768 px up, the card's two columns are at least 460 px tall, so a short screen does not make the card jump.
 
-**Things that keep their place.** A copy button always has the width of its normal label. A connection notice takes the left of the strip and wraps there, with "Try now" and the "Change currency or network" button together on the right. At 1200 px it makes the card 22 px taller, where it used to make it 49 px taller.
+**Things that keep their place.** A copy button always takes the space of its normal label, wrapped or not: when it shows "Copied" it narrows inside that space and widens back, and nothing beside or under it moves. A connection notice takes the left of the strip and wraps there, with "Try now" and the "Change currency or network" button together on the right. At 1200 px a notice no longer changes the card's height at all, because the strip is already as tall as the button in it; it first made the card 49 px taller.
 
-**Keyboard focus** shows as a 2 px outline, 2 px off the control, on every button, menu and tick box in the checkout. The dev panel keeps the browser's own.
+**Keyboard focus** shows as a 2 px outline, 2 px off the control, on every button, radio button and tick box in the checkout. The dev panel keeps the browser's own.
 
 **A partial payment's new amount** is marked in two ways that last as long as the status does: the label "Send the remaining" is in the `warn` colour, and the amount has a `warn` rule down its left side. When it first appears, the block is also washed in the pale `warn` colour for 1.5 s. The lasting marks do not depend on that motion.
 
@@ -573,19 +573,54 @@ Three pieces are reused across screens: `Button` (a black pill for the main acti
 
 | What | Motion |
 |---|---|
-| A new screen's two columns | Fade in and rise 8 px, 180 ms. The card's frame and the strip under it do not move |
-| The picker's fee line and "You are paying with" group, when a network is first chosen | Fades in and rises 6 px, 160 ms |
+| A new screen's content, in its one or two columns | Fades in and rises 8 px, 180 ms. The strip under it does not move |
+| The card's width, between the picker and a payment | Moves between 520 and 940 px over 200 ms |
+| A picker section opening or closing | Its height moves over 200 ms, and a chosen option takes its colour over 120 ms |
+| A copy button after a successful copy | Narrows to "Copied" and widens back, 180 ms each way |
+| The picker's fee line and wallet sentence, when a network is first chosen | Fade in and rise 6 px, 160 ms |
 | "Still working…", a create or requote error, the copy failure line, a connection notice, and the address and QR coming back | Fades in, 150 ms |
 | The confirmations bar | Moves to the server's count over 300 ms, in either direction |
 | The countdown bar | Follows each second over 1 s, so it moves steadily |
 | The change dialog and its backdrop | Fade in over 150 ms, the dialog from 98% of its size |
-| Buttons and the picker's menus | Change colour over 120 ms |
+| Buttons | Change colour over 120 ms. A copy button's colour moves with its width, over 180 ms |
 
-Nothing in the checkout is animated out. When the server's answer takes the address and QR away, they are gone in the same render, and the same goes for a notice, the dialog and a whole screen. The only things that fade away are the wash, which is a tint behind the amount and not the amount, and, outside the checkout, the dev panel's tab as the panel opens. A change of amount and each tick of the countdown happen in one frame: the digits are never counted, tweened or cross-faded. They do fade in with the rest of their column when a screen first appears. With "reduce motion" set on the device, one rule makes every transition and animation instant.
+Nothing the server takes away is animated out. When the server's answer takes the address and QR away, they are gone in the same render, and the same goes for a notice, the dialog and a whole screen. What does close with a movement is the shopper's own doing: a picker section after a choice, and a copy button after a copy. The only things that fade away are the wash, which is a tint behind the amount and not the amount, and, outside the checkout, the dev panel's tab as the panel opens. A change of amount and each tick of the countdown happen in one frame: the digits are never counted, tweened or cross-faded. They do fade in with the rest of their column when a screen first appears. With "reduce motion" set on the device, one rule makes every transition and animation instant.
 
 The fades use the browser's `@starting-style`. A browser without it shows the content at once, with no fade, and nothing else changes.
 
 **How it was checked.** The tests run without a browser's layout, so they cannot see any of this. The planning agent drove the real page in headless Chrome: 17 screens at four widths measured for clipped elements and a split currency code, a run with very long names and a 23-digit order amount, and timed samples of each motion, including that no frame shows an address once the screen that replaced it is up. Those scripts are not in the repository.
+
+### 11.2 The picker and the chains' colours
+
+Added on 13 Nov 2026. After the look had been reviewed I chose a different picker and the chains' own colours from a second set of drawings. Tasks 29 to 34 of the plan did the work.
+
+**The picker** is one card, one column, at most 520 px wide at every window width. From top to bottom: the order header, "Choose how to pay", the Currency section, the Network section, a line with the chosen network's fee, usual time and confirmations, the Continue button, and under it the sentence saying which currency and network the shopper's wallet must be able to send.
+
+- Each section is a group of radio buttons. A network option shows its chip, its name, and under the name its fee and usual time, so every network's cost is visible before one is chosen.
+- A section closes to one row once something is chosen in it: the chosen name and a "Change" button. The Network section does not appear until a currency is chosen. Changing the currency opens it again with nothing chosen, and a currency with one network has it filled in, as before.
+- Nothing is chosen and nothing has focus when the page loads.
+- With a keyboard, Tab reaches the first option without choosing it. The arrow keys choose, as radio buttons do, and a choice closes the section. Focus then goes to the first network, or to the Continue button once both are chosen. "Change" opens the section again with focus on the chosen option. If the server lists a currency with no networks, focus goes to that currency's "Change" button. Focus never rests on something hidden: the form of a section that is not showing is inert.
+- While a create or a new quote is in flight, the radio buttons and the "Change" buttons are disabled.
+
+What the agreed drawing has and the picker no longer does: two menus, a right-hand column, a "You are paying with" pill, and the sentence "The amount to send and the address are shown next."
+
+**The card's width** belongs to one element around the checkout, which stays mounted: 520 px while the picker or its loading card is showing, 940 px while a payment is. It moves between the two over 200 ms. A page loaded on a payment starts at 940 px and does not move. The height is not animated.
+
+**The chains' colours** are mine. Two of them cannot be used everywhere as they are, and the table says what each needs.
+
+| Network | Colour | Text on a fill | Border and radio button |
+|---|---|---|---|
+| Ethereum | `#627EEA`. A filled control uses `#5770D0`, 11% darker | White, 4.53:1. On `#627EEA` it would be 3.69:1 | `#627EEA`, 3.69:1 on white |
+| Polygon | `#8247E5` | White, 5.27:1 | The same colour |
+| Tron | `#DC062B` | White, 5.12:1 | The same colour |
+| Solana | `#14F195` | Near-black, 12.11:1. White would be 1.50:1 | `#0EA566`, 3.19:1 on white. The green itself would be 1.50:1 |
+| Any other | Grey, `#6B7280` | White, 4.83:1 | The same colour |
+
+One function, `networkColours`, answers what a network gets, so no screen decides it. The colours are used in five places: the network chip; a chosen network's option and its closed row, as a border with a 10% tint behind; the Continue button; the pay screen's network banner; and the QR frame with its label. Inside the banner and the frame's label the chip is reversed, so it stays visible on its own colour. The letter on a chip outside them is decoration, and on Ethereum's chip it is white at 3.69:1; the network's name is always in words beside it.
+
+A network's colour is never used for a status. Tron's red is close to the red of a failed payment, and I accepted that: a status is a mark, a headline and a sentence, a network is a banner that names it, and the two never stand in for each other. Every place that carries a chain's colour also names the network in words.
+
+**"Change currency or network"** is a bordered button on the pay screen and on the expired screen. The picker's "Back" is still an underlined one.
 
 ## 12. One thing I would defend
 
