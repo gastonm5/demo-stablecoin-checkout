@@ -12,9 +12,10 @@ export function CheckoutCard({
   return (
     <div className="mx-auto w-full max-w-[940px] overflow-hidden rounded-card border border-line bg-surface text-body leading-[1.4] text-ink">
       <div className="grid grid-cols-1 md:min-h-[460px] md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <div className="px-5 py-7 md:px-8">{left}</div>
-        <div className="flex flex-col justify-center gap-4 border-t border-line px-5 py-7 md:border-t-0 md:border-l md:px-7">
-          {right}
+        <div className="entrance px-5 py-7 md:px-8">{left}</div>
+        {/* The divider is frame, so the entrance runs on what is inside it. */}
+        <div className="flex flex-col justify-center border-t border-line px-5 py-7 md:border-t-0 md:border-l md:px-7">
+          <div className="entrance flex flex-col gap-4">{right}</div>
         </div>
       </div>
       {strip && (

@@ -390,3 +390,44 @@ test('announces what to send when the pay screen appears, and leaves focus alone
   expect(announced()).toHaveTextContent('Send 43.69 USDT on Tron (TRC-20)')
   expect(document.body).toHaveFocus()
 })
+
+// jsdom cannot run the entrance; these check what decides whether it plays: fresh nodes or kept ones.
+test('a new answer of the same kind keeps the screen, so its entrance does not play again', () => {
+  const { rerender } = renderView(
+    checkoutWith(paymentResult([withStatus('awaiting_payment')])),
+  )
+  const banner = screen.getByText('Tron (TRC-20) network')
+  vi.setSystemTime(BEFORE + 1_000)
+  rerender(
+    checkoutWith(
+      paymentResult([
+        withStatus('awaiting_payment'),
+        withStatus('awaiting_payment'),
+      ]),
+    ),
+  )
+  expect(screen.getByText('Tron (TRC-20) network')).toBe(banner)
+  // The pay screen's remaining mode is the same kind of screen.
+  rerender(
+    checkoutWith(
+      paymentResult([withStatus('awaiting_payment'), withStatus('underpaid')]),
+    ),
+  )
+  expect(shown('Send the remaining')).toBeInTheDocument()
+  expect(screen.getByText('Tron (TRC-20) network')).toBe(banner)
+})
+
+test('a new kind of screen gets new nodes, and the address is gone in the same render', () => {
+  const { rerender } = renderView(
+    checkoutWith(paymentResult([withStatus('awaiting_payment')])),
+  )
+  const merchant = screen.getByText('Nordwind Audio')
+  expect(screen.getByText(ADDRESS)).toBeInTheDocument()
+  rerender(
+    checkoutWith(
+      paymentResult([withStatus('awaiting_payment'), withStatus('detected')]),
+    ),
+  )
+  expect(screen.queryByText(ADDRESS)).not.toBeInTheDocument()
+  expect(screen.getByText('Nordwind Audio')).not.toBe(merchant)
+})

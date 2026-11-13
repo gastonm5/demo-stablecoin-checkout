@@ -47,3 +47,24 @@
 @utility text-amount {
   font-size: clamp(1.75rem, 7.5vw, 2.5rem);
 }
+
+/* Plays once, when the element is first rendered. There is no exit: what leaves is gone in the same render. */
+@utility entrance {
+  transition-property: opacity, translate;
+  transition-duration: var(--entrance-duration, 180ms);
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  @starting-style {
+    opacity: 0;
+    translate: 0 var(--entrance-rise, 8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+}
