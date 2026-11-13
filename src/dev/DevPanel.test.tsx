@@ -329,6 +329,18 @@ test('disables Start over when there is no payment', async () => {
   expect(openPicker).not.toHaveBeenCalled()
 })
 
+test('Start over sits directly under the current payment, above Set status', async () => {
+  await renderOpen()
+  const headings = screen
+    .getAllByRole('heading', { level: 2 })
+    .map((heading) => heading.textContent)
+  expect(headings.slice(0, 3)).toEqual([
+    'Current payment',
+    'Start over',
+    'Set status',
+  ])
+})
+
 test('a panel left open is open again after a remount, and takes no focus', async () => {
   await renderOpen()
   cleanup()

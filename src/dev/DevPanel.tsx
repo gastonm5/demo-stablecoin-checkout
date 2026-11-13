@@ -205,6 +205,31 @@ export function DevPanel({
             )}
           </Section>
 
+          <Section title="Start over">
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                disabled={reference === null}
+                onClick={restart}
+                className={BUTTON}
+              >
+                restart this payment
+              </button>
+              <button
+                type="button"
+                disabled={reference === null}
+                onClick={openPicker}
+                className={BUTTON}
+              >
+                new payment
+              </button>
+            </div>
+            <p className="mt-2 text-[#7d8796]">
+              restart: same reference, awaiting_payment with a fresh quote, then
+              the page reloads. new: back to the picker.
+            </p>
+          </Section>
+
           <Section title="Set status">
             <div className="grid grid-cols-2 gap-1.5">
               {STATUSES.map((status) => (
@@ -243,31 +268,6 @@ export function DevPanel({
                 </button>
               </span>
             </div>
-          </Section>
-
-          <Section title="Start over">
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                disabled={reference === null}
-                onClick={restart}
-                className={BUTTON}
-              >
-                restart this payment
-              </button>
-              <button
-                type="button"
-                disabled={reference === null}
-                onClick={openPicker}
-                className={BUTTON}
-              >
-                new payment
-              </button>
-            </div>
-            <p className="mt-2 text-[#7d8796]">
-              restart: same reference, awaiting_payment with a fresh quote, then
-              the page reloads. new: back to the picker.
-            </p>
           </Section>
 
           {SETTINGS.map(([title, rows]) => (
