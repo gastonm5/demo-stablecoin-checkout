@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { ReactNode, Ref } from 'react'
-import type { Payment } from '../api/schemas'
 import { formatDateTime } from '../domain/format'
 import type { Screen } from '../domain/screen'
 import type { SequenceEntry } from '../domain/sequence'
@@ -8,7 +7,6 @@ import { BODY, NOTICE, Row, StatusCard, WARN } from '../components/StatusCard'
 import { headline } from './statusText'
 
 export function ExpiredScreen({
-  payment,
   screen,
   money,
   requoting,
@@ -18,7 +16,6 @@ export function ExpiredScreen({
   notice,
   headingRef,
 }: {
-  payment: Payment
   screen: Extract<Screen, { kind: 'expired' }>
   money?: SequenceEntry // the entry that carried money, for the dead end
   requoting: boolean
@@ -30,6 +27,7 @@ export function ExpiredScreen({
 }) {
   // View state only: whether the shopper has said they sent nothing.
   const [ticked, setTicked] = useState(false)
+  const { payment } = screen
   const { quote, merchant } = payment
   const sum = (amount: string) => `${amount} ${quote.crypto_currency}`
   const shared = {
@@ -77,7 +75,6 @@ export function ExpiredScreen({
     )
   }
 
-  const expiredAt = payment.status === 'expired' ? payment.expired_at : null
   const locked = !ticked || requoting
   return (
     <StatusCard
@@ -86,7 +83,7 @@ export function ExpiredScreen({
       amount={sum(quote.total_due)}
       muted
       timeRows={
-        expiredAt && <Row label="Expired at">{formatDateTime(expiredAt)}</Row>
+        <Row label="Expired at">{formatDateTime(payment.expired_at)}</Row>
       }
       icon="clock"
       link={

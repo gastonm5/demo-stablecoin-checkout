@@ -1,5 +1,6 @@
 import { parsePayment } from '../api/schemas'
-import type { Payment } from '../api/schemas'
+import type { Payment, PaymentStatus } from '../api/schemas'
+import type { With } from '../domain/screen'
 
 // The brief's values, restated here because the client may not import the mock.
 
@@ -76,6 +77,26 @@ export function makePayment(
   quote?: Record<string, unknown>,
 ): Payment {
   return parsePayment(paymentJson(state, quote))
+}
+
+const hasStatus = <S extends PaymentStatus>(
+  payment: Payment,
+  status: S,
+): payment is With<S> => payment.status === status
+
+// The state fixture for a status, narrowed to it, for a screen that takes only that status.
+export function paymentWith<S extends PaymentStatus>(
+  status: S,
+  state: Record<string, unknown> = {},
+  quote?: Record<string, unknown>,
+): With<S> {
+  const payment = makePayment(
+    { status, ...STATE_FIXTURES[status], ...state },
+    quote,
+  )
+  if (!hasStatus(payment, status))
+    throw new Error(`The fixture parsed as ${payment.status}, not ${status}`)
+  return payment
 }
 
 // Unlike the assumed order in every shown value, so a header showing the wrong one is caught.

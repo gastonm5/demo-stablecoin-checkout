@@ -102,70 +102,73 @@ test('does not ask at zero for a status with no clock', () => {
   expect(checkNow).not.toHaveBeenCalled()
 })
 
-test('a failed catalogue is a details problem for a pay status only', () => {
+// The card that waits for the list, with "Try again" when the list cannot check this payment.
+const payLoading = (payment: Payment, problem: boolean) => ({
+  kind: 'pay_loading',
+  payment,
+  problem,
+})
+
+test('a failed catalogue is a problem for a pay status, and a status screen does not wait for it', () => {
   const failed = catalogue({ currencies: undefined, error: new Error('down') })
-  const hook = mount(withStatus('awaiting_payment'), failed)
-  expect(hook.result.current.detailsProblem).toBe(true)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
-  hook.rerender({ p: withStatus('underpaid'), c: failed })
-  expect(hook.result.current.detailsProblem).toBe(true)
-  hook.rerender({ p: withStatus('detected'), c: failed })
-  expect(hook.result.current.detailsProblem).toBe(false)
-  expect(hook.result.current.screen).toEqual({ kind: 'waiting' })
+  const awaiting = withStatus('awaiting_payment')
+  const hook = mount(awaiting, failed)
+  expect(hook.result.current.screen).toEqual(payLoading(awaiting, true))
+  const underpaid = withStatus('underpaid')
+  hook.rerender({ p: underpaid, c: failed })
+  expect(hook.result.current.screen).toEqual(payLoading(underpaid, true))
+  const detected = withStatus('detected')
+  hook.rerender({ p: detected, c: failed })
+  expect(hook.result.current.screen).toEqual({
+    kind: 'waiting',
+    payment: detected,
+  })
 })
 
 test('a catalogue without the quote currency is a details problem', () => {
   const [, ...others] = parseCurrencies(CURRENCIES_JSON)
   expect(others.map((c) => c.code)).not.toContain('USDT')
-  const hook = mount(
-    withStatus('awaiting_payment'),
-    catalogue({ currencies: others }),
-  )
-  expect(hook.result.current.detailsProblem).toBe(true)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+  const awaiting = withStatus('awaiting_payment')
+  const hook = mount(awaiting, catalogue({ currencies: others }))
+  expect(hook.result.current.screen).toEqual(payLoading(awaiting, true))
 })
 
 test('an amount with too many decimal places is a details problem', () => {
-  const hook = mount(
-    withStatus('awaiting_payment', { total_due: '163.1234567' }),
-  )
-  expect(hook.result.current.detailsProblem).toBe(true)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
-  hook.rerender({
-    p: makePayment({
-      status: 'underpaid',
-      ...STATE_FIXTURES.underpaid,
-      amount_outstanding: '43.1234567',
-    }),
-    c: catalogue(),
+  const awaiting = withStatus('awaiting_payment', { total_due: '163.1234567' })
+  const hook = mount(awaiting)
+  expect(hook.result.current.screen).toEqual(payLoading(awaiting, true))
+  const underpaid = makePayment({
+    status: 'underpaid',
+    ...STATE_FIXTURES.underpaid,
+    amount_outstanding: '43.1234567',
   })
-  expect(hook.result.current.detailsProblem).toBe(true)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+  hook.rerender({ p: underpaid, c: catalogue() })
+  expect(hook.result.current.screen).toEqual(payLoading(underpaid, true))
 })
 
 test('a quote network missing from the catalogue currency is a details problem', () => {
   const polygon = { network: 'polygon', network_name: 'Polygon' }
-  const hook = mount(withStatus('awaiting_payment', polygon))
-  expect(hook.result.current.detailsProblem).toBe(true)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
-  hook.rerender({ p: withStatus('underpaid', polygon), c: catalogue() })
-  expect(hook.result.current.detailsProblem).toBe(true)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+  const awaiting = withStatus('awaiting_payment', polygon)
+  const hook = mount(awaiting)
+  expect(hook.result.current.screen).toEqual(payLoading(awaiting, true))
+  const underpaid = withStatus('underpaid', polygon)
+  hook.rerender({ p: underpaid, c: catalogue() })
+  expect(hook.result.current.screen).toEqual(payLoading(underpaid, true))
 })
 
 test('a quote network name other than the catalogue one is a details problem', () => {
-  const hook = mount(withStatus('awaiting_payment', { network_name: 'Tron' }))
-  expect(hook.result.current.detailsProblem).toBe(true)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+  const awaiting = withStatus('awaiting_payment', { network_name: 'Tron' })
+  const hook = mount(awaiting)
+  expect(hook.result.current.screen).toEqual(payLoading(awaiting, true))
 })
 
 test('a catalogue that is still loading is not a problem yet', () => {
+  const awaiting = withStatus('awaiting_payment')
   const hook = mount(
-    withStatus('awaiting_payment'),
+    awaiting,
     catalogue({ currencies: undefined, isLoading: true }),
   )
-  expect(hook.result.current.detailsProblem).toBe(false)
-  expect(hook.result.current.screen).toEqual({ kind: 'pay_loading' })
+  expect(hook.result.current.screen).toEqual(payLoading(awaiting, false))
 })
 
 // A failed refetch keeps the list it already had, and that list still checks the quote.
@@ -184,7 +187,6 @@ test('a catalogue that has both currencies and an error still gives the pay scre
 test('a checked quote gets the pay screen, the usual time and the connection', () => {
   const hook = mount(withStatus('awaiting_payment'))
   const state = hook.result.current
-  expect(state.detailsProblem).toBe(false)
   expect(state.screen).toMatchObject({ kind: 'pay', clock: 'running' })
   expect(state.connection).toBe('ok')
   expect(state.usualSeconds).toBe(60)
@@ -212,6 +214,7 @@ test('money is the last status that carried it', () => {
   })
   expect(state.current.screen).toEqual({
     kind: 'expired',
+    payment: expired,
     variant: 'dead_end',
     after: 'partial',
   })

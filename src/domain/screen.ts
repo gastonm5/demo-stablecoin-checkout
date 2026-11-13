@@ -7,27 +7,62 @@ import { carriesMoney } from './status'
 export const FRESH_ANSWER_MS = 10_000
 export const FAILURES_BEFORE_NOTICE = 2
 
-export type ClockState =
-  'running' | 'checking' | 'still_valid' | 'cannot_confirm' | 'none'
+export type With<S extends Payment['status']> = Extract<Payment, { status: S }>
+
+export type DetailsState = 'loading' | 'unavailable' | 'ready'
 
 export type Screen =
   | {
       kind: 'pay'
-      mode: 'full' | 'remaining'
-      clock: ClockState
-      showAddress: boolean
-      remainingMs: number | null
+      mode: 'full'
+      payment: With<'awaiting_payment'>
+      clock: 'running'
+      showAddress: true
+      remainingMs: number
     }
-  | { kind: 'pay_loading' }
-  | { kind: 'waiting' }
-  | { kind: 'complete'; overpaid: boolean }
+  | {
+      kind: 'pay'
+      mode: 'full'
+      payment: With<'awaiting_payment'>
+      clock: 'still_valid'
+      showAddress: true
+    }
+  | {
+      kind: 'pay'
+      mode: 'full'
+      payment: With<'awaiting_payment'>
+      clock: 'checking' | 'cannot_confirm'
+      showAddress: false
+    }
+  | {
+      kind: 'pay'
+      mode: 'remaining'
+      payment: With<'underpaid'>
+      clock: 'none'
+      showAddress: true
+    }
+  | {
+      kind: 'pay_loading'
+      payment: With<'awaiting_payment' | 'underpaid'>
+      problem: boolean
+    }
+  | { kind: 'waiting'; payment: With<'detected' | 'confirming'> }
+  | { kind: 'complete'; payment: With<'paid' | 'overpaid'> }
+  | { kind: 'expired'; payment: With<'expired'>; variant: 'plain' | 'cautious' }
   | {
       kind: 'expired'
-      variant: 'plain' | 'cautious' | 'dead_end'
-      after: 'partial' | 'payment' | null
+      payment: With<'expired'>
+      variant: 'dead_end'
+      after: 'partial' | 'payment'
     }
-  | { kind: 'failed'; moneySeen: 'yes' | 'no' | 'unknown' }
-  | { kind: 'checking' }
+  | {
+      kind: 'failed'
+      payment: With<'failed'>
+      moneySeen: 'yes' | 'no' | 'unknown'
+    }
+  | { kind: 'checking'; payment: With<'unknown' | 'awaiting_payment'> }
+
+export type ClockState = Extract<Screen, { kind: 'pay' }>['clock']
 
 export type ScreenInput = {
   payment: Payment
@@ -35,27 +70,26 @@ export type ScreenInput = {
   now: number // device clock, ms
   lastSuccessAt: number // device time of the last valid response for this payment
   lastFailureAt: number | null
-  detailsChecked: boolean // the currency list is loaded, holds the quote's currency and network under its name, and amountsToSend(payment) all fit its decimals
+  details: DetailsState // ready: the currency list is loaded, holds the quote's currency and network under its name, and amountsToSend(payment) all fit its decimals
 }
 
 export function deriveScreen(input: ScreenInput): Screen {
-  const { payment, sequence, detailsChecked } = input
+  const { payment, sequence, details } = input
   switch (payment.status) {
     case 'paid':
-      return { kind: 'complete', overpaid: false }
     case 'overpaid':
-      return { kind: 'complete', overpaid: true }
+      return { kind: 'complete', payment }
     case 'detected':
     case 'confirming':
-      return { kind: 'waiting' }
+      return { kind: 'waiting', payment }
     case 'unknown':
-      return { kind: 'checking' }
+      return { kind: 'checking', payment }
     case 'failed': {
       if (moneySeen(sequence.entries))
-        return { kind: 'failed', moneySeen: 'yes' }
+        return { kind: 'failed', payment, moneySeen: 'yes' }
       // After a reload the page cannot know whether money arrived earlier.
       const unknown = sequence.startedFrom === 'reload'
-      return { kind: 'failed', moneySeen: unknown ? 'unknown' : 'no' }
+      return { kind: 'failed', payment, moneySeen: unknown ? 'unknown' : 'no' }
     }
     case 'expired': {
       // An unknown status says nothing about the money; only a known one can reopen a new quote.
@@ -65,29 +99,40 @@ export function deriveScreen(input: ScreenInput): Screen {
       // No new quote once part or all of the money was seen: the API does not say what happens to it.
       if (before && carriesMoney(before.status)) {
         const after = before.status === 'underpaid' ? 'partial' : 'payment'
-        return { kind: 'expired', variant: 'dead_end', after }
+        return { kind: 'expired', payment, variant: 'dead_end', after }
       }
       const cautious = sequence.startedFrom === 'reload'
       return {
         kind: 'expired',
+        payment,
         variant: cautious ? 'cautious' : 'plain',
-        after: null,
       }
     }
     case 'awaiting_payment':
       // Going backwards may be a stale answer with the money already sent; an address would invite paying twice.
-      if (moneySeen(currentQuote(sequence))) return { kind: 'checking' }
-      if (!detailsChecked) return { kind: 'pay_loading' }
-      return payInFull(input)
+      if (moneySeen(currentQuote(sequence)))
+        return { kind: 'checking', payment }
+      if (details !== 'ready')
+        return {
+          kind: 'pay_loading',
+          payment,
+          problem: details === 'unavailable',
+        }
+      return payInFull(payment, input)
     case 'underpaid':
-      if (!detailsChecked) return { kind: 'pay_loading' }
+      if (details !== 'ready')
+        return {
+          kind: 'pay_loading',
+          payment,
+          problem: details === 'unavailable',
+        }
       // Any money stops the clock: the shopper can always send the rest.
       return {
         kind: 'pay',
         mode: 'remaining',
+        payment,
         clock: 'none',
         showAddress: true,
-        remainingMs: null,
       }
     default:
       return payment satisfies never
@@ -95,11 +140,13 @@ export function deriveScreen(input: ScreenInput): Screen {
 }
 
 // The countdown is information, not authority: at zero only a server answer can show the address again.
-function payInFull(input: ScreenInput): Screen {
-  const { payment, now, lastSuccessAt, lastFailureAt } = input
+function payInFull(
+  payment: With<'awaiting_payment'>,
+  { now, lastSuccessAt, lastFailureAt }: ScreenInput,
+): Screen {
   const deadline = Date.parse(payment.quote.expires_at)
   const left = remainingMs(payment.quote.expires_at, now)
-  const pay = { kind: 'pay', mode: 'full', remainingMs: 0 } as const
+  const pay = { kind: 'pay', mode: 'full', payment } as const
   if (left > 0) {
     return { ...pay, clock: 'running', showAddress: true, remainingMs: left }
   }

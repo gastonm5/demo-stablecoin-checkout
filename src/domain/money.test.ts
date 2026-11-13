@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import type { DecimalString } from '../api/schemas'
-import { makePayment, STATE_FIXTURES } from '../test/fixtures'
+import { makePayment, paymentWith, STATE_FIXTURES } from '../test/fixtures'
 import { amountsToSend, fitsDecimals, fractionDigits, toSend } from './money'
 
 test.each([
@@ -31,16 +31,14 @@ test('amountsToSend is the total, plus the outstanding amount on underpaid', () 
 })
 
 test('toSend on awaiting_payment is the quote total and the quote address', () => {
-  expect(toSend(makePayment())).toEqual({
+  expect(toSend(paymentWith('awaiting_payment'))).toEqual({
     amount: '163.69',
     address: 'TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e',
   })
 })
 
 test('toSend on underpaid is the outstanding amount and the address the status gives', () => {
-  const payment = makePayment({
-    status: 'underpaid',
-    ...STATE_FIXTURES.underpaid,
+  const payment = paymentWith('underpaid', {
     crypto_address: 'TXYZ9w8v7u6t5s4r3q2p1n9m8k7j6h5g4f',
   })
   expect(payment.quote.crypto_address).toBe(

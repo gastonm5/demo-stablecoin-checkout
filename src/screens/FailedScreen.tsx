@@ -1,5 +1,4 @@
 import type { ReactNode, Ref } from 'react'
-import type { Payment } from '../api/schemas'
 import type { Screen } from '../domain/screen'
 import type { SequenceEntry } from '../domain/sequence'
 import { BODY, StatusCard } from '../components/StatusCard'
@@ -7,20 +6,18 @@ import { headline, reasonText } from './statusText'
 
 // A dead end on purpose: a retry could leave more money stuck, so there is nothing to press.
 export function FailedScreen({
-  payment,
   screen,
   money,
   notice,
   headingRef,
 }: {
-  payment: Payment
   screen: Extract<Screen, { kind: 'failed' }>
   money?: SequenceEntry
   notice?: ReactNode
   headingRef?: Ref<HTMLHeadingElement>
 }) {
-  const { quote, merchant } = payment
-  const reason = payment.status === 'failed' ? payment.reason : ''
+  const { payment } = screen
+  const { quote, merchant, reason } = payment
   const seen = screen.moneySeen === 'yes'
   const received = seen ? money?.amount_received : undefined
   return (

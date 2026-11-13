@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { QRCodeSVG } from 'qrcode.react'
 import type { ComponentProps } from 'react'
 import { expect, test, vi } from 'vitest'
-import { makePayment, STATE_FIXTURES } from '../test/fixtures'
+import { paymentWith } from '../test/fixtures'
 import { PayScreen } from './PayScreen'
 
 type Props = ComponentProps<typeof PayScreen>
@@ -13,6 +13,7 @@ const ADDRESS = 'TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e'
 const running = {
   kind: 'pay',
   mode: 'full',
+  payment: paymentWith('awaiting_payment'),
   clock: 'running',
   showAddress: true,
   remainingMs: 767_000,
@@ -20,19 +21,19 @@ const running = {
 const remaining = {
   kind: 'pay',
   mode: 'remaining',
+  payment: paymentWith('underpaid'),
   clock: 'none',
   showAddress: true,
-  remainingMs: null,
 } as const
-const timedOut = (clock: PayView['clock'], showAddress: boolean): PayView => ({
-  ...running,
-  clock,
-  showAddress,
-  remainingMs: 0,
-})
-
-const underpaid = () =>
-  makePayment({ status: 'underpaid', ...STATE_FIXTURES.underpaid })
+// Past the deadline the clock alone decides whether the address shows.
+const timedOut = (
+  clock: 'checking' | 'cannot_confirm' | 'still_valid',
+): PayView => {
+  const { payment } = running
+  return clock === 'still_valid'
+    ? { kind: 'pay', mode: 'full', payment, clock, showAddress: true }
+    : { kind: 'pay', mode: 'full', payment, clock, showAddress: false }
+}
 const ethQuote = {
   crypto_currency: 'ETH',
   network: 'ethereum',
@@ -46,12 +47,7 @@ const ethQuote = {
 
 function renderPay(overrides: Partial<Props> = {}) {
   return render(
-    <PayScreen
-      payment={makePayment()}
-      screen={running}
-      onChange={() => {}}
-      {...overrides}
-    />,
+    <PayScreen screen={running} onChange={() => {}} {...overrides} />,
   )
 }
 
@@ -120,7 +116,12 @@ test('shows the amount exactly as sent and copies it without the unit', async ()
 })
 
 test('keeps all eighteen places of an ETH amount', async () => {
-  renderPay({ payment: makePayment({}, ethQuote) })
+  renderPay({
+    screen: {
+      ...running,
+      payment: paymentWith('awaiting_payment', {}, ethQuote),
+    },
+  })
   const amount = screen.getByText('0.055295738369148398 ETH')
   // Eighteen places are wider than the card; they must wrap, not overflow.
   expect(amount).toHaveClass('break-all')
@@ -164,7 +165,7 @@ test.each([
   ['checking', "Time's up."],
   ['cannot_confirm', "We can't confirm this quote is still live."],
 ] as const)('%s hides the address and the QR', (clock, text) => {
-  renderPay({ screen: timedOut(clock, false) })
+  renderPay({ screen: timedOut(clock) })
   expect(screen.queryByText(ADDRESS)).not.toBeInTheDocument()
   expect(screen.queryByText(/address$/)).not.toBeInTheDocument()
   expect(screen.queryByTitle(/QR code/)).not.toBeInTheDocument()
@@ -180,7 +181,7 @@ test.each([
 })
 
 test('still valid shows the address and no timer', () => {
-  renderPay({ screen: timedOut('still_valid', true) })
+  renderPay({ screen: timedOut('still_valid') })
   expect(screen.queryByRole('timer')).not.toBeInTheDocument()
   expect(screen.queryByText('Rate held for')).not.toBeInTheDocument()
   expect(screen.getByText(ADDRESS)).toBeInTheDocument()
@@ -191,7 +192,7 @@ test('still valid shows the address and no timer', () => {
 })
 
 test('underpaid shows the remaining amount, what arrived, and no countdown', () => {
-  renderPay({ payment: underpaid(), screen: remaining, onChange: null })
+  renderPay({ screen: remaining, onChange: null })
   expect(screen.getByText('Send the remaining')).toBeInTheDocument()
   expect(screen.getByText('43.69 USDT')).toBeInTheDocument()
   expect(
@@ -224,19 +225,15 @@ test('underpaid shows the remaining amount, what arrived, and no countdown', () 
 })
 
 test('underpaid copies the remaining amount', async () => {
-  renderPay({ payment: underpaid(), screen: remaining, onChange: null })
+  renderPay({ screen: remaining, onChange: null })
   const writeText = await copyWith('Copy amount')
   expect(writeText).toHaveBeenCalledExactlyOnceWith('43.69')
 })
 
 test('underpaid shows the address its own status gives', async () => {
   const other = 'TXYZ9w8v7u6t5s4r3q2p1n9m8k7j6h5g4f'
-  const payment = makePayment({
-    status: 'underpaid',
-    ...STATE_FIXTURES.underpaid,
-    crypto_address: other,
-  })
-  renderPay({ payment, screen: remaining, onChange: null })
+  const payment = paymentWith('underpaid', { crypto_address: other })
+  renderPay({ screen: { ...remaining, payment }, onChange: null })
   expect(screen.getByText(other)).toBeInTheDocument()
   const writeText = await copyWith('Copy Tron address')
   expect(writeText).toHaveBeenCalledExactlyOnceWith(other)
@@ -246,28 +243,27 @@ test.each([
   ['none', remaining, 'Send the rest in one transfer to the same address.'],
   [
     'checking',
-    timedOut('checking', false),
+    timedOut('checking'),
     "Time's up. Checking with the payment service.",
   ],
   [
     'still_valid',
-    timedOut('still_valid', true),
+    timedOut('still_valid'),
     'This quote is still valid. Your device clock looks wrong, so the timer is hidden.',
   ],
   [
     'cannot_confirm',
-    timedOut('cannot_confirm', false),
+    timedOut('cannot_confirm'),
     "We can't confirm this quote is still live. Don't send until this page reconnects.",
   ],
 ] as const)('the strip for %s', (_, view, text) => {
-  const payment = view.mode === 'remaining' ? underpaid() : makePayment()
-  renderPay({ payment, screen: view })
+  renderPay({ screen: view })
   expect(fullText(text)).toBeInTheDocument()
 })
 
 test('a connection notice replaces the strip text', () => {
   renderPay({
-    screen: timedOut('still_valid', true),
+    screen: timedOut('still_valid'),
     notice: <span>You appear to be offline.</span>,
   })
   expect(screen.getByText('You appear to be offline.')).toBeInTheDocument()

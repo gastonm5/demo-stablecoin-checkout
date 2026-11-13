@@ -1,6 +1,8 @@
-import type { Screen } from '../domain/screen'
-
-export type StatusScreen = Exclude<Screen, { kind: 'pay' | 'pay_loading' }>
+// Only what a headline reads, so any status screen fits and so does a small literal.
+export type StatusScreen =
+  | { kind: 'waiting' | 'complete' | 'failed' | 'checking' }
+  | { kind: 'expired'; variant: 'plain' | 'cautious' }
+  | { kind: 'expired'; variant: 'dead_end'; after: 'partial' | 'payment' }
 
 // One source for each headline, so the screen and the announcement cannot drift apart.
 export function headline(screen: StatusScreen): string {

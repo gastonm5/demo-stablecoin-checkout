@@ -1,25 +1,23 @@
 import type { ReactNode, Ref } from 'react'
-import type { Payment } from '../api/schemas'
 import { formatDateTime } from '../domain/format'
+import type { Screen } from '../domain/screen'
 import { BODY, NOTICE, Row, StatusCard, WARN } from '../components/StatusCard'
 import { headline } from './statusText'
 
 // paid or overpaid. The API says nothing about returning the extra, so neither does this page.
 export function CompleteScreen({
-  payment,
+  screen,
   notice,
   headingRef,
 }: {
-  payment: Payment
+  screen: Extract<Screen, { kind: 'complete' }>
   notice?: ReactNode
   headingRef?: Ref<HTMLHeadingElement>
 }) {
+  const { payment } = screen
   const { quote, merchant } = payment
   const sum = (amount: string) => `${amount} ${quote.crypto_currency}`
-  const title = headline({
-    kind: 'complete',
-    overpaid: payment.status === 'overpaid',
-  })
+  const title = headline(screen)
 
   if (payment.status === 'overpaid') {
     return (
@@ -49,17 +47,12 @@ export function CompleteScreen({
     )
   }
 
-  const received =
-    'amount_received' in payment ? payment.amount_received : undefined
-  const settledAt = 'settled_at' in payment ? payment.settled_at : undefined
   return (
     <StatusCard
       payment={payment}
       label="Paid"
-      amount={received && sum(received)}
-      timeRows={
-        settledAt && <Row label="Settled">{formatDateTime(settledAt)}</Row>
-      }
+      amount={sum(payment.amount_received)}
+      timeRows={<Row label="Settled">{formatDateTime(payment.settled_at)}</Row>}
       icon="ok"
       title={title}
       headingRef={headingRef}

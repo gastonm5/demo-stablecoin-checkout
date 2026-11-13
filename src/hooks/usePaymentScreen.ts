@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { remainingMs } from '../domain/countdown'
 import { detailsMatch } from '../domain/details'
 import { deriveConnection, deriveScreen } from '../domain/screen'
-import type { Connection, Screen } from '../domain/screen'
+import type { Connection, DetailsState, Screen } from '../domain/screen'
 import { lastMoney } from '../domain/sequence'
 import type { SequenceEntry } from '../domain/sequence'
 import type { PaymentEntry } from './paymentCache'
@@ -15,7 +15,6 @@ export type PaymentScreenState = {
   entry: PaymentEntry | undefined
   screen: Screen | null // null until the first answer
   connection: Connection
-  detailsProblem: boolean // the pay screen cannot show its amount: the catalogue failed, lacks the quote's currency or network under its name, or an amount does not fit
   money: SequenceEntry | undefined // lastMoney of the sequence
   usualSeconds: number | undefined // from the catalogue entry for the quote's currency and network
 }
@@ -33,17 +32,15 @@ export function usePaymentScreen(
   const network = catalogue.currencies
     ?.find((c) => c.code === quote?.crypto_currency)
     ?.networks.find((n) => n.id === quote?.network)
-  const detailsChecked =
-    current !== undefined &&
-    catalogue.currencies !== undefined &&
-    detailsMatch(current, catalogue.currencies)
-  const toPay =
-    current?.status === 'awaiting_payment' || current?.status === 'underpaid'
+  const list = catalogue.currencies
   // A list still loading is not a problem yet: until it arrives the pay screen waits.
-  const detailsProblem =
-    toPay &&
-    (catalogue.error != null ||
-      (catalogue.currencies !== undefined && !detailsChecked))
+  const details: DetailsState = list
+    ? current && detailsMatch(current, list)
+      ? 'ready'
+      : 'unavailable'
+    : catalogue.error != null
+      ? 'unavailable'
+      : 'loading'
 
   // At zero the countdown only asks; the server decides. Once per quote, so a re-render never asks again.
   const deadlinePassed =
@@ -70,11 +67,10 @@ export function usePaymentScreen(
           now,
           lastSuccessAt: payment.lastSuccessAt,
           lastFailureAt: payment.lastFailureAt,
-          detailsChecked,
+          details,
         })
       : null,
     connection: deriveConnection(online, payment.consecutiveFailures),
-    detailsProblem,
     money: entry && lastMoney(entry.sequence.entries),
     usualSeconds: network?.avg_confirmation_seconds,
   }

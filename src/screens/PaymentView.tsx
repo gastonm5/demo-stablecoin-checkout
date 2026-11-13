@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import type { Payment } from '../api/schemas'
 import { toSend } from '../domain/money'
 import type { Screen } from '../domain/screen'
 import type { UseCheckoutResult } from '../hooks/useCheckout'
@@ -21,16 +20,14 @@ import { WaitingScreen } from './WaitingScreen'
 const DETAILS_FAILED = "We couldn't load the payment details."
 
 // The pay screen has no headline, so its announcement says what to send and where.
-function announcement(
-  screen: Screen,
-  payment: Payment,
-  detailsProblem: boolean,
-): string {
+function announcement(screen: Screen): string {
   switch (screen.kind) {
-    case 'pay':
-      return `Send ${toSend(payment).amount} ${payment.quote.crypto_currency} on ${payment.quote.network_name}`
+    case 'pay': {
+      const { quote } = screen.payment
+      return `Send ${toSend(screen.payment).amount} ${quote.crypto_currency} on ${quote.network_name}`
+    }
     case 'pay_loading':
-      return detailsProblem ? DETAILS_FAILED : ''
+      return screen.problem ? DETAILS_FAILED : ''
     default:
       return headline(screen)
   }
@@ -46,8 +43,10 @@ export function PaymentView({
   // View state only: whether the "have you already sent?" question is open.
   const [confirming, setConfirming] = useState(false)
   const { payment } = checkout
-  const { entry, screen, connection, detailsProblem, money, usualSeconds } =
-    usePaymentScreen(payment, catalogue)
+  const { entry, screen, connection, money, usualSeconds } = usePaymentScreen(
+    payment,
+    catalogue,
+  )
   const headingRef = useFocusOnChange<HTMLHeadingElement>(
     screen?.kind ?? 'loading',
   )
@@ -74,13 +73,11 @@ export function PaymentView({
         </div>
       )
     }
-    const current = entry.payment
-    const shared = { payment: current, notice, headingRef }
+    const shared = { notice, headingRef }
     switch (screen.kind) {
       case 'pay':
         return (
           <PayScreen
-            payment={current}
             screen={screen}
             onChange={changeOffered ? () => setConfirming(true) : null}
             notice={notice}
@@ -89,9 +86,9 @@ export function PaymentView({
       case 'pay_loading':
         return (
           <LoadingCard
-            order={current}
+            order={screen.payment}
             loading="Loading the payment details…"
-            problem={detailsProblem ? DETAILS_FAILED : null}
+            problem={screen.problem ? DETAILS_FAILED : null}
             onRetry={() => {
               catalogue.retry()
               payment.checkNow()
@@ -100,9 +97,15 @@ export function PaymentView({
           />
         )
       case 'waiting':
-        return <WaitingScreen {...shared} usualSeconds={usualSeconds} />
+        return (
+          <WaitingScreen
+            {...shared}
+            screen={screen}
+            usualSeconds={usualSeconds}
+          />
+        )
       case 'complete':
-        return <CompleteScreen {...shared} />
+        return <CompleteScreen {...shared} screen={screen} />
       case 'expired':
         return (
           <ExpiredScreen
@@ -113,8 +116,8 @@ export function PaymentView({
             error={checkout.submitError}
             onRequote={() =>
               checkout.submit({
-                currency: current.quote.crypto_currency,
-                network: current.quote.network,
+                currency: screen.payment.quote.crypto_currency,
+                network: screen.payment.quote.network,
               })
             }
             onChange={checkout.changeChoice}
@@ -123,16 +126,14 @@ export function PaymentView({
       case 'failed':
         return <FailedScreen {...shared} screen={screen} money={money} />
       case 'checking':
-        return <CheckingScreen {...shared} money={money} />
+        return <CheckingScreen {...shared} screen={screen} money={money} />
     }
   }
 
   return (
     <>
       <p role="status" aria-live="polite" className="sr-only">
-        {entry && screen
-          ? announcement(screen, entry.payment, detailsProblem)
-          : ''}
+        {entry && screen ? announcement(screen) : ''}
       </p>
       {body()}
       <ConfirmChangeDialog

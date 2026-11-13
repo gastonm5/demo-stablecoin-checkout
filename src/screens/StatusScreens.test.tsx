@@ -5,7 +5,7 @@ import { expect, test, vi } from 'vitest'
 import { formatDateTime } from '../domain/format'
 import { startSequence } from '../domain/sequence'
 import type { SequenceEntry } from '../domain/sequence'
-import { makePayment, STATE_FIXTURES } from '../test/fixtures'
+import { paymentWith, STATE_FIXTURES } from '../test/fixtures'
 import { CheckingScreen } from './CheckingScreen'
 import { CompleteScreen } from './CompleteScreen'
 import { ExpiredScreen } from './ExpiredScreen'
@@ -14,39 +14,39 @@ import { reasonText } from './statusText'
 import { WaitingScreen } from './WaitingScreen'
 
 type ExpiredProps = ComponentProps<typeof ExpiredScreen>
-type Variant = ExpiredProps['screen']['variant']
-type After = ExpiredProps['screen']['after']
+type ExpiredFacts =
+  | { variant: 'plain' | 'cautious' }
+  | { variant: 'dead_end'; after: 'partial' | 'payment' }
 
 const REFERENCE = 'AQH-100306-PMT'
 const HASH = '9d1f4c8a2be7...'
 const ADDRESS = 'TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e'
 
-const withStatus = (status: string) =>
-  makePayment({ status, ...STATE_FIXTURES[status] })
-const unknownStatus = () => makePayment({ status: 'on_hold' })
+// on_hold is a status the page does not know, so it parses as unknown.
+const unknownStatus = () => paymentWith('unknown', { status: 'on_hold' })
+const waiting = (status: 'detected' | 'confirming') =>
+  ({ kind: 'waiting', payment: paymentWith(status) }) as const
+const complete = (status: 'paid' | 'overpaid') =>
+  ({ kind: 'complete', payment: paymentWith(status) }) as const
+const checking = () => ({ kind: 'checking', payment: unknownStatus() }) as const
 
 // The entry the sequence records for a status, so its amounts are validated strings.
-const entryFor = (status: string): SequenceEntry =>
-  startSequence(withStatus(status), 'creation', 0).entries[0]
+const entryFor = (status: 'underpaid' | 'confirming'): SequenceEntry =>
+  startSequence(paymentWith(status), 'creation', 0).entries[0]
 // amount_received 120.00, amount_outstanding 43.69
 const partialMoney = entryFor('underpaid')
 // amount_received 163.69
 const fullMoney = entryFor('confirming')
 
-function expired(
-  variant: Variant,
-  after: After = null,
-  more: Partial<ExpiredProps> = {},
-) {
+function expired(facts: ExpiredFacts, more: Partial<ExpiredProps> = {}) {
   const props: ExpiredProps = {
-    payment: withStatus('expired'),
-    screen: { kind: 'expired', variant, after },
+    screen: { kind: 'expired', payment: paymentWith('expired'), ...facts },
     money:
-      after === 'partial'
-        ? partialMoney
-        : after === 'payment'
-          ? fullMoney
-          : undefined,
+      'after' in facts
+        ? facts.after === 'partial'
+          ? partialMoney
+          : fullMoney
+        : undefined,
     requoting: false,
     error: null,
     onRequote: vi.fn(),
@@ -58,25 +58,30 @@ function expired(
 
 const failed = (moneySeen: 'yes' | 'no' | 'unknown') => (
   <FailedScreen
-    payment={withStatus('failed')}
-    screen={{ kind: 'failed', moneySeen }}
+    screen={{ kind: 'failed', payment: paymentWith('failed'), moneySeen }}
     money={moneySeen === 'yes' ? fullMoney : undefined}
   />
 )
 
 const STATUS_SCREENS: [string, () => ReactNode][] = [
-  ['detected', () => <WaitingScreen payment={withStatus('detected')} />],
-  ['confirming', () => <WaitingScreen payment={withStatus('confirming')} />],
-  ['paid', () => <CompleteScreen payment={withStatus('paid')} />],
-  ['overpaid', () => <CompleteScreen payment={withStatus('overpaid')} />],
-  ['expired, plain', () => expired('plain').node],
-  ['expired, cautious', () => expired('cautious').node],
-  ['expired after part', () => expired('dead_end', 'partial').node],
-  ['expired after a payment', () => expired('dead_end', 'payment').node],
+  ['detected', () => <WaitingScreen screen={waiting('detected')} />],
+  ['confirming', () => <WaitingScreen screen={waiting('confirming')} />],
+  ['paid', () => <CompleteScreen screen={complete('paid')} />],
+  ['overpaid', () => <CompleteScreen screen={complete('overpaid')} />],
+  ['expired, plain', () => expired({ variant: 'plain' }).node],
+  ['expired, cautious', () => expired({ variant: 'cautious' }).node],
+  [
+    'expired after part',
+    () => expired({ variant: 'dead_end', after: 'partial' }).node,
+  ],
+  [
+    'expired after a payment',
+    () => expired({ variant: 'dead_end', after: 'payment' }).node,
+  ],
   ['failed, money seen', () => failed('yes')],
   ['failed, no money', () => failed('no')],
   ['failed, money unknown', () => failed('unknown')],
-  ['checking', () => <CheckingScreen payment={unknownStatus()} />],
+  ['checking', () => <CheckingScreen screen={checking()} />],
 ]
 
 // The whole text of an element, so a sentence split by <strong> is matched in one piece.
@@ -89,7 +94,7 @@ const buttonNames = () =>
 test.each(['plain', 'cautious'] as const)(
   'expired, %s: the new quote and the change link need the tick box',
   async (variant) => {
-    const { props, node } = expired(variant)
+    const { props, node } = expired({ variant })
     render(node)
     const user = userEvent.setup()
     const button = screen.getByRole('button', { name: 'Get a new quote' })
@@ -113,7 +118,7 @@ test.each(['plain', 'cautious'] as const)(
 )
 
 test('expired: says what it shows and what it hides', () => {
-  render(expired('plain').node)
+  render(expired({ variant: 'plain' }).node)
   expect(
     screen.getByRole('heading', { name: 'This quote has expired' }),
   ).toBeInTheDocument()
@@ -136,7 +141,7 @@ test('expired: says what it shows and what it hides', () => {
 })
 
 test('expired: while a new quote is on its way the button says so', async () => {
-  render(expired('plain', null, { requoting: true }).node)
+  render(expired({ variant: 'plain' }, { requoting: true }).node)
   await userEvent
     .setup()
     .click(screen.getByRole('checkbox', { name: 'I have not sent a payment' }))
@@ -147,25 +152,25 @@ test('expired: while a new quote is on its way the button says so', async () => 
 })
 
 test('expired: a failed new quote says so', () => {
-  render(expired('plain', null, { error: new Error('down') }).node)
+  render(expired({ variant: 'plain' }, { error: new Error('down') }).node)
   expect(screen.getByRole('alert')).toHaveTextContent(
     "We couldn't get a new quote. Try again.",
   )
 })
 
 test.each([
-  ['plain', null],
-  ['cautious', null],
-  ['dead_end', 'partial'],
-  ['dead_end', 'payment'],
-] as const)('expired, %s %s: never shows the address', (variant, after) => {
-  render(expired(variant, after).node)
+  ['plain', { variant: 'plain' }],
+  ['cautious', { variant: 'cautious' }],
+  ['dead_end partial', { variant: 'dead_end', after: 'partial' }],
+  ['dead_end payment', { variant: 'dead_end', after: 'payment' }],
+] as const)('expired, %s: never shows the address', (_, facts) => {
+  render(expired(facts).node)
   expect(screen.queryByText(ADDRESS)).not.toBeInTheDocument()
   expect(screen.queryByTitle(/QR code/)).not.toBeInTheDocument()
 })
 
 test('expired: the cautious variant warns about earlier funds', () => {
-  render(expired('cautious').node)
+  render(expired({ variant: 'cautious' }).node)
   const warning = screen.getByText(
     'If you sent any funds for this payment, do not get a new quote. Contact Nordwind Audio.',
   )
@@ -175,7 +180,7 @@ test('expired: the cautious variant warns about earlier funds', () => {
 })
 
 test('expired after a partial payment is a dead end', () => {
-  render(expired('dead_end', 'partial').node)
+  render(expired({ variant: 'dead_end', after: 'partial' }).node)
   expect(screen.getByText("The full amount wasn't reached")).toBeInTheDocument()
   expect(screen.getByText('Received before it expired')).toBeInTheDocument()
   expect(screen.getByText('120.00 USDT')).toBeInTheDocument()
@@ -209,7 +214,7 @@ test('expired after a partial payment is a dead end', () => {
 })
 
 test('expired after a full payment was seen is a dead end too', () => {
-  render(expired('dead_end', 'payment').node)
+  render(expired({ variant: 'dead_end', after: 'payment' }).node)
   expect(
     screen.getByRole('heading', { name: 'This payment expired' }),
   ).toBeInTheDocument()
@@ -234,7 +239,7 @@ test('expired after a full payment was seen is a dead end too', () => {
 })
 
 test('overpaid tells the truth about the extra', () => {
-  render(<CompleteScreen payment={withStatus('overpaid')} />)
+  render(<CompleteScreen screen={complete('overpaid')} />)
   expect(screen.getByText('Payment complete')).toBeInTheDocument()
   expect(screen.getByText('Received')).toBeInTheDocument()
   expect(screen.getByText('180.00 USDT')).toBeInTheDocument()
@@ -258,7 +263,7 @@ test('overpaid tells the truth about the extra', () => {
 })
 
 test('paid shows the amount, the reference and the settled time', () => {
-  render(<CompleteScreen payment={withStatus('paid')} />)
+  render(<CompleteScreen screen={complete('paid')} />)
   expect(
     screen.getByRole('heading', { name: 'Payment complete' }),
   ).toBeInTheDocument()
@@ -279,7 +284,7 @@ test('paid shows the amount, the reference and the settled time', () => {
 })
 
 test('detected says seen on the network, not received', () => {
-  render(<WaitingScreen payment={withStatus('detected')} usualSeconds={60} />)
+  render(<WaitingScreen screen={waiting('detected')} usualSeconds={60} />)
   expect(
     screen.getByRole('heading', {
       name: "We've seen your payment on the network",
@@ -306,7 +311,7 @@ test('detected says seen on the network, not received', () => {
 })
 
 test('confirming shows its progress', () => {
-  render(<WaitingScreen payment={withStatus('confirming')} />)
+  render(<WaitingScreen screen={waiting('confirming')} />)
   expect(screen.getByText('2 of 3')).toBeInTheDocument()
   expect(screen.queryByText('Seen at')).not.toBeInTheDocument()
   expect(screen.queryByText(/Usually about/)).not.toBeInTheDocument()
@@ -330,11 +335,17 @@ test.each(STATUS_SCREENS)(
 )
 
 test.each([
-  ['detected', () => <WaitingScreen payment={withStatus('detected')} />],
-  ['paid', () => <CompleteScreen payment={withStatus('paid')} />],
-  ['overpaid', () => <CompleteScreen payment={withStatus('overpaid')} />],
-  ['expired after part', () => expired('dead_end', 'partial').node],
-  ['expired after a payment', () => expired('dead_end', 'payment').node],
+  ['detected', () => <WaitingScreen screen={waiting('detected')} />],
+  ['paid', () => <CompleteScreen screen={complete('paid')} />],
+  ['overpaid', () => <CompleteScreen screen={complete('overpaid')} />],
+  [
+    'expired after part',
+    () => expired({ variant: 'dead_end', after: 'partial' }).node,
+  ],
+  [
+    'expired after a payment',
+    () => expired({ variant: 'dead_end', after: 'payment' }).node,
+  ],
   ['failed, money seen', () => failed('yes')],
 ])('%s shows the transaction hash', (_, node) => {
   render(node())
@@ -345,7 +356,7 @@ test.each([
 })
 
 test('the copy buttons copy the exact reference and hash', async () => {
-  render(<CompleteScreen payment={withStatus('paid')} />)
+  render(<CompleteScreen screen={complete('paid')} />)
   const user = userEvent.setup()
   const writeText = vi.spyOn(navigator.clipboard, 'writeText')
   await user.click(
@@ -417,8 +428,11 @@ test('a reason the page does not know gets generic wording', () => {
   )
   render(
     <FailedScreen
-      payment={makePayment({ status: 'failed', reason: 'chain_reorg' })}
-      screen={{ kind: 'failed', moneySeen: 'no' }}
+      screen={{
+        kind: 'failed',
+        payment: paymentWith('failed', { reason: 'chain_reorg' }),
+        moneySeen: 'no',
+      }}
     />,
   )
   expect(
@@ -428,7 +442,7 @@ test('a reason the page does not know gets generic wording', () => {
 })
 
 test('checking gives the reference and a way forward', () => {
-  render(<CheckingScreen payment={unknownStatus()} />)
+  render(<CheckingScreen screen={checking()} />)
   expect(
     screen.getByRole('heading', { name: "We're checking your payment" }),
   ).toBeInTheDocument()
@@ -444,7 +458,7 @@ test('checking gives the reference and a way forward', () => {
 })
 
 test('checking keeps the transaction seen earlier', () => {
-  render(<CheckingScreen payment={unknownStatus()} money={fullMoney} />)
+  render(<CheckingScreen screen={checking()} money={fullMoney} />)
   expect(screen.getByText(HASH)).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Copy transaction hash' }),
@@ -454,7 +468,7 @@ test('checking keeps the transaction seen earlier', () => {
 test('a connection notice replaces the strip text', () => {
   render(
     <WaitingScreen
-      payment={withStatus('detected')}
+      screen={waiting('detected')}
       notice={<span>You appear to be offline.</span>}
     />,
   )

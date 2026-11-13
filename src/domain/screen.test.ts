@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import type { Payment } from '../api/schemas'
 import { makePayment, STATE_FIXTURES } from '../test/fixtures'
 import { deriveConnection, deriveScreen } from './screen'
-import type { ScreenInput } from './screen'
+import type { Screen, ScreenInput } from './screen'
 import { recordStatus, startSequence } from './sequence'
 
 const D = Date.parse(makePayment().quote.expires_at)
@@ -18,12 +18,15 @@ const input = (over: Partial<ScreenInput>): ScreenInput => ({
   now: D - 30_000,
   lastSuccessAt: D - 31_000,
   lastFailureAt: null,
-  detailsChecked: true,
+  details: 'ready',
   ...over,
 })
 
+// toEqual skips an undefined field, so the rest is compared exactly; one test checks the payment itself.
+const withoutPayment = (screen: Screen) => ({ ...screen, payment: undefined })
+
 // The last payment is the server's current answer, as it always is for the page.
-function after(
+function derive(
   payments: Payment[],
   startedFrom: 'creation' | 'reload' = 'creation',
   over: Partial<ScreenInput> = {},
@@ -37,6 +40,9 @@ function after(
     input({ payment: payments[payments.length - 1], sequence, ...over }),
   )
 }
+
+const after = (...args: Parameters<typeof derive>) =>
+  withoutPayment(derive(...args))
 
 const statuses = (
   list: string[],
@@ -54,11 +60,10 @@ const PAY_REMAINING = {
   mode: 'remaining',
   clock: 'none',
   showAddress: true,
-  remainingMs: null,
 }
 
 test('time left shows the pay screen with a running clock', () => {
-  expect(deriveScreen(input({}))).toEqual({
+  expect(withoutPayment(deriveScreen(input({})))).toEqual({
     kind: 'pay',
     mode: 'full',
     clock: 'running',
@@ -129,13 +134,15 @@ test.each([
     false,
   ],
 ])('%s', (_name, over, clock, showAddress) => {
-  expect(deriveScreen(input(over))).toMatchObject({
+  const screen = deriveScreen(input(over))
+  expect(screen).toMatchObject({
     kind: 'pay',
     mode: 'full',
     clock,
     showAddress,
-    remainingMs: 0,
   })
+  // Past the deadline there is no time left to show.
+  expect(screen).not.toHaveProperty('remainingMs')
 })
 
 test('a clock two minutes behind after a hidden tab is just a smaller number', () => {
@@ -162,10 +169,10 @@ test('underpaid past the old deadline still shows the address', () => {
 test.each([['detected'], ['confirming'], ['underpaid']])(
   'awaiting_payment after %s hides the address',
   (money) => {
-    for (const detailsChecked of [true, false]) {
+    for (const details of ['ready', 'loading', 'unavailable'] as const) {
       expect(
         statuses(['awaiting_payment', money, 'awaiting_payment'], 'creation', {
-          detailsChecked,
+          details,
         }),
       ).toEqual({ kind: 'checking' })
     }
@@ -182,43 +189,43 @@ test('only a new quote brings the address back', () => {
   ).toMatchObject({ kind: 'pay', mode: 'full', showAddress: true })
 })
 
-test('the pay screen waits for the amount check', () => {
-  expect(deriveScreen(input({ detailsChecked: false }))).toEqual({
-    kind: 'pay_loading',
-  })
-  expect(
-    statuses(['awaiting_payment', 'underpaid'], 'creation', {
-      detailsChecked: false,
-    }),
-  ).toEqual({ kind: 'pay_loading' })
-})
-
 test.each([
-  ['detected', { kind: 'waiting' }],
-  ['confirming', { kind: 'waiting' }],
-  ['paid', { kind: 'complete', overpaid: false }],
-  ['overpaid', { kind: 'complete', overpaid: true }],
-  ['settling', { kind: 'checking' }],
-  ['expired', { kind: 'expired', variant: 'plain', after: null }],
-  ['failed', { kind: 'failed', moneySeen: 'no' }],
-])(
-  'status-only screens do not wait for the amount check: %s',
-  (status, screen) => {
+  ['loading', false],
+  ['unavailable', true],
+] as const)(
+  'the pay screen waits for the amount check: %s',
+  (details, problem) => {
+    expect(withoutPayment(deriveScreen(input({ details })))).toEqual({
+      kind: 'pay_loading',
+      problem,
+    })
     expect(
-      statuses(['awaiting_payment', status], 'creation', {
-        detailsChecked: false,
-      }),
-    ).toEqual(screen)
+      statuses(['awaiting_payment', 'underpaid'], 'creation', { details }),
+    ).toEqual({ kind: 'pay_loading', problem })
   },
 )
 
 test.each([
-  [
-    'plain',
-    ['awaiting_payment', 'expired'],
-    'creation',
-    { variant: 'plain', after: null },
-  ],
+  ['detected', { kind: 'waiting' }],
+  ['confirming', { kind: 'waiting' }],
+  ['paid', { kind: 'complete' }],
+  ['overpaid', { kind: 'complete' }],
+  ['settling', { kind: 'checking' }],
+  ['expired', { kind: 'expired', variant: 'plain' }],
+  ['failed', { kind: 'failed', moneySeen: 'no' }],
+])(
+  'status-only screens do not wait for the amount check: %s',
+  (status, screen) => {
+    for (const details of ['loading', 'unavailable'] as const) {
+      expect(
+        statuses(['awaiting_payment', status], 'creation', { details }),
+      ).toEqual(screen)
+    }
+  },
+)
+
+test.each([
+  ['plain', ['awaiting_payment', 'expired'], 'creation', { variant: 'plain' }],
   [
     'dead end after a partial payment',
     ['awaiting_payment', 'underpaid', 'expired'],
@@ -235,14 +242,9 @@ test.each([
     'plain again when the money went away first',
     ['awaiting_payment', 'detected', 'awaiting_payment', 'expired'],
     'creation',
-    { variant: 'plain', after: null },
+    { variant: 'plain' },
   ],
-  [
-    'cautious after a reload',
-    ['expired'],
-    'reload',
-    { variant: 'cautious', after: null },
-  ],
+  ['cautious after a reload', ['expired'], 'reload', { variant: 'cautious' }],
   [
     'evidence beats caution',
     ['underpaid', 'expired'],
@@ -281,19 +283,19 @@ test.each([
     'plain when only an unknown status came before',
     ['awaiting_payment', 'settling', 'expired'],
     'creation',
-    { variant: 'plain', after: null },
+    { variant: 'plain' },
   ],
   [
     'cautious when only an unknown status came before a reload',
     ['settling', 'expired'],
     'reload',
-    { variant: 'cautious', after: null },
+    { variant: 'cautious' },
   ],
   [
     'plain when the server said awaiting_payment after the money',
     ['awaiting_payment', 'detected', 'awaiting_payment', 'settling', 'expired'],
     'creation',
-    { variant: 'plain', after: null },
+    { variant: 'plain' },
   ],
 ] as const)('expired: %s', (_name, list, startedFrom, expected) => {
   // The default clock still shows time left: the server's expired wins over it.
@@ -311,13 +313,13 @@ test('expired after a requote ignores money on the earlier quote', () => {
       withStatus('awaiting_payment', NEW_QUOTE),
       withStatus('expired', NEW_QUOTE),
     ]),
-  ).toEqual({ kind: 'expired', variant: 'plain', after: null })
+  ).toEqual({ kind: 'expired', variant: 'plain' })
 })
 
 test('expired on a new quote looks only at that quote', () => {
   expect(
     after([withStatus('underpaid'), withStatus('expired', NEW_QUOTE)]),
-  ).toEqual({ kind: 'expired', variant: 'plain', after: null })
+  ).toEqual({ kind: 'expired', variant: 'plain' })
 })
 
 test.each([
@@ -347,13 +349,30 @@ test('failed counts money seen on an earlier quote', () => {
 })
 
 test('paid, overpaid, detected, confirming and unknown', () => {
-  expect(statuses(['paid'])).toEqual({ kind: 'complete', overpaid: false })
-  expect(statuses(['overpaid'])).toEqual({ kind: 'complete', overpaid: true })
+  expect(statuses(['paid'])).toEqual({ kind: 'complete' })
+  expect(statuses(['overpaid'])).toEqual({ kind: 'complete' })
   expect(statuses(['detected'])).toEqual({ kind: 'waiting' })
   expect(statuses(['confirming'])).toEqual({ kind: 'waiting' })
   expect(statuses(['awaiting_payment', 'settling'])).toEqual({
     kind: 'checking',
   })
+})
+
+test('every screen carries the payment it was derived from', () => {
+  const cases: [Payment[], Partial<ScreenInput>][] = [
+    [[makePayment()], {}],
+    [[makePayment()], { details: 'loading' }],
+    [[makePayment(), withStatus('underpaid')], {}],
+    [[makePayment(), withStatus('detected')], {}],
+    [[makePayment(), withStatus('paid')], {}],
+    [[makePayment(), withStatus('expired')], {}],
+    [[makePayment(), withStatus('failed')], {}],
+    [[makePayment(), withStatus('settling')], {}],
+    [[makePayment(), withStatus('detected'), makePayment()], {}],
+  ]
+  for (const [payments, over] of cases) {
+    expect(derive(payments, 'creation', over).payment).toBe(payments.at(-1))
+  }
 })
 
 test('deriveConnection', () => {

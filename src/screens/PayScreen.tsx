@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import type { Payment } from '../api/schemas'
 import { formatRemaining } from '../domain/countdown'
 import { networkShortName } from '../domain/format'
 import { toSend } from '../domain/money'
@@ -13,20 +12,19 @@ import { QrFrame } from '../components/QrFrame'
 const label = 'text-xs font-semibold text-gray-500'
 
 export function PayScreen({
-  payment,
   screen,
   onChange,
   notice,
 }: {
-  payment: Payment // awaiting_payment or underpaid
   screen: Extract<Screen, { kind: 'pay' }>
   onChange: (() => void) | null // null hides "Change currency or network"
   notice?: ReactNode // a connection notice to show in the strip, when there is one
 }) {
+  const { payment } = screen
   const { quote } = payment
   const currency = quote.crypto_currency
   const networkName = quote.network_name
-  const remaining = payment.status === 'underpaid' ? payment : null
+  const remaining = screen.mode === 'remaining' ? screen.payment : null
   const { amount, address } = toSend(payment)
 
   const clockText = (
@@ -89,7 +87,7 @@ export function PayScreen({
               </p>
             </div>
           )}
-          {screen.clock === 'running' && screen.remainingMs !== null && (
+          {screen.clock === 'running' && (
             <div className="mt-5 flex items-baseline justify-between text-[13.5px]">
               <span>Rate held for</span>
               <span role="timer" className="text-lg font-bold tabular-nums">
