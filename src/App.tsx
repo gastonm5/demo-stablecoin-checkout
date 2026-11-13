@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
-import { CheckoutCard } from './components/CheckoutCard'
-import { OrderHeader } from './components/OrderHeader'
+import { LoadingCard } from './components/LoadingCard'
 import { PaymentView } from './screens/PaymentView'
 import { PickerScreen } from './screens/PickerScreen'
 import { DevPanel } from './dev/DevPanel'
@@ -33,28 +32,13 @@ function Checkout({ checkout }: { checkout: UseCheckoutResult }) {
   }
 
   return (
-    <CheckoutCard
-      left={<OrderHeader order={checkout.order} />}
-      right={
-        <div className="flex flex-col items-center gap-3 text-center text-[14.5px]">
-          {catalogue.error != null ? (
-            <>
-              <p className="font-semibold">
-                We couldn't load the payment options.
-              </p>
-              <button
-                type="button"
-                onClick={catalogue.retry}
-                className="rounded-full bg-[#14161a] px-5 py-3 font-bold text-white"
-              >
-                Try again
-              </button>
-            </>
-          ) : (
-            <p className="text-gray-600">Loading payment options…</p>
-          )}
-        </div>
+    <LoadingCard
+      order={checkout.order}
+      loading="Loading payment options…"
+      problem={
+        catalogue.error != null ? "We couldn't load the payment options." : null
       }
+      onRetry={catalogue.retry}
     />
   )
 }

@@ -145,6 +145,22 @@ test('the pay screen waits for the currency list', () => {
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 
+test('the card that waits for the currency list says when the payment service cannot be reached', async () => {
+  const { checkout } = renderView(
+    checkoutWith(
+      paymentResult([withStatus('awaiting_payment')], {
+        consecutiveFailures: 2,
+      }),
+    ),
+    loadingCatalogue(),
+  )
+  expect(screen.getByText('Loading the payment details…')).toBeInTheDocument()
+  expect(screen.getByText(UNREACHABLE)).toBeInTheDocument()
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Try now' }))
+  expect(checkout.payment.checkNow).toHaveBeenCalledOnce()
+  expect(screen.queryByText(ADDRESS)).not.toBeInTheDocument()
+})
+
 test('a status screen does not wait for the currency list', () => {
   renderView(
     checkoutWith(paymentResult([withStatus('detected')])),

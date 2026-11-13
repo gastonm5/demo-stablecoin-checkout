@@ -7,13 +7,12 @@ import type { Catalogue } from '../hooks/useCurrencies'
 import { useFocusOnChange } from '../hooks/useFocusOnChange'
 import { usePaymentScreen } from '../hooks/usePaymentScreen'
 import { CheckingScreen } from './CheckingScreen'
-import { CheckoutCard } from '../components/CheckoutCard'
 import { CompleteScreen } from './CompleteScreen'
 import { ConfirmChangeDialog } from '../components/ConfirmChangeDialog'
 import { ExpiredScreen } from './ExpiredScreen'
 import { FailedScreen } from './FailedScreen'
+import { LoadingCard } from '../components/LoadingCard'
 import { connectionNotice } from '../components/NoticeStrip'
-import { OrderHeader } from '../components/OrderHeader'
 import { PayScreen } from './PayScreen'
 import { headline } from './statusText'
 import { WaitingScreen } from './WaitingScreen'
@@ -93,29 +92,14 @@ export function PaymentView({
         )
       case 'pay_loading':
         return (
-          <CheckoutCard
-            left={<OrderHeader order={current} />}
-            right={
-              <div className="flex flex-col items-center gap-3 text-center text-[14.5px]">
-                {detailsProblem ? (
-                  <>
-                    <p className="font-semibold">{DETAILS_FAILED}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        catalogue.retry()
-                        payment.checkNow()
-                      }}
-                      className="rounded-full bg-[#14161a] px-5 py-3 font-bold text-white"
-                    >
-                      Try again
-                    </button>
-                  </>
-                ) : (
-                  <p className="text-gray-600">Loading the payment details…</p>
-                )}
-              </div>
-            }
+          <LoadingCard
+            order={current}
+            loading="Loading the payment details…"
+            problem={detailsProblem ? DETAILS_FAILED : null}
+            onRetry={() => {
+              catalogue.retry()
+              payment.checkNow()
+            }}
             strip={notice}
           />
         )
