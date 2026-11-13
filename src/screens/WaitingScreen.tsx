@@ -49,7 +49,7 @@ export function WaitingScreen({
           className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-track"
         >
           <div
-            className="h-full bg-surface-inverse"
+            className="h-full bg-surface-inverse transition-[width] duration-300 ease-out"
             style={{ width: `${share * 100}%` }}
           />
         </div>

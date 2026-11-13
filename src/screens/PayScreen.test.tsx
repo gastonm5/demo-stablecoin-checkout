@@ -192,6 +192,23 @@ test('shows the countdown', () => {
   expect(timer).not.toHaveAttribute('aria-live')
 })
 
+// A figure caught mid-animation could be read wrong.
+test.each([
+  ['a full quote', running, '163.69'],
+  ['underpaid', remaining, '43.69'],
+] as const)(
+  '%s never animates the amount or the countdown',
+  (_, view, digits) => {
+    renderPay({ screen: view })
+    const figures = [
+      expectAmount(digits, 'USDT'),
+      ...screen.queryAllByRole('timer'),
+    ]
+    for (const figure of figures)
+      expect(figure.className).not.toMatch(/transition|animate|entrance/)
+  },
+)
+
 // Hidden from assistive technology, so no role or name can find it.
 const bar = (container: HTMLElement) => container.querySelector('.bg-track')
 

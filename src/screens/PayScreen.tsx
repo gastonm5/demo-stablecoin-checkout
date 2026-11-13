@@ -13,6 +13,8 @@ import { OrderHeader } from '../components/OrderHeader'
 import { QrFrame } from '../components/QrFrame'
 
 const label = 'text-label font-semibold text-ink-subtle'
+// For the address and the QR coming back on a quote that is still valid; when they go, they go at once.
+const fade = 'entrance [--entrance-duration:150ms] [--entrance-rise:0px]'
 
 export function PayScreen({
   screen,
@@ -89,7 +91,9 @@ export function PayScreen({
             </p>
           )}
           {screen.showAddress && (
-            <div className="mt-5 rounded-control border border-line bg-surface-sunken px-3.5 py-3">
+            <div
+              className={`mt-5 rounded-control border border-line bg-surface-sunken px-3.5 py-3 ${fade}`}
+            >
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2.5">
                 <p
                   className={`min-w-0 wrap-anywhere ${label}`}
@@ -118,7 +122,7 @@ export function PayScreen({
               className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-track"
             >
               <div
-                className="h-full bg-surface-inverse"
+                className="h-full bg-surface-inverse transition-[width] duration-1000 ease-linear"
                 style={{
                   width: `${remainingShare(screen.remainingMs, screen.lifetimeMs) * 100}%`,
                 }}
@@ -129,16 +133,18 @@ export function PayScreen({
       }
       right={
         screen.showAddress ? (
-          <QrFrame
-            address={address}
-            networkId={quote.network}
-            networkName={networkName}
-            note={
-              remaining
-                ? 'Same address as before. The code holds the address only.'
-                : 'The code holds the address only. Enter the amount yourself.'
-            }
-          />
+          <div className={fade}>
+            <QrFrame
+              address={address}
+              networkId={quote.network}
+              networkName={networkName}
+              note={
+                remaining
+                  ? 'Same address as before. The code holds the address only.'
+                  : 'The code holds the address only. Enter the amount yourself.'
+              }
+            />
+          </div>
         ) : (
           <p className="text-center text-small text-ink-muted">
             The address is hidden until we can confirm this quote.

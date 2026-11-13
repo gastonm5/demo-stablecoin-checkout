@@ -126,7 +126,10 @@ export function ExpiredScreen({
         {requoting ? 'Working…' : 'Get a new quote'}
       </Button>
       {error != null && (
-        <p role="alert" className="text-small font-semibold text-bad">
+        <p
+          role="alert"
+          className="entrance text-small font-semibold text-bad [--entrance-duration:150ms] [--entrance-rise:0px]"
+        >
           We couldn't get a new quote. Try again.
         </p>
       )}

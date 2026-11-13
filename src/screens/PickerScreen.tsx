@@ -19,8 +19,11 @@ const STILL_WORKING_AFTER_MS = 4_000
 
 const label = 'mb-1.5 block text-label font-semibold text-ink-subtle'
 const note = 'text-small wrap-anywhere text-ink-subtle'
+// Each plays when its element mounts, so changing the network afterwards does not replay it.
+const settle = 'entrance [--entrance-duration:160ms] [--entrance-rise:6px]'
+const fade = 'entrance [--entrance-duration:150ms] [--entrance-rise:0px]'
 const menu =
-  'peer w-full appearance-none rounded-control border-[1.5px] border-line bg-surface py-3 pr-10 pl-3.5 font-bold disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-subtle'
+  'peer w-full appearance-none rounded-control border-[1.5px] border-line bg-surface py-3 pr-10 pl-3.5 font-bold transition-colors duration-[120ms] disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-subtle'
 const chevron = (
   <svg
     aria-hidden="true"
@@ -132,7 +135,7 @@ export function PickerScreen({
             </div>
           </div>
           {network && (
-            <p className={`mt-3.5 ${note}`}>
+            <p className={`mt-3.5 ${note} ${settle}`}>
               {`Fee ${formatUsdFee(network.network_fee)} · usually ${usualTime(network.avg_confirmation_seconds)} · ${confirmationsLabel(network.required_confirmations)}`}
             </p>
           )}
@@ -142,7 +145,7 @@ export function PickerScreen({
         <>
           {currency && network && (
             <>
-              <div>
+              <div className={settle}>
                 <div className={label}>You are paying with</div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-surface-inverse py-1.5 pr-3.5 pl-1.5 text-small font-bold text-ink-inverse">
                   <NetworkChip
@@ -153,7 +156,7 @@ export function PickerScreen({
                   <span className="min-w-0 wrap-anywhere">{`${currency.code} on ${network.name}`}</span>
                 </div>
               </div>
-              <p className={note}>
+              <p className={`${note} ${settle}`}>
                 {`Your wallet or exchange must be able to send ${currency.code} on the ${networkShortName(network.name)} network.`}
               </p>
             </>
@@ -170,12 +173,15 @@ export function PickerScreen({
             {button}
           </Button>
           {stillWorking && (
-            <p role="status" className={note}>
+            <p role="status" className={`${note} ${fade}`}>
               Still working…
             </p>
           )}
           {error != null && (
-            <p role="alert" className="text-small font-semibold text-bad">
+            <p
+              role="alert"
+              className={`text-small font-semibold text-bad ${fade}`}
+            >
               We couldn't reach the payment service. Try again.
             </p>
           )}

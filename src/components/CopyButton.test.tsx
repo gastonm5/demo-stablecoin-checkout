@@ -33,9 +33,11 @@ async function clickCopy() {
 
 // The sentence is on a line under the button, which keeps its label.
 function expectFailedUnder({ button, regions }: Clicked) {
+  // The sentence mounts inside the region, so it can fade in while the region stays put.
   const sentence = screen.getByText(FAILED)
-  expect(sentence).toHaveAttribute('aria-live', 'polite')
-  expect(regions).toContain(sentence)
+  const region = sentence.closest('[aria-live]')
+  expect(region).toHaveAttribute('aria-live', 'polite')
+  expect(regions).toContain(region)
   expect(button).not.toContainElement(sentence)
   expect(button).toHaveAccessibleName('Copy amount')
 }

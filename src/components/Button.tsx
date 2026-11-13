@@ -26,7 +26,7 @@ export function Button({
       type="button"
       disabled={disabled || busy}
       aria-busy={busy || undefined}
-      className={`${VARIANTS[variant]} ${className}`}
+      className={`${VARIANTS[variant]} transition-colors duration-[120ms] ${className}`}
     />
   )
 }

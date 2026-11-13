@@ -77,10 +77,30 @@
   }
 }
 
+/* Opening only: with no rule for closing, the dialog and its backdrop go at once. */
+dialog[open] {
+  transition-property: opacity, scale;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  @starting-style {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+dialog[open]::backdrop {
+  transition: opacity 150ms cubic-bezier(0.2, 0, 0, 1);
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* `*` does not reach ::backdrop, so it is named. */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
-  ::after {
+  ::after,
+  ::backdrop {
     transition-duration: 0s !important;
     animation-duration: 0s !important;
     animation-iteration-count: 1 !important;
