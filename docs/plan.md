@@ -1849,6 +1849,81 @@ After Step 4 a screen takes `screen` and reads `screen.payment`; it no longer ta
 
 ---
 
+### Task 18: Stop the clock when time cannot change the screen
+
+Added on 12 Nov 2026, after Task 17, at my request. No status, wording, request or amount changes.
+
+**What was observed.** `useNow` ticks every second and is called by `usePaymentScreen`, so every tick re-renders `PaymentView` and the screen under it, whatever the status. Measured in the running app with temporary commit counters, over ten seconds in each status:
+
+| Status | Polls sent | `PaymentView` commits | Of which from the clock |
+| --- | --- | --- | --- |
+| Picker | 0 | 0 | 0 |
+| `awaiting_payment` | 3 | 13 | 10 |
+| `underpaid`, `detected`, `confirming` | 3 | 13 | 10 |
+| `paid`, `overpaid`, `failed`, `expired` | 0 | 10 | 10 |
+
+On a final status nothing is polled and nothing can change, and the page still re-rendered once a second for as long as it stayed open.
+
+**Where time is read.** In two places only, and both only when the server's status is `awaiting_payment`:
+
+- `payInFull` in `src/domain/screen.ts`: the countdown, hiding the address at the device's deadline, and the ten-second window in which a "still valid" answer authorises the address.
+- `usePaymentScreen`: the one check sent to the server when the device's deadline passes. It applies to any `awaiting_payment`, including while the details card is showing and after a status went backwards.
+
+**The rule.** The clock runs while the server's status is `awaiting_payment`, and not otherwise. Nothing finer: after the deadline the screen still needs the clock, because "still valid" must stop authorising the address when its answer is ten seconds old. Stopping the clock in some sub-states of `awaiting_payment` would need scheduling logic that can get that wrong.
+
+**A stale clock must never be used.** While the clock is stopped its value is old. The status can only become `awaiting_payment` through a server answer, and every answer carries the device time it arrived at (`lastSuccessAt`). So the time the screen is derived from is the later of the ticking clock and the last answer. On the first render after a new quote, that is the answer's own time, a few milliseconds old.
+
+**Interfaces:**
+
+```ts
+// src/hooks/useNow.ts
+export function useNow(active: boolean, intervalMs = 1_000): number
+// active: the device time, updated every intervalMs and at once when the tab becomes visible.
+// not active: no timer and no listener. The value is whatever it last was, and is not the time.
+
+// src/hooks/usePaymentScreen.ts
+// useNow(status === 'awaiting_payment'), and the time used everywhere in the hook is
+// Math.max(<that value>, payment.lastSuccessAt)
+```
+
+**Rules:**
+
+- Hook calls stay unconditional.
+- No `Date.now()` during render and no state set in an effect's body; both are lint errors here, and neither is needed.
+- No memoisation, no new component, no second timer, no change to polling.
+- The check at zero keeps both guards: once per quote, and not when the server has answered since the deadline.
+- Every timer and listener is cleaned up when the clock stops and on unmount.
+- No test asserts a React render count.
+
+- [ ] **Step 1: Write the failing tests**
+
+  In `src/hooks/useNow.test.tsx` (the three existing tests pass `true`):
+
+  - Not active: no timer is scheduled; five seconds pass and the value has not changed; the tab going hidden and visible with the system time moved on does not change it either.
+  - Becoming active schedules the timer and the value follows the device time; becoming inactive clears the timer and removes the listener.
+
+  In `src/hooks/usePaymentScreen.test.tsx`:
+
+  - For each of `underpaid`, `detected`, `confirming`, `paid`, `overpaid`, `expired` and `failed`, no timer is scheduled. For `awaiting_payment`, one is.
+  - A clock stopped on `expired` for sixty seconds, then a new quote answered now: the pay screen's remaining time is the new deadline minus the time of that answer, not sixty seconds more.
+  - A clock stopped on `expired`, then an `awaiting_payment` answer for a quote whose deadline is already past on the device but ahead of the stale value: the screen is "still valid", not a running countdown.
+  - A "still valid" screen stops showing the address once its answer is more than ten seconds old.
+
+- [ ] **Step 2: Run them and see them fail**
+
+Run: `npm test -- src/hooks/useNow.test.tsx src/hooks/usePaymentScreen.test.tsx`
+Expected: the new tests fail; the existing ones pass.
+
+- [ ] **Step 3: Implement** `useNow(active)` and its use in `usePaymentScreen`.
+
+- [ ] **Step 4: Gate.** `npm run check && npm run build`.
+
+- [ ] **Step 5: Commit**: "Stop the clock when time cannot change the screen".
+
+- [ ] **Step 6: Measure again** in the running app with the same temporary counters, and remove them. Expected: `awaiting_payment` unchanged; `underpaid`, `detected` and `confirming` commit only with their polls; `paid`, `overpaid`, `failed` and `expired` do not commit at all between polls.
+
+---
+
 ## How this plan is executed
 
 - **Tasks 1 to 13** are implemented one at a time, in order, each by a fresh implementer on Opus that is given this plan, the spec and its own task.
@@ -1859,4 +1934,5 @@ After Step 4 a screen takes `screen` and reads `screen.payment`; it no longer ta
 - **Task 15** was added after the walk-through and is built like Tasks 1 to 13: one implementer on Opus, then a Codex review of its commits.
 - **Task 16** is a folder refactor added after Task 15: one implementer on Opus in a separate worktree, a Codex review of the moves, then a Codex pass over the whole change.
 - **Task 17** removes repeated decisions and unreachable branches: one implementer on Opus in a separate worktree, a Codex review of the three mechanical steps and another of the typed change, then a Codex pass over the whole change with its documents.
+- **Task 18** stops the clock outside `awaiting_payment`: measured first by the planning agent in the running app, built by one implementer on Opus on top of Task 17, reviewed by Codex, then measured again.
 - Nothing is pushed until the human says so.
