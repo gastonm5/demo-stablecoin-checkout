@@ -136,4 +136,51 @@ test('counts the updates it makes while mounted', async () => {
   expect(stateUpdates.count).toBe(before + 1)
 })
 
+function renderCopyOf(value: string) {
+  return renderHook((props: { value: string }) => useCopy(props.value), {
+    initialProps: { value },
+  })
+}
+
+test('is idle at once when the value changes while copied', async () => {
+  const { result, rerender } = renderCopyOf('163.69')
+  await copy(result)
+  expect(result.current.state).toBe('copied')
+  rerender({ value: '81.84' })
+  expect(result.current.state).toBe('idle')
+})
+
+test.each([
+  ['succeeds', (settle: Settle) => settle.resolve()],
+  ['fails', (settle: Settle) => settle.reject(new Error('denied'))],
+])('stays idle when a copy %s after the value changed', async (_, finish) => {
+  const settle = {} as Settle
+  writeText.mockReturnValue(
+    new Promise<void>((resolve, reject) =>
+      Object.assign(settle, { resolve, reject }),
+    ),
+  )
+  const { result, rerender } = renderCopyOf('163.69')
+  act(() => result.current.copy())
+  rerender({ value: '81.84' })
+  await act(async () => finish(settle))
+  expect(result.current.state).toBe('idle')
+})
+
+test('stays copied when re-rendered with the same value', async () => {
+  const { result, rerender } = renderCopyOf('163.69')
+  await copy(result)
+  rerender({ value: '163.69' })
+  expect(result.current.state).toBe('copied')
+})
+
+test('shows copied for a copy of the new value', async () => {
+  const { result, rerender } = renderCopyOf('163.69')
+  await copy(result)
+  rerender({ value: '81.84' })
+  await copy(result)
+  expect(writeText).toHaveBeenLastCalledWith('81.84')
+  expect(result.current.state).toBe('copied')
+})
+
 type Settle = { resolve(): void; reject(reason: unknown): void }
