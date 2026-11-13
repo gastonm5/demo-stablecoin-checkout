@@ -153,6 +153,19 @@ test('copies the full address', async () => {
   expect(writeText).toHaveBeenCalledExactlyOnceWith(ADDRESS)
 })
 
+test('each copy button comes after the value it copies', () => {
+  renderPay()
+  const follows = (first: Element, second: Element) =>
+    expect(first.compareDocumentPosition(second)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  const amount = expectAmount('163.69', 'USDT')
+  const address = screen.getByText(ADDRESS)
+  follows(amount, screen.getByRole('button', { name: 'Copy amount' }))
+  follows(screen.getByText('Tron (TRC-20) address'), address)
+  follows(address, screen.getByRole('button', { name: 'Copy Tron address' }))
+})
+
 test('shows the merchant, the order and the fiat amount', () => {
   expect(navigator.language).toBe('en-US')
   renderPay()

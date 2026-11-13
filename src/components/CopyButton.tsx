@@ -2,40 +2,69 @@ import { useCopy } from '../hooks/useCopy'
 import { Button } from './Button'
 
 const FAILED = 'Copy failed. Select the text and copy it.'
+const COPIED = 'Copied'
 
-export function CopyButton({ value, label }: { value: string; label: string }) {
+const CELL =
+  'col-start-1 row-start-1 flex max-w-full items-center gap-1.5 text-left'
+// A percentage and a length interpolate, so the width moves both ways with no measuring. `enabled:` only outranks Button's own transition classes, whatever their order in the CSS, without the !important that would beat the reduced-motion rule; the background stays listed so hover still fades.
+const MOVE =
+  'enabled:transition-[width,background-color] enabled:duration-[180ms] ease-[cubic-bezier(.2,0,0,1)]'
+
+// The twin and the button draw their insides from here, so the space the twin holds is the idle button's own.
+function Face({ text, live = false }: { text: string; live?: boolean }) {
+  return (
+    <>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        className="size-3.5 shrink-0"
+      >
+        <rect x="5" y="5" width="9" height="9" rx="2" />
+        <path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
+      </svg>
+      <span
+        aria-live={live ? 'polite' : undefined}
+        className="min-w-0 wrap-anywhere"
+      >
+        {text}
+      </span>
+    </>
+  )
+}
+
+export function CopyButton({
+  value,
+  label,
+  align = 'start',
+}: {
+  value: string
+  label: string
+  align?: 'start' | 'end' // end keeps the right edge still, for a button at the end of a row
+}) {
   const { state, copy } = useCopy(value)
+  const copied = state === 'copied'
   const failed = state === 'failed'
   return (
-    <span className="inline-flex max-w-full flex-col">
+    <span className="inline-grid max-w-full">
+      {/* The idle button, unseen, holds the width and height in the row, wrapped or not, so nothing beside or under moves while the button narrows. */}
+      <Button
+        variant="secondary"
+        aria-hidden="true"
+        inert
+        tabIndex={-1}
+        className={`${CELL} pointer-events-none invisible`}
+      >
+        <Face text={label} />
+      </Button>
       <Button
         variant="secondary"
         onClick={copy}
-        className="inline-flex max-w-full items-center gap-1.5 text-left"
+        className={`${CELL} ${MOVE} h-0 min-h-full overflow-hidden ${align === 'end' ? 'justify-self-end' : 'justify-self-start'} ${copied ? 'w-[6.75rem] min-w-min' : 'w-full'}`}
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className="size-3.5 shrink-0"
-        >
-          <rect x="5" y="5" width="9" height="9" rx="2" />
-          <path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
-        </svg>
-        <span className="grid min-w-0 wrap-anywhere">
-          {/* Unseen in the same cell, so "Copied" never narrows the button. */}
-          <span
-            aria-hidden="true"
-            className="invisible col-start-1 row-start-1"
-          >
-            {label}
-          </span>
-          <span aria-live="polite" className="col-start-1 row-start-1">
-            {state === 'copied' ? 'Copied' : label}
-          </span>
-        </span>
+        <Face text={copied ? COPIED : label} live />
       </Button>
       {/* There before a failure, so the sentence is announced; it wraps inside the button's width instead of widening it. */}
       <span
