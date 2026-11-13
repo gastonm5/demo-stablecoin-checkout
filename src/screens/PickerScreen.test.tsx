@@ -329,6 +329,16 @@ test('focus follows each choice and each Change', async () => {
   expect(radio('Network', 'ethereum')).toHaveFocus()
 })
 
+test('a currency with no networks sends focus to its Change button', async () => {
+  const noNetworks = parseCurrencies({
+    currencies: [{ code: 'DAI', name: 'Dai', decimals: 18, networks: [] }],
+  })
+  renderPicker({ currencies: [...currencies, ...noNetworks] })
+  await choose('DAI')
+  expect(changeButton('Currency')).toHaveFocus()
+  expect(document.activeElement?.closest('[inert]')).toBeNull()
+})
+
 test('the keyboard reaches every option: Space for the first, arrows for the rest', async () => {
   renderPicker()
   const user = userEvent.setup()

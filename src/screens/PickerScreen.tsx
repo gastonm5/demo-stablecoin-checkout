@@ -83,10 +83,16 @@ export function PickerScreen({
       setChanging(null)
     })
     const networks = networkSection.current
+    const firstNetwork = networks?.querySelector('input')
     // The network section stays closed only on a network already chosen.
     if (networks?.querySelector('input:checked'))
       continueButton.current?.focus()
-    else networks?.querySelector('input')?.focus({ preventScroll: true })
+    else if (firstNetwork) firstNetwork.focus({ preventScroll: true })
+    // The server may list a currency with no networks, and then Change is the way back.
+    else
+      currencySection.current
+        ?.querySelector('button')
+        ?.focus({ preventScroll: true })
   }
 
   function chooseNetwork(networkId: string) {
