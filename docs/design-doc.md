@@ -43,7 +43,7 @@ The page has three screens inside one card. The card keeps the same shape throug
 
 ![Pay screen](design/pay-screen-proposal.png)
 
-The drawings are the designs I agreed before the build, and they are kept as agreed. The build differs from them in seven small ways. Two changed while building: the pay screen has no bar under the countdown (section 5), and the dev panel has no live readout (section 8). Five changed when I went over the finished screens: the picker has the same header as the pay screen, with the merchant and the amount, and no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, and the network menu shows the chosen network's name alone (section 11).
+The drawings are the designs I agreed before the build, and they are kept as agreed. The build differs from them in eight small ways. Two changed while building: the pay screen has no bar under the countdown (section 5), and the dev panel has no live readout (section 8). Six changed when I went over the finished screens: the picker has the same header as the pay screen, with the merchant and the amount, and no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, the failed screen has no line under the card, and the network menu shows the chosen network's name alone (section 11).
 
 **Choose first, then quote.** The page opens on the picker with nothing selected. No payment exists and no clock runs. Only when the shopper presses "Continue with USDT on Tron" does the page call `POST /api/payments` and show an address.
 
