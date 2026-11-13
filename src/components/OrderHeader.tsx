@@ -14,7 +14,7 @@ export function OrderHeader({ order }: { order: OrderSummary }) {
       ? merchant.logo_url
       : null
   return (
-    <div className="mb-[22px] flex items-center gap-3">
+    <div className="mb-[22px] flex flex-wrap items-center gap-3 min-[480px]:flex-nowrap">
       <div
         aria-hidden="true"
         className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-[#dfe3e8] bg-[#f6f7f9] font-bold"
@@ -31,12 +31,15 @@ export function OrderHeader({ order }: { order: OrderSummary }) {
           [...merchant.name][0]
         )}
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1 min-[480px]:flex-initial">
         <div className={key}>Payment for</div>
-        <div className={value}>{merchant.name}</div>
+        <div className={`${value} wrap-anywhere`}>{merchant.name}</div>
       </div>
-      <div className="ml-auto text-right">
-        <div className={key}>Order {order.order_id}</div>
+      {/* On a phone the order takes a row of its own, so the merchant's name keeps the width. */}
+      <div className="flex w-full min-w-0 items-baseline justify-between gap-3 min-[480px]:ml-auto min-[480px]:w-auto min-[480px]:flex-col min-[480px]:items-end min-[480px]:gap-0 min-[480px]:text-right">
+        <div className={`${key} min-w-0 wrap-anywhere`}>
+          Order {order.order_id}
+        </div>
         <div className={value}>
           {formatFiat(order.order.amount, order.order.currency)}
         </div>

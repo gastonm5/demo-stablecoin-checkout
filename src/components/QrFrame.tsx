@@ -21,7 +21,7 @@ export function QrFrame({
             networkName={networkName}
             className="size-[18px] text-[10px]"
           />
-          {`${networkName.toUpperCase()} ONLY`}
+          <span className="min-w-0 wrap-anywhere">{`${networkName.toUpperCase()} ONLY`}</span>
         </div>
         {/* Address only: the API gives no token contract to build a payment link from. See ADR 0004.
             The four-module margin is the quiet zone the QR standard asks for, so the dark frame never touches the code. */}

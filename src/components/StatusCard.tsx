@@ -5,9 +5,9 @@ import { CheckoutCard } from './CheckoutCard'
 import { CopyButton } from './CopyButton'
 import { OrderHeader } from './OrderHeader'
 
-export const BODY = 'max-w-[320px] text-[14.5px] text-gray-600'
+export const BODY = 'max-w-[320px] text-[14.5px] wrap-anywhere text-gray-600'
 export const NOTICE =
-  'rounded-xl border border-[#f3d999] bg-[#fff7e6] px-3.5 py-3 text-left text-sm text-[#6b4e00]'
+  'rounded-xl border border-[#f3d999] bg-[#fff7e6] px-3.5 py-3 text-left text-sm wrap-anywhere text-[#6b4e00]'
 export const WARN = 'text-[#b45309]'
 
 const ICONS = {
@@ -30,7 +30,9 @@ export function Row({
   return (
     <div className="flex items-center justify-between gap-3 border-t border-[#eef0f2] py-[9px] text-sm">
       <dt className="shrink-0 text-gray-500">{label}</dt>
-      <dd className={`min-w-0 text-right font-semibold ${className}`}>
+      <dd
+        className={`min-w-0 text-right font-semibold wrap-anywhere ${className}`}
+      >
         {children}
       </dd>
     </div>
@@ -76,7 +78,7 @@ export function StatusCard({
   payment: Payment
   money?: SequenceEntry // supplies the transaction when the status itself carries none
   label?: string
-  amount?: string // with its currency, exactly as received
+  amount?: string // exactly as received; the card adds the quote's currency
   muted?: boolean
   amountRows?: ReactNode
   timeRows?: ReactNode
@@ -101,9 +103,12 @@ export function StatusCard({
                 {label}
               </p>
               <p
-                className={`mb-3.5 text-[32px] leading-[1.1] font-extrabold tracking-[-.02em] break-all sm:text-[40px] ${muted ? 'text-[#9aa1ab]' : ''}`}
+                className={`mb-3.5 text-amount leading-[1.1] font-extrabold tracking-[-.02em] wrap-anywhere ${muted ? 'text-[#9aa1ab]' : ''}`}
               >
-                {amount}
+                {amount}{' '}
+                <span className="whitespace-nowrap">
+                  {payment.quote.crypto_currency}
+                </span>
               </p>
             </>
           )}

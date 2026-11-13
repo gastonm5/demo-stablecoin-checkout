@@ -47,7 +47,7 @@ export function ExpiredScreen({
       <StatusCard
         {...shared}
         label={partial ? 'Received before it expired' : 'Payment seen'}
-        amount={received && sum(received)}
+        amount={received}
         amountRows={
           partial && (
             <>
@@ -80,7 +80,7 @@ export function ExpiredScreen({
     <StatusCard
       {...shared}
       label="Expired quote"
-      amount={sum(quote.total_due)}
+      amount={quote.total_due}
       muted
       timeRows={
         <Row label="Expired at">{formatDateTime(payment.expired_at)}</Row>

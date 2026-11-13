@@ -24,7 +24,7 @@ export function CompleteScreen({
       <StatusCard
         payment={payment}
         label="Received"
-        amount={sum(payment.amount_received)}
+        amount={payment.amount_received}
         amountRows={
           <>
             <Row label="Amount due">{sum(quote.total_due)}</Row>
@@ -51,7 +51,7 @@ export function CompleteScreen({
     <StatusCard
       payment={payment}
       label="Paid"
-      amount={sum(payment.amount_received)}
+      amount={payment.amount_received}
       timeRows={<Row label="Settled">{formatDateTime(payment.settled_at)}</Row>}
       icon="ok"
       title={title}

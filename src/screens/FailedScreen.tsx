@@ -17,7 +17,7 @@ export function FailedScreen({
   headingRef?: Ref<HTMLHeadingElement>
 }) {
   const { payment } = screen
-  const { quote, merchant, reason } = payment
+  const { merchant, reason } = payment
   const seen = screen.moneySeen === 'yes'
   const received = seen ? money?.amount_received : undefined
   return (
@@ -25,7 +25,7 @@ export function FailedScreen({
       payment={payment}
       money={money}
       label="Payment seen"
-      amount={received && `${received} ${quote.crypto_currency}`}
+      amount={received}
       icon="bad"
       title={headline(screen)}
       headingRef={headingRef}

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QRCodeSVG } from 'qrcode.react'
 import type { ComponentProps } from 'react'
@@ -62,6 +62,13 @@ async function copyWith(buttonName: string) {
 const fullText = (text: string) =>
   screen.getByText((_, element) => element?.textContent === text)
 
+// The server's digits, a space and the unit, with the unit in a piece that never wraps.
+function expectAmount(digits: string, unit: string) {
+  const amount = fullText(`${digits} ${unit}`)
+  expect(within(amount).getByText(unit)).toHaveClass('whitespace-nowrap')
+  return amount
+}
+
 test('names the network on the banner, the address label, the copy button and the QR', () => {
   renderPay()
   expect(screen.getByText('Tron (TRC-20) network')).toBeInTheDocument()
@@ -105,7 +112,7 @@ test('the QR holds exactly the address, with a quiet zone of four modules', () =
 test('shows the amount exactly as sent and copies it without the unit', async () => {
   renderPay()
   expect(screen.getByText('Send exactly')).toBeInTheDocument()
-  expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
+  expectAmount('163.69', 'USDT')
   expect(
     screen.getByText(
       '162.69 USDT + 1.00 USDT network fee · 1 USDT = 0.9214 EUR',
@@ -122,9 +129,9 @@ test('keeps all eighteen places of an ETH amount', async () => {
       payment: paymentWith('awaiting_payment', {}, ethQuote),
     },
   })
-  const amount = screen.getByText('0.055295738369148398 ETH')
+  const amount = expectAmount('0.055295738369148398', 'ETH')
   // Eighteen places are wider than the card; they must wrap, not overflow.
-  expect(amount).toHaveClass('break-all')
+  expect(amount).toHaveClass('wrap-anywhere')
   expect(
     screen.getByText(
       '0.054229071702481731 ETH + 0.001066666666666667 ETH network fee · 1 ETH = 2764.20 EUR',
@@ -151,6 +158,29 @@ test('shows the merchant, the order and the fiat amount', () => {
   expect(screen.getByText('Nordwind Audio')).toBeInTheDocument()
   expect(screen.getByText('Order ORD-88213')).toBeInTheDocument()
   expect(screen.getByText('€149.90')).toBeInTheDocument()
+})
+
+test('long names are shown in full, free to wrap inside the card', () => {
+  const merchant = 'Nordwind Audio & Hi-Fi Vertriebsgesellschaft mbH'
+  const network = 'Polygon PoS (formerly Matic Network)'
+  const payment = paymentWith(
+    'awaiting_payment',
+    {
+      order_id: 'ORD-2026-11-0000088213',
+      merchant: { name: merchant, logo_url: null },
+    },
+    { network: 'polygon', network_name: network },
+  )
+  renderPay({ screen: { ...running, payment } })
+  for (const text of [
+    merchant,
+    'Order ORD-2026-11-0000088213',
+    `${network} network`,
+    `${network} address`,
+    `${network.toUpperCase()} ONLY`,
+  ])
+    // overflow-wrap is inherited, so the class may sit on an ancestor.
+    expect(screen.getByText(text).closest('.wrap-anywhere')).not.toBeNull()
 })
 
 test('shows the countdown', () => {
@@ -194,7 +224,7 @@ test('still valid shows the address and no timer', () => {
 test('underpaid shows the remaining amount, what arrived, and no countdown', () => {
   renderPay({ screen: remaining, onChange: null })
   expect(screen.getByText('Send the remaining')).toBeInTheDocument()
-  expect(screen.getByText('43.69 USDT')).toBeInTheDocument()
+  expectAmount('43.69', 'USDT')
   expect(
     screen.getByText(/We received 120.00 of 163.69 USDT/),
   ).toBeInTheDocument()
@@ -210,7 +240,9 @@ test('underpaid shows the remaining amount, what arrived, and no countdown', () 
       .compareDocumentPosition(screen.getByText('Tron (TRC-20) network')),
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   expect(screen.queryByText('Send exactly')).not.toBeInTheDocument()
-  expect(screen.queryByText('163.69 USDT')).not.toBeInTheDocument()
+  expect(
+    screen.queryByText((_, element) => element?.textContent === '163.69 USDT'),
+  ).not.toBeInTheDocument()
   expect(screen.queryByText(/network fee/)).not.toBeInTheDocument()
   expect(screen.queryByRole('timer')).not.toBeInTheDocument()
   expect(

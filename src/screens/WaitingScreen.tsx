@@ -26,7 +26,7 @@ export function WaitingScreen({
     <StatusCard
       payment={payment}
       label="Payment seen"
-      amount={`${payment.amount_received} ${quote.crypto_currency}`}
+      amount={payment.amount_received}
       timeRows={
         detectedAt && <Row label="Seen at">{formatDateTime(detectedAt)}</Row>
       }

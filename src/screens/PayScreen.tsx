@@ -49,7 +49,7 @@ export function PayScreen({
         <>
           <OrderHeader order={payment} />
           {remaining && (
-            <p className="mb-3.5 rounded-xl border border-[#f3d999] bg-[#fff7e6] px-3.5 py-3 text-sm text-[#6b4e00]">
+            <p className="mb-3.5 rounded-xl border border-[#f3d999] bg-[#fff7e6] px-3.5 py-3 text-sm wrap-anywhere text-[#6b4e00]">
               <strong>Part of your payment arrived.</strong>{' '}
               {`We received ${remaining.amount_received} of ${quote.total_due} ${currency}.`}
             </p>
@@ -63,8 +63,8 @@ export function PayScreen({
             {remaining ? 'Send the remaining' : 'Send exactly'}
           </p>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="min-w-0 text-[32px] leading-[1.1] font-extrabold tracking-[-.02em] tabular-nums break-all sm:text-[40px]">
-              {`${amount} ${currency}`}
+            <p className="min-w-0 text-amount leading-[1.1] font-extrabold tracking-[-.02em] tabular-nums wrap-anywhere">
+              {amount} <span className="whitespace-nowrap">{currency}</span>
             </p>
             <CopyButton value={amount} label="Copy amount" />
           </div>
@@ -76,7 +76,9 @@ export function PayScreen({
           {screen.showAddress && (
             <div className="mt-5 rounded-xl border border-[#dfe3e8] bg-[#fafbfc] px-3.5 py-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2.5">
-                <p className={label}>{`${networkName} address`}</p>
+                <p
+                  className={`min-w-0 wrap-anywhere ${label}`}
+                >{`${networkName} address`}</p>
                 <CopyButton
                   value={address}
                   label={`Copy ${networkShortName(networkName)} address`}

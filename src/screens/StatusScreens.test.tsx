@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps, ReactNode } from 'react'
 import { expect, test, vi } from 'vitest'
@@ -88,6 +88,12 @@ const STATUS_SCREENS: [string, () => ReactNode][] = [
 const fullText = (text: string) =>
   screen.getByText((_, element) => element?.textContent === text)
 
+// The server's digits, a space and the unit, with the unit in a piece that never wraps.
+function expectAmount(digits: string, unit = 'USDT') {
+  const amount = fullText(`${digits} ${unit}`)
+  expect(within(amount).getByText(unit)).toHaveClass('whitespace-nowrap')
+}
+
 const buttonNames = () =>
   screen.getAllByRole('button').map((button) => button.textContent)
 
@@ -123,7 +129,7 @@ test('expired: says what it shows and what it hides', () => {
     screen.getByRole('heading', { name: 'This quote has expired' }),
   ).toBeInTheDocument()
   expect(screen.getByText('Expired quote')).toBeInTheDocument()
-  expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
+  expectAmount('163.69')
   expect(
     screen.getByText(
       formatDateTime(STATE_FIXTURES.expired.expired_at as string),
@@ -183,7 +189,7 @@ test('expired after a partial payment is a dead end', () => {
   render(expired({ variant: 'dead_end', after: 'partial' }).node)
   expect(screen.getByText("The full amount wasn't reached")).toBeInTheDocument()
   expect(screen.getByText('Received before it expired')).toBeInTheDocument()
-  expect(screen.getByText('120.00 USDT')).toBeInTheDocument()
+  expectAmount('120.00')
   expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
   expect(screen.getByText('43.69 USDT')).toBeInTheDocument()
   expect(screen.getByText('Missing')).toBeInTheDocument()
@@ -219,7 +225,7 @@ test('expired after a full payment was seen is a dead end too', () => {
     screen.getByRole('heading', { name: 'This payment expired' }),
   ).toBeInTheDocument()
   expect(screen.getByText('Payment seen')).toBeInTheDocument()
-  expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
+  expectAmount('163.69')
   expect(
     fullText('We saw a payment before it expired. Do not send again.'),
   ).toBeInTheDocument()
@@ -242,7 +248,7 @@ test('overpaid tells the truth about the extra', () => {
   render(<CompleteScreen screen={complete('overpaid')} />)
   expect(screen.getByText('Payment complete')).toBeInTheDocument()
   expect(screen.getByText('Received')).toBeInTheDocument()
-  expect(screen.getByText('180.00 USDT')).toBeInTheDocument()
+  expectAmount('180.00')
   expect(screen.getByText('Amount due')).toBeInTheDocument()
   expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
   expect(screen.getByText('Extra sent')).toBeInTheDocument()
@@ -268,7 +274,7 @@ test('paid shows the amount, the reference and the settled time', () => {
     screen.getByRole('heading', { name: 'Payment complete' }),
   ).toBeInTheDocument()
   expect(screen.getByText('Paid')).toBeInTheDocument()
-  expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
+  expectAmount('163.69')
   expect(screen.getByText(REFERENCE)).toBeInTheDocument()
   expect(screen.getByText('Settled')).toBeInTheDocument()
   expect(
@@ -291,7 +297,7 @@ test('detected says seen on the network, not received', () => {
     }),
   ).toBeInTheDocument()
   expect(screen.getByText('Payment seen')).toBeInTheDocument()
-  expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
+  expectAmount('163.69')
   expect(
     screen.getByText(
       "Waiting for it to be confirmed. You don't need to send anything else.",
@@ -392,7 +398,7 @@ test.each([
       ),
     ).toBeInTheDocument()
     expect(screen.getByText('Payment seen')).toBeInTheDocument()
-    expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
+    expectAmount('163.69')
   } else {
     expect(screen.getByText('The settlement was rejected.')).toBeInTheDocument()
     expect(screen.queryByText(/We saw/)).not.toBeInTheDocument()

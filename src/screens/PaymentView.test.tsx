@@ -204,7 +204,9 @@ test('an amount with too many decimal places is not shown', () => {
 
 test('shows the pay screen once the amount is checked', () => {
   renderView(checkoutWith(paymentResult([withStatus('awaiting_payment')])))
-  expect(screen.getByText('163.69 USDT')).toBeInTheDocument()
+  expect(
+    screen.getByText((_, element) => element?.textContent === '163.69 USDT'),
+  ).toBeInTheDocument()
   expect(screen.getByText(ADDRESS)).toBeInTheDocument()
 })
 
