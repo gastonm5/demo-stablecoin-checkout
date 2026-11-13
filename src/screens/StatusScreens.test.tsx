@@ -385,9 +385,6 @@ test.each([
       'Do not send anything more. Contact Nordwind Audio and quote the reference.',
     ),
   ).toBeInTheDocument()
-  expect(
-    screen.getByText("This page can't fix this payment."),
-  ).toBeInTheDocument()
   if (moneySeen === 'yes') {
     expect(
       screen.getByText(
@@ -476,4 +473,22 @@ test('a connection notice replaces the strip text', () => {
   expect(
     screen.queryByText('This page updates by itself.'),
   ).not.toBeInTheDocument()
+})
+
+test('the failed screen draws no strip, but a connection notice still gets one', () => {
+  const { container, unmount } = render(failed('no'))
+  // Besides the strip, the card has one region, so a second child means a strip was drawn.
+  expect(container.firstElementChild?.childElementCount).toBe(1)
+  unmount()
+  render(
+    <FailedScreen
+      screen={{
+        kind: 'failed',
+        payment: paymentWith('failed'),
+        moneySeen: 'no',
+      }}
+      notice={<span>You appear to be offline.</span>}
+    />,
+  )
+  expect(screen.getByText('You appear to be offline.')).toBeInTheDocument()
 })

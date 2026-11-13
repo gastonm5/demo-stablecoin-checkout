@@ -84,7 +84,7 @@ export function StatusCard({
   title: string
   headingRef?: Ref<HTMLHeadingElement>
   children: ReactNode
-  strip: ReactNode
+  strip?: ReactNode
   notice?: ReactNode // a connection notice replaces the strip text
   link?: ReactNode
 }) {
@@ -145,10 +145,12 @@ export function StatusCard({
         </div>
       }
       strip={
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          {notice ?? <span>{strip}</span>}
-          {link}
-        </div>
+        (notice ?? strip ?? link) && (
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            {notice ?? <span>{strip}</span>}
+            {link}
+          </div>
+        )
       }
     />
   )

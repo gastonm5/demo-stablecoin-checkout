@@ -29,7 +29,6 @@ export function FailedScreen({
       icon="bad"
       title={headline(screen)}
       headingRef={headingRef}
-      strip="This page can't fix this payment."
       notice={notice}
     >
       <p className={BODY}>
