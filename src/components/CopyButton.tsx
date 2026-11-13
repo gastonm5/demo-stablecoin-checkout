@@ -62,7 +62,7 @@ export function CopyButton({
       <Button
         variant="secondary"
         onClick={copy}
-        className={`${CELL} ${MOVE} self-start ${align === 'end' ? 'justify-self-end' : 'justify-self-start'} ${copied ? 'w-[6.75rem] min-w-min' : 'w-full'}`}
+        className={`${CELL} ${MOVE} h-0 min-h-full overflow-hidden ${align === 'end' ? 'justify-self-end' : 'justify-self-start'} ${copied ? 'w-[6.75rem] min-w-min' : 'w-full'}`}
       >
         <Face text={copied ? COPIED : label} live />
       </Button>
