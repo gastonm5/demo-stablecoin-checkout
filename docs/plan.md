@@ -1766,6 +1766,89 @@ Staying in `src/components/`, with their tests: `CheckoutCard`, `StatusCard`, `O
 
 ---
 
+### Task 17: Remove repeated decisions and unreachable branches from the screens
+
+Added on 12 Nov 2026, after Task 16, at my request, from a review of five simplification proposals. No behaviour, wording, request or amount changes. No ADR is affected.
+
+**Why.** Three things were written more than once or more loosely than the code means them:
+
+- The amount and address to pay were chosen in two places, each checking both `screen.mode` and `payment.status` because the types did not tie them together. If the two ever disagreed, the pay screen would show the full amount under "Send exactly".
+- The check of a payment against the currency list lived inside a hook, where it could only be tested through the hook.
+- Every screen took any `Payment` and defended itself against statuses it can never be given. The `Screen` type also allowed combinations the derivation never produces.
+
+**Left alone on purpose:** the write latch and its release, the two poll cancellations around a requote, the failure count, the disabled query after a final status, the request client, the status sequence and its types, focus behaviour, polling policy.
+
+**Files:**
+
+- Create: `src/components/LoadingCard.tsx`, `src/domain/details.ts`, `src/domain/details.test.ts`
+- Modify: `src/App.tsx`, `src/domain/money.ts`, `src/domain/screen.ts`, `src/hooks/usePaymentScreen.ts`, `src/screens/statusText.ts`, every file in `src/screens/`, `src/test/fixtures.ts`, and the tests beside each
+
+**Interfaces:**
+
+```ts
+// Step 1 — src/components/LoadingCard.tsx
+export function LoadingCard(props: {
+  order: OrderSummary
+  loading: string // shown while there is no problem
+  problem: string | null // shown in its place, with a "Try again" button
+  onRetry(): void
+  strip?: ReactNode
+}): ReactNode
+
+// Step 2 — src/domain/money.ts
+export function toSend(payment: Payment): {
+  amount: DecimalString
+  address: string
+} // underpaid: its amount_outstanding and its own crypto_address; otherwise the quote's total_due and address
+
+// Step 3 — src/domain/details.ts
+export function detailsMatch(payment: Payment, currencies: Currency[]): boolean
+// true when the quote's currency is listed, its network is listed under the same name,
+// and every amountsToSend(payment) fits the currency's decimals
+
+// Step 4 — src/domain/screen.ts
+type With<S extends Payment['status']> = Extract<Payment, { status: S }>
+export type DetailsState = 'loading' | 'unavailable' | 'ready'
+export type Screen =
+  | { kind: 'pay'; mode: 'full'; payment: With<'awaiting_payment'>; clock: 'running'; showAddress: true; remainingMs: number }
+  | { kind: 'pay'; mode: 'full'; payment: With<'awaiting_payment'>; clock: 'still_valid'; showAddress: true }
+  | { kind: 'pay'; mode: 'full'; payment: With<'awaiting_payment'>; clock: 'checking' | 'cannot_confirm'; showAddress: false }
+  | { kind: 'pay'; mode: 'remaining'; payment: With<'underpaid'>; clock: 'none'; showAddress: true }
+  | { kind: 'pay_loading'; payment: With<'awaiting_payment' | 'underpaid'>; problem: boolean }
+  | { kind: 'waiting'; payment: With<'detected' | 'confirming'> }
+  | { kind: 'complete'; payment: With<'paid' | 'overpaid'> }
+  | { kind: 'expired'; payment: With<'expired'>; variant: 'plain' | 'cautious' }
+  | { kind: 'expired'; payment: With<'expired'>; variant: 'dead_end'; after: 'partial' | 'payment' }
+  | { kind: 'failed'; payment: With<'failed'>; moneySeen: 'yes' | 'no' | 'unknown' }
+  | { kind: 'checking'; payment: With<'unknown' | 'awaiting_payment'> }
+// ScreenInput.detailsChecked: boolean becomes ScreenInput.details: DetailsState
+// ClockState stays exported, as the union of the clock values above
+```
+
+After Step 4 a screen takes `screen` and reads `screen.payment`; it no longer takes `payment`. `StatusCard` and the other reusable components keep their props. `toSend` narrows its parameter to `With<'awaiting_payment' | 'underpaid'>`. `usePaymentScreen` stops returning `detailsProblem`.
+
+**Rules for every step:**
+
+- No visible string, condition that can be reached, request or amount changes. Existing assertions stay; where a type forces an expected value to change shape, it keeps asserting the same facts.
+- `showAddress`, `mode` and `clock` stay as fields. `showAddress` is the address rule in one place and tests assert it by name.
+- `SequenceEntry` and `money` are not touched. The dead end keeps its checks on `money`.
+- In `WaitingScreen`, `required > 0` and `Math.min(1, …)` stay: the server may send zero required confirmations.
+- In `src/domain/screen.test.ts`, `toEqual` stays `toEqual`. Compare everything except the payment, and check the payment's identity once. Do not turn an exact assertion into `toMatchObject`.
+- No assertion (`as`) in production code. Test fixtures get one typed helper that narrows a payment by status.
+- No new dependency, no new layer, nothing renamed that is not listed here.
+
+- [ ] **Step 1: The shared card.** First add the test that is missing today: the `pay_loading` card shows the connection notice in its strip. It passes before the change; it pins what the extraction must keep. Then extract `LoadingCard` and use it in `App.tsx` and in `PaymentView`'s `pay_loading` case. The "Loading your payment…" card stays as it is: it has no order to show. Neither card gains a heading. Commit: "Share the loading and error card".
+
+- [ ] **Step 2: The amount and address, decided once.** Tests first for `toSend` in `money.test.ts`: `awaiting_payment` gives the quote's `total_due` and address; `underpaid` gives `amount_outstanding` and its own `crypto_address`, with a fixture whose address differs from the quote's. Then use it in `PayScreen` and in `PaymentView`'s announcement, deciding on `payment.status` alone. Commit: "Decide the amount and address to pay in one place".
+
+- [ ] **Step 3: The details check as a pure function.** First add the hook test that is missing today: a catalogue that has both `currencies` and an `error` still gives the pay screen. Then tests first for `detailsMatch` in `details.test.ts`: a match; the currency missing; the network missing; the network listed under another name; `total_due` with too many decimal places; `amount_outstanding` with too many on `underpaid`. Then call it from `usePaymentScreen`. The hook's own tests stay. Commit: "Check a payment against the currency list in src/domain".
+
+- [ ] **Step 4: Screens that receive exactly their payment.** Change `Screen`, `ScreenInput` and `deriveScreen` as in the interfaces above; give `headline` a parameter that names only the fields it reads, so a small literal still works; make each screen take `screen`; compute `details` in `usePaymentScreen` as `loading` when there is no list and no error, `unavailable` when there is no list and an error or the list does not match, `ready` when the list matches. Remove the branches that only defended against another status. Commit: "Give each screen the payment its status guarantees".
+
+- [ ] **Step 5: Gate.** `npm run check && npm run build`, and the test count is not lower than before the task.
+
+---
+
 ## How this plan is executed
 
 - **Tasks 1 to 13** are implemented one at a time, in order, each by a fresh implementer on Opus that is given this plan, the spec and its own task.
@@ -1775,4 +1858,5 @@ Staying in `src/components/`, with their tests: `CheckoutCard`, `StatusCard`, `O
 - **Task 14** is done with the human.
 - **Task 15** was added after the walk-through and is built like Tasks 1 to 13: one implementer on Opus, then a Codex review of its commits.
 - **Task 16** is a folder refactor added after Task 15: one implementer on Opus in a separate worktree, a Codex review of the moves, then a Codex pass over the whole change.
+- **Task 17** removes repeated decisions and unreachable branches: one implementer on Opus in a separate worktree, a Codex review of the three mechanical steps and another of the typed change, then a Codex pass over the whole change with its documents.
 - Nothing is pushed until the human says so.
