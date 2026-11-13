@@ -2095,6 +2095,52 @@ Immediate, on purpose: any amount; the countdown's digits; the address and QR go
 
 ---
 
+## Task 28: Start over from the dev panel, and a panel that slides
+
+Added on 13 Nov 2026, at my request, after I saw a drawing of the panel with the new section. It is built before Tasks 21 to 27 because I want it for testing them.
+
+**Why.** Once a payment is `paid`, `overpaid` or `failed` the page stops polling, and the page remembers every status it has seen. So a status pressed after that never brings the page back, and the only way out was to edit the URL by hand.
+
+**Files:** `mock/store.ts`, `mock/app.ts`, `mock/control.test.ts`, `src/dev/mockControl.ts`, `src/dev/mockControl.test.ts`, `src/dev/DevPanel.tsx`, `src/dev/DevPanel.test.tsx`, `README.md`, `docs/design-doc.md`, and `src/App.tsx` only if the row around the panel needs it. Nothing in `src/api`, `src/hooks`, `src/domain`, `src/screens` or `src/components`: the app must not learn that the mock exists.
+
+**Interfaces:**
+
+- `MockStore.restart(reference: string): PaymentRecord | undefined`
+- `POST /__mock/payments/:reference/restart`, no body needed: 200 with the payment, or the same 404 the status route gives for an unknown reference.
+- `restartMockPayment(reference: string): Promise<void>` in `src/dev/mockControl.ts`.
+
+### The mock
+
+- [ ] Tests first, in `mock/control.test.ts`: a restart after `paid` answers `awaiting_payment` with the same reference, order and pair; nothing of the old status is left (`amount_received`, `tx_hash`, `confirmations`, `settled_at`); `expires_at` is rebuilt from the mock's clock and the current "New quotes last" setting, shown by changing that setting before the restart; a restart of an unknown reference is a 404; a restart works from `awaiting_payment` too.
+- [ ] `restart` builds the quote the way a new payment does, for the payment's own currency and network, and saves it as `awaiting_payment` with no status fields. It does not go through `requote`, which refuses anything that is not `expired`.
+
+### The panel
+
+- [ ] A section titled "Start over" between "Current payment" and "Set status", with two buttons side by side, `restart this payment` and `new payment`, and under them the line: "restart: same reference, awaiting_payment with a fresh quote, then the page reloads. new: back to the picker." Both buttons are disabled when there is no payment. They look like the panel's other buttons.
+- [ ] `restart this payment` sends the restart. When the mock answers, the page reloads (`window.location.reload()`), because only a reload clears what the page has seen. When the request fails, nothing happens, like a failed status command.
+- [ ] `new payment` loads the page's own path with no query (`window.location.assign(window.location.pathname)`).
+- [ ] jsdom cannot spy on `window.location`. Put the two navigations behind something a test can replace; two functions in a small module in `src/dev`, mocked with `vi.mock`, is enough.
+- [ ] The panel remembers being open in `sessionStorage` under `dev-panel-open`, read when it mounts and written when it opens or closes, so it is still open after either button reloads the page. A browser that refuses storage is ignored: the panel then starts collapsed as it does now.
+- [ ] Tests: the restart button sends the open payment's reference and then reloads; a failed restart does not reload; `new payment` navigates and sends nothing to the mock; both are disabled with no payment; a panel left open is open again after a remount, and one that was closed is not. The existing tests keep their assertions.
+
+### The slide
+
+- [ ] Opening and closing both animate. The panel's width goes between the 34 px tab and 330 px in 200 ms with `cubic-bezier(.2,0,0,1)`. Its content keeps a fixed 330 px width and is clipped, so nothing inside reflows while the width changes. With `prefers-reduced-motion: reduce` there is no transition.
+- [ ] The panel is fixed to the right edge of the window at every width. The row beside the page keeps 34 px for it, and from 900 px wide that reserved width grows to 330 px in step with the panel, so the card is pushed aside as before. Under 900 px the panel lies over the page as before.
+- [ ] The tab and the content are both always in the document, so the one going away can fade while the width changes. Whichever is not showing is `inert` and `aria-hidden`: it cannot be focused, is not announced, and the tests' role queries do not find it.
+- [ ] Focus moves to "hide" when the panel opens and to the tab when it closes, and never when the page loads, including when it loads already open.
+- [ ] Still no request to the mock while collapsed.
+
+### The documents, in the same commit
+
+- [ ] `README.md`, in "With the dev panel": two rows in the table before "An offline browser": "The same payment from the start" (press **restart this payment** under **Start over**; it goes back to `awaiting_payment` with a new quote and the page reloads) and "The picker again" (press **new payment** under **Start over**). The paragraph that ends "To try another sequence, start a new payment." ends instead: "To try another sequence, use **Start over**: both of its buttons reload the page, and the panel stays open across the reload." In "With curl", one more example: `curl -X POST localhost:5173/__mock/payments/AQH-100306-PMT/restart`, with the comment "Put a payment back to awaiting_payment with a new quote. An open page needs a reload to forget what it saw."
+- [ ] `docs/design-doc.md`, section 8: a row in the controls table after "Set status": "Start over" with "\"restart this payment\" puts the open payment back to `awaiting_payment` with a new quote and reloads the page. \"new payment\" reloads to the picker". After "It starts collapsed.": "It slides open and closed in 200 ms, or at once when the system asks for reduced motion, and it remembers being open for the life of the tab, so it is still open after a reload." Under "What the build changed from the drawing", a bullet: "**Start over.** Added after the build, at my request. Once a payment is `paid`, `overpaid` or `failed` the page stops polling, and it remembers the statuses it has seen, so a status pressed afterwards could not bring the page back. The buttons reload the page because loading it again is the only thing that clears that memory."
+- [ ] `docs/design-doc.md`, the paragraph before the first drawing: "eight small ways" becomes "nine small ways", and after the sentence listing the six, one more: "One was added later: the dev panel has a Start over section and slides open and closed (section 8)."
+- [ ] `docs/design-doc.md`, the table of where state lives: the row "A ticked box, an open dialog, the open dev panel" loses the dev panel, and a new row under it reads: "The open dev panel", "React state in the panel, copied to `sessionStorage`", "So it is still open after the reload its Start over buttons cause".
+- [ ] Commit: "Start over from the dev panel, and slide it open and closed".
+
+---
+
 ## How this plan is executed
 
 - **Tasks 1 to 13** are implemented one at a time, in order, each by a fresh implementer on Opus that is given this plan, the spec and its own task.
@@ -2107,4 +2153,5 @@ Immediate, on purpose: any amount; the countdown's digits; the address and QR go
 - **Task 17** removes repeated decisions and unreachable branches: one implementer on Opus in a separate worktree, a Codex review of the three mechanical steps and another of the typed change, then a Codex pass over the whole change with its documents.
 - **Task 18** stops the clock outside `awaiting_payment`: measured first by the planning agent in the running app, built by one implementer on Opus on top of Task 17, reviewed by Codex, then measured again.
 - **Tasks 19 to 27** follow a review of the rendered page: each is built by an implementer on Opus in a separate worktree, checked by the planning agent with screenshots and measurements at four widths, and reviewed by Codex. Nothing is pushed until I have tested it.
+- **Task 28** adds Start over to the dev panel and makes it slide. It was planned after Task 20 and is built next: one implementer on Opus in the same worktree, checked by the planning agent in a browser, and reviewed by Codex.
 - Nothing is pushed until the human says so.
