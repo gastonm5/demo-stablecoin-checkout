@@ -1924,6 +1924,177 @@ Expected: the new tests fail; the existing ones pass.
 
 ---
 
+## Tasks 19 to 27: layout, a visual system and motion
+
+Added on 13 Nov 2026, at my request, after a review of the rendered page at 1200, 768, 390 and 320 px. The page keeps its look: a white card on a cool grey page, near-black for the one primary action, colour only for networks and for status. No status, request, amount or ADR changes. No new dependency.
+
+**What the review confirmed:**
+
+- At 320 px, a long unbreakable word in the merchant or network name makes the card clip the amount, the address's first line and the countdown. The mobile grid column is sized `auto` and the card is `overflow-hidden`.
+- "167.275546 USDC" breaks as "USD" / "C" at 390 and 768 px, because the amount uses `break-all`.
+- The copy button is 130 px wide idle, 91 px on "Copied" and 294 px on failure, and moves what is under it.
+- On a phone the header wraps as "Nordwind" / "Audio" and "ORDER ORD-" / "88213".
+- At 1200 px the card is 240 px tall on the picker, up to 631 on the pay screen and 300 on the failed screen. A connection notice adds a row to the strip.
+- Three colour pairs fall short on contrast. There are 23 hex colours, 15 font sizes, six radii, three copies of the primary button, three of the amber notice, two link blues, font glyphs for status icons, no focus styles and no motion.
+
+**Decisions I made:**
+
+- The QR is shown on phones as it is now.
+- A partial payment's new amount is emphasised, so nobody sends the full amount again by mistake.
+- The countdown gets no special styling in its last minute. It gets a bar under it showing how much time is left.
+- The waiting screen gets no continuous indicator.
+- The copy failure sentence moves out of the button to a line under it.
+- A long merchant name wraps. It is never cut short.
+- Dark mode and merchant branding are left out.
+
+**Rules for every task below:**
+
+- Every digit of every amount stays visible and unchanged. Nothing is rounded, shortened or hidden.
+- The address and QR are shown exactly when they are now. Nothing that hides them may be delayed by an animation.
+- Shopper-facing words do not change unless a task says so.
+- The colours of the dev panel are not touched.
+- Tests keep their assertions. Where markup changes how a string must be found, the same fact is asserted another way.
+
+### Task 19: Stop the card clipping, and keep the unit whole
+
+**Files:** `src/components/CheckoutCard.tsx`, `src/components/OrderHeader.tsx`, `src/components/StatusCard.tsx`, `src/components/NetworkBanner.tsx`, `src/components/QrFrame.tsx`, `src/screens/PayScreen.tsx`, `src/screens/PickerScreen.tsx`, and their tests.
+
+- [ ] **The grid.** The card's single column below `md` becomes `minmax(0, 1fr)`, and every flex child that holds text gets `min-width: 0`, so content wraps inside the card instead of being clipped.
+- [ ] **Long words.** Merchant name, order id, network name and the banner and QR frame titles use `overflow-wrap: anywhere`. Nothing is truncated.
+- [ ] **The amount.** In `PayScreen` and `StatusCard`, `break-all` goes. The digits and the unit are separate inline pieces: the unit does not break, the line breaks at the space first, and a run of digits breaks only when it is longer than the line. The size is fluid, `clamp(1.75rem, 7.5vw, 2.5rem)`.
+- [ ] **The header.** Under 480 px the order id and the fiat amount take their own row under the merchant, on one line with the id on the left and the amount on the right. From 480 px they sit on the right as now.
+- [ ] **Tests.** For the pay screen, the waiting screen and the plain expired screen: the amount's text content is exactly the server's string followed by a space and the currency, and the unit is in an element that does not wrap. A long merchant name is rendered in full.
+- [ ] Commit: "Wrap inside the card, and never split a currency code".
+
+### Task 20: Name the colours
+
+**Files:** `src/index.css` and every component and screen that has a colour. Not `src/dev/`.
+
+Tokens in `@theme`, each generating its Tailwind utilities:
+
+| Token | Value | Replaces |
+| --- | --- | --- |
+| `page` | `#f5f5f7` | |
+| `surface` | `#ffffff` | `bg-white` |
+| `surface-sunken` | `#fafbfc` | also `#f6f7f9`, `gray-50` |
+| `surface-inverse` | `#14161a` | |
+| `ink` | `#14161a` | |
+| `ink-muted` | `#4b5563` | `gray-600` |
+| `ink-subtle` | `#6b7280` | `gray-500` |
+| `ink-faint` | `#838a94` | `#9aa1ab`, which was 2.61:1 on white; this is 3.48:1 |
+| `ink-inverse` | `#ffffff` | `text-white` |
+| `ink-inverse-muted` | `#c9ced4` | |
+| `line` | `#dfe3e8` | |
+| `line-strong` | `#cfd4da` | |
+| `line-faint` | `#eef0f2` | |
+| `track` | `#e6e8eb` | |
+| `action` | `#14161a` | |
+| `action-disabled` | `#e5e7eb` | also `#d5d9de`; its text is `ink-muted` |
+| `link` | `#3b5bdb` | also `blue-700`; a disabled link is `ink-subtle` |
+| `focus` | `#3b5bdb` | |
+| `ok` | `#15803d` | |
+| `warn` | `#b45309` | |
+| `warn-surface`, `warn-line`, `warn-ink` | `#fff7e6`, `#f3d999`, `#6b4e00` | also `amber-50`, `amber-300` |
+| `bad` | `#b91c1c` | also `red-700` |
+| `pending` | `#6b7280` | |
+| `network-tron`, `network-ethereum`, `network-polygon`, `network-solana`, `network-other` | `#ff060a`, `#627eea`, `#8247e5`, `#14b8a6`, `#6b7280` | |
+
+- [ ] Network tokens are used only by `NetworkChip`. No action or status style uses one.
+- [ ] After the task, no hex colour and no Tailwind palette colour is left in `src/components` or `src/screens`.
+- [ ] Commit: "Name the colours the checkout uses".
+
+### Task 21: One button, one notice, one set of icons, one scale
+
+**Files:** create `src/components/Button.tsx`, `src/components/Notice.tsx`, `src/components/StatusIcon.tsx`; `src/index.css`; the screens and components that use them.
+
+- [ ] **`Button`**, with `variant: 'primary' | 'secondary' | 'link'` and a `busy` flag, replaces every hand-written button. Primary is the black pill; secondary is the bordered control used by copy and "Try now"; link is the underlined text button. Each has hover, pressed, disabled and busy states. A disabled primary button is `action-disabled` with `ink-muted` text.
+- [ ] **`Notice`** is the one warning box, used by the underpaid banner, the overpaid notice, the dead end and "payment not found".
+- [ ] **`StatusIcon`** draws pending, clock, check and alert as inline SVG in the existing ring, in place of the glyphs `●`, `◷`, `✓` and `!`.
+- [ ] **Type:** `label` 12 px, `small` 14, `body` 15, `lead` 16, `figure` 18, `title` 22, and `amount` from Task 19. Every other size goes.
+- [ ] **Radii:** `card` 22 px, `control` 12 px, and full. Every other radius goes.
+- [ ] Commit: "Share the button, the notice, the status icons and the scales".
+
+### Task 22: A copy button that keeps its size, a strip that keeps its shape, focus you can see
+
+**Files:** `src/components/CopyButton.tsx`, `src/hooks/useCopy.ts` only if needed, `src/components/StatusCard.tsx`, `src/screens/PayScreen.tsx`, `src/index.css`, tests.
+
+- [ ] **Copy.** The button always has the width of its normal label. On success the label inside it reads "Copied". On failure the button keeps its label and the sentence "Copy failed. Select the text and copy it." appears on a line under it, announced as it is now.
+- [ ] **Strip.** The notice takes the space on the left and wraps there; its button and the link stay together on the right. At 1200 px a notice appearing on the pay screen changes the card's height by no more than 24 px.
+- [ ] **Focus.** Every button, link, menu and tick box shows a 2 px `focus` outline, offset 2 px, on keyboard focus. The heading that receives programmatic focus keeps none.
+- [ ] Commit: "Keep the copy button and the strip steady, and show keyboard focus".
+
+### Task 23: One card height on a desktop
+
+**Files:** `src/components/CheckoutCard.tsx`, test.
+
+- [ ] From `md` up the card's two columns have a minimum height of 460 px. Below `md` there is none.
+- [ ] Commit: "Give the card a steady height on wide screens".
+
+### Task 24: A bar under the countdown
+
+This reverses something I dropped. The bar was left out because the API gives a quote's deadline and not its lifetime. It comes back on one condition: the page draws it only when it saw the quote begin.
+
+**Files:** `src/domain/sequence.ts`, `src/domain/screen.ts`, `src/screens/PayScreen.tsx`, their tests, `src/test/fixtures.ts` if needed.
+
+**Interfaces:**
+
+```ts
+// src/domain/sequence.ts
+export type StatusSequence = {
+  // …as now, plus:
+  quoteStartedAt: number | null // device time the page saw the current quote begin; null after a reload, until a new quote
+}
+// startSequence(payment, 'creation', at) sets it to at; startSequence(payment, 'reload', at) sets it to null.
+// recordStatus sets it to at when quote.expires_at changes, and leaves it alone otherwise.
+
+// src/domain/screen.ts — the running pay variant gains:
+lifetimeMs: number | null // the deadline minus quoteStartedAt; null when that is null or not positive
+```
+
+- [ ] Tests first, in `sequence.test.ts` and `screen.test.ts`: creation sets the start; a reload does not; a repeated status keeps it; a new quote resets it; the running screen carries the lifetime, or `null` after a reload.
+- [ ] `PayScreen` draws a thin bar under "Rate held for" when `lifetimeMs` is not `null`: its filled share is `remainingMs / lifetimeMs`, held between 0 and 1. It is decoration (`aria-hidden`); the time beside it is the information. With no lifetime there is no bar and nothing in its place.
+- [ ] The bar disappears with the countdown, at once.
+- [ ] Commit: "Draw the time left as a bar when the page saw the quote begin".
+
+### Task 25: Make a partial payment's new amount hard to miss
+
+**Files:** `src/screens/PayScreen.tsx`, `src/index.css`, test.
+
+- [ ] On `underpaid`, the label "Send the remaining" is set in `warn` and the amount block carries a `warn` rule down its left side. These stay for as long as the status does, so the emphasis does not depend on motion.
+- [ ] When the block first appears it is washed in `warn-surface`, fading over 1.5 s, once. With reduced motion there is no wash.
+- [ ] The words do not change, and the amount is still replaced in a single frame, never counted or tweened.
+- [ ] Commit: "Emphasise the amount still to send after a partial payment".
+
+### Task 26: Motion for a change of screen
+
+**Files:** `src/index.css`, `src/components/CheckoutCard.tsx`, the screens, tests.
+
+- [ ] **Entrances only.** One utility: opacity from 0 and 8 px of rise, 180 ms, `cubic-bezier(.2, 0, 0, 1)`, through `@starting-style`. It is applied to the card's content, not its frame. Nothing has an exit animation.
+- [ ] A change of screen kind plays it once. A poll or a countdown tick that changes nothing plays nothing: a test re-renders the payment view with a new answer of the same status and finds the same DOM node.
+- [ ] When the address must go, it is absent from the DOM in the same render as the status change. The existing tests for that stay.
+- [ ] `prefers-reduced-motion: reduce` makes every transition and animation in the app instant, in one rule.
+- [ ] Commit: "Fade a new screen in, and never animate one out".
+
+### Task 27: Motion for the rest
+
+**Files:** `src/index.css`, `src/screens/PickerScreen.tsx`, `src/screens/WaitingScreen.tsx`, `src/screens/PayScreen.tsx`, `src/components/ConfirmChangeDialog.tsx`, `src/components/CopyButton.tsx`, `src/components/NoticeStrip.tsx`, `src/components/Button.tsx`, tests.
+
+| What | Motion |
+| --- | --- |
+| Picker: the fee line and the "You are paying with" group, when a network is first chosen | The entrance, 160 ms, 6 px |
+| "Still working…", a create or requote error, the copy failure line, a connection notice appearing | Fade in, 150 ms, no movement |
+| The address and QR returning on "still valid" | Fade in, 150 ms, no movement |
+| The confirmations bar | Width moves to the server's value, 300 ms ease-out, in either direction |
+| The countdown bar | Width follows each tick over 1 s, linear |
+| The dialog and its backdrop opening | Fade in 150 ms; the dialog from 0.98 scale |
+| Buttons, the menus and the tick-box-gated controls | Colour, 120 ms |
+
+Immediate, on purpose: any amount; the countdown's digits; the address and QR going; a notice changing or disappearing; the dialog closing; an error replacing a loading line.
+
+- [ ] Commit: "Add the small motions: picker, notices, dialog, bars and buttons".
+
+---
+
 ## How this plan is executed
 
 - **Tasks 1 to 13** are implemented one at a time, in order, each by a fresh implementer on Opus that is given this plan, the spec and its own task.
@@ -1935,4 +2106,5 @@ Expected: the new tests fail; the existing ones pass.
 - **Task 16** is a folder refactor added after Task 15: one implementer on Opus in a separate worktree, a Codex review of the moves, then a Codex pass over the whole change.
 - **Task 17** removes repeated decisions and unreachable branches: one implementer on Opus in a separate worktree, a Codex review of the three mechanical steps and another of the typed change, then a Codex pass over the whole change with its documents.
 - **Task 18** stops the clock outside `awaiting_payment`: measured first by the planning agent in the running app, built by one implementer on Opus on top of Task 17, reviewed by Codex, then measured again.
+- **Tasks 19 to 27** follow a review of the rendered page: each is built by an implementer on Opus in a separate worktree, checked by the planning agent with screenshots and measurements at four widths, and reviewed by Codex. Nothing is pushed until I have tested it.
 - Nothing is pushed until the human says so.
