@@ -26,8 +26,8 @@ export function usePaymentScreen(
   const { entry, checkNow } = payment
   const current = entry?.payment
   const clock = useNow(current?.status === 'awaiting_payment')
-  // A stopped clock is stale, and the answer that made the status awaiting_payment arrived after it stopped.
-  const now = Math.max(clock, payment.lastSuccessAt)
+  // Until its first tick the clock has no value, and the answer that made the status awaiting_payment is the time.
+  const now = Math.max(clock ?? 0, payment.lastSuccessAt)
   const online = useOnline()
   const quote = current?.quote
   // Looked up apart from the check: a status screen shows the usual time without waiting for it.

@@ -162,6 +162,28 @@ test('a quote past its deadline after a stopped clock is still valid, not counti
   expect(checkNow).not.toHaveBeenCalled()
 })
 
+test('a new quote after the device clock went back counts down from its answer and checks at its own deadline', () => {
+  const hook = fromExpired()
+  // Set back without a tick, so a value the clock kept from before is an hour ahead of the answer.
+  vi.setSystemTime(Date.now() - 3_600_000)
+  const deadline = Date.now() + 15 * 60_000
+  const awaiting = withStatus('awaiting_payment', {
+    expires_at: new Date(deadline).toISOString(),
+  })
+  hook.rerender({ p: awaiting, at: Date.now() })
+  expect(hook.result.current.screen).toEqual({
+    kind: 'pay',
+    mode: 'full',
+    payment: awaiting,
+    clock: 'running',
+    showAddress: true,
+    remainingMs: deadline - Date.now(),
+  })
+  expect(checkNow).not.toHaveBeenCalled()
+  advance(15 * 60_000 + 1_000)
+  expect(checkNow).toHaveBeenCalledOnce()
+})
+
 test('a still valid screen hides the address once its answer is more than ten seconds old', () => {
   vi.setSystemTime(DEADLINE + 1_000)
   const awaiting = withStatus('awaiting_payment')
