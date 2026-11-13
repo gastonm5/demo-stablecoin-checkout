@@ -50,6 +50,15 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 - Do not add a dependency without asking.
 - The app's request code must not know the mock exists. Only the dev panel calls the mock's control endpoints.
 
+## Look and motion
+
+- Colours, text sizes and radii come from the names in the `@theme` block of `src/index.css`. No colour code, no palette colour, no `text-[…]` size and no `rounded-[…]` radius in `src/screens` or `src/components`. The dev panel keeps its own colours.
+- Use `Button`, `Notice` and `StatusIcon`. Do not hand-write a button.
+- Text wraps inside the card down to 320 px wide. A currency code never splits across lines.
+- Things may fade in. Nothing fades out. Never animate an amount, the countdown's digits, or the removal of an address, a QR, a notice or a screen.
+- One rule in `src/index.css` handles reduced motion for the checkout. Do not add per-component handling there.
+- The tests have no layout. Check a change to layout or motion in a real browser at 1200, 768, 390 and 320 px, and say that you did.
+
 ## Tests
 
 - Write the test first for `src/domain` and for the polling hook.

@@ -142,6 +142,7 @@ Each of these is deliberate. The design doc's follow-ups section has the detail.
 | Payment links in the QR that prefill the amount and network | A token link needs the token's contract address, which the API does not return. Guessing one risks pointing a shopper at the wrong token. The QR holds the plain address, and the page names the network around it |
 | An endpoint that returns the order before a payment exists  | The picker's header comes from an assumed order summary, the way the order id already did. I did not invent an API for it                                                                                          |
 | The countdown bar after a reload                            | A bar needs the quote's full lifetime, and the API gives only its deadline. The page draws the bar when it saw the quote begin, and shows the time alone after a reload                                            |
+| Dark mode and merchant branding                             | Left out when the look was reviewed. The colours are named in one block, so either is a change to that block                                                                                                       |
 | Checking every poll against the shopper's choice            | The page checks the answer to a create or a new quote against the choice. A later poll would need the choice to survive a reload                                                                                   |
 | A new quote after a partial payment has expired             | The page would have to say what happens to the money already sent, and it does not know                                                                                                                            |
 | A live readout of the mock's state in the dev panel         | It needed a polling loop to show what the checkout page beside it already shows                                                                                                                                    |
@@ -158,6 +159,7 @@ I used Claude Code throughout. One Claude model handled design, planning and coo
 - **A plan, then one task per agent.** Thirteen build tasks, and four more I added after seeing the finished page, each built test-first by an agent that saw only its own task and the design.
 - **A second model reviewed everything.** Codex reviewed the design, the plan, and every task's commit before the next task began, then the whole branch at the end. The planning agent read each diff and re-ran the tests itself. That last pass found the largest gap: nothing checked that a server answer was about the payment the page had asked for.
 - **Nothing rewritten.** Review fixes are new commits. The history shows the wrong turns.
+- **The look came last, and in parallel.** After the page worked, I asked for a review of how it renders at four widths, and nine tasks followed: layout, one set of colours and sizes, shared pieces, motion. I asked whether they could run at once. The planning agent split them into lanes that touched different files, each in its own checkout, checked each in a real browser, and merged them. The merge commits are in the history.
 
 [`docs/agent-log.md`](docs/agent-log.md) records every disagreement and mistake at the time it happened. The three answers below are drawn from it.
 
@@ -178,6 +180,14 @@ That sequence ended up carrying most of the safety rules. It is how the page kno
 I asked for the timer to stop whenever time cannot change what the shopper sees, on three conditions: hook calls stay unconditional, a stale clock value is never shown, and the two usual shortcuts are not taken. Memoising everything would hide the cost without removing it. Moving the timer into the countdown alone would leave the screen above it unaware of the deadline that hides the address.
 
 The agent measured the running app before changing anything. Time turned out to be read in one status only, `awaiting_payment`, so the clock runs there and nowhere else. In ten seconds the payment view now commits 13 times on a live quote, 3 times on a waiting status and not at all on a final one. Before, it was 13, 13 and 10. Hiding the address at the deadline, the ten-second window after a "still valid" answer and the one check at zero all still run from that one clock. Codex then found the case my second condition was about: with the device clock set back while the timer was stopped, a new quote could inherit the old reading. A stopped clock now has no value at all.
+
+### What the look pass turned up
+
+The first two could not fail a test, because the tests have no layout. The third could have, and no test had been written for it.
+
+- **Text cut off at the card's edge.** At 320 px, a long word in the merchant's or the network's name pushed the end of the amount, the first line of the address and the countdown past the card, where they were clipped. "167.275546 USDC" broke as "USD" and "C". Both had been there since the build.
+- **A dev panel that could not be opened with a mouse.** When the panel was made to slide, its tab ended up drawn below the bottom of the window. The tests passed, Codex found nothing, and the planning agent's own browser script passed 29 checks, because it pressed the tab from script. It was caught when the planning agent laid screenshots side by side and saw letters where the tab should be. The script now presses with a real mouse.
+- **"Copied" beside an amount that was not copied.** If the amount changed within two seconds of a copy, the button still said "Copied" while the clipboard held the old amount. It had been that way since the build. Codex found it while reviewing an unrelated change to the same button.
 
 ### What the agent got wrong about the payment state machine
 
