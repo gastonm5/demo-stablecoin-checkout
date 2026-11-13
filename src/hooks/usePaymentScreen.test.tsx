@@ -180,7 +180,9 @@ test('a new quote after the device clock went back counts down from its answer a
     remainingMs: deadline - Date.now(),
   })
   expect(checkNow).not.toHaveBeenCalled()
-  advance(15 * 60_000 + 1_000)
+  advance(15 * 60_000 - 1_000)
+  expect(checkNow).not.toHaveBeenCalled()
+  advance(2_000)
   expect(checkNow).toHaveBeenCalledOnce()
 })
 
