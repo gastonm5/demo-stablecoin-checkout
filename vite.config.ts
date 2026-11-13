@@ -10,5 +10,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
+    // Vitest blanks every stylesheet import; one test reads the stylesheet's source through ?raw.
+    css: { include: [/\.css\?raw$/] },
   },
 })

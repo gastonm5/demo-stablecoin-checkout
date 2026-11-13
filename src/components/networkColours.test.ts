@@ -1,6 +1,5 @@
-/// <reference types="node" />
-import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
+import css from '../index.css?raw'
 import { networkColours } from './networkColours'
 
 test.each(['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'])(
@@ -52,7 +51,8 @@ test('gives an id it does not know the neutral colours, even one that names a bu
 
 // Tailwind emits nothing, and no error, for a class whose colour token is missing.
 test('names only colours that index.css defines, for every network', () => {
-  const css = readFileSync(`${import.meta.dirname}/../index.css`, 'utf8')
+  // The check below needs the stylesheet's source, not CSS a plugin has processed.
+  expect(css).toContain('--color-network-solana-line:')
   const classes = ['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'].flatMap(
     (networkId) =>
       Object.values(networkColours(networkId)).flatMap((slot) =>
