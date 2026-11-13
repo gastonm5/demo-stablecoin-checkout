@@ -17,6 +17,7 @@ const running = {
   clock: 'running',
   showAddress: true,
   remainingMs: 767_000,
+  lifetimeMs: 900_000,
 } as const
 const remaining = {
   kind: 'pay',
@@ -189,6 +190,35 @@ test('shows the countdown', () => {
   const timer = screen.getByRole('timer')
   expect(timer).toHaveTextContent('12:47')
   expect(timer).not.toHaveAttribute('aria-live')
+})
+
+// Hidden from assistive technology, so no role or name can find it.
+const bar = (container: HTMLElement) => container.querySelector('.bg-track')
+
+test('draws the time left as a share of the lifetime, hidden from assistive technology', () => {
+  const { container } = renderPay()
+  expect(bar(container)).toHaveAttribute('aria-hidden', 'true')
+  expect(bar(container)?.firstElementChild).toHaveStyle({
+    width: `${(767_000 / 900_000) * 100}%`,
+  })
+})
+
+test('no bar when the page did not see the quote begin', () => {
+  const { container } = renderPay({
+    screen: { ...running, lifetimeMs: null },
+  })
+  expect(screen.getByRole('timer')).toHaveTextContent('12:47')
+  expect(bar(container)).toBeNull()
+})
+
+test.each([
+  ['checking', timedOut('checking')],
+  ['cannot_confirm', timedOut('cannot_confirm')],
+  ['still_valid', timedOut('still_valid')],
+  ['none', remaining],
+] as const)('no bar when the clock is %s', (_, view) => {
+  const { container } = renderPay({ screen: view })
+  expect(bar(container)).toBeNull()
 })
 
 test.each([

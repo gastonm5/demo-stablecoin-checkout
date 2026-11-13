@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { formatRemaining } from '../domain/countdown'
+import { formatRemaining, remainingShare } from '../domain/countdown'
 import { networkShortName } from '../domain/format'
 import { toSend } from '../domain/money'
 import type { ClockState, Screen } from '../domain/screen'
@@ -95,6 +95,19 @@ export function PayScreen({
               <span role="timer" className="text-lg font-bold tabular-nums">
                 {formatRemaining(screen.remainingMs)}
               </span>
+            </div>
+          )}
+          {screen.clock === 'running' && screen.lifetimeMs !== null && (
+            <div
+              aria-hidden="true"
+              className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-track"
+            >
+              <div
+                className="h-full bg-surface-inverse"
+                style={{
+                  width: `${remainingShare(screen.remainingMs, screen.lifetimeMs) * 100}%`,
+                }}
+              />
             </div>
           )}
         </>

@@ -23,8 +23,34 @@ test('starts with one entry', () => {
     startedFrom: 'creation',
     quoteExpiresAt: FIRST_QUOTE,
     quoteStartIndex: 0,
+    quoteStartedAt: 1000,
     entries: [{ status: 'awaiting_payment', at: 1000 }],
   })
+})
+
+test('after a reload the page did not see the quote begin', () => {
+  expect(startSequence(makePayment(), 'reload', 1000).quoteStartedAt).toBe(null)
+})
+
+test('a repeated or new status on the same quote keeps its start', () => {
+  let s = startSequence(makePayment(), 'creation', 1000)
+  s = recordStatus(s, makePayment(), 2000)
+  s = recordStatus(s, withStatus('underpaid'), 3000)
+  expect(s.quoteStartedAt).toBe(1000)
+  s = recordStatus(
+    startSequence(makePayment(), 'reload', 1000),
+    makePayment(),
+    2000,
+  )
+  expect(s.quoteStartedAt).toBe(null)
+})
+
+test('a new quote starts when the page sees it, even after a reload', () => {
+  for (const startedFrom of ['creation', 'reload'] as const) {
+    let s = startSequence(withStatus('expired'), startedFrom, 1000)
+    s = recordStatus(s, makePayment({}, NEW_QUOTE), 2000)
+    expect(s.quoteStartedAt).toBe(2000)
+  }
 })
 
 test('a repeated status updates the last entry', () => {

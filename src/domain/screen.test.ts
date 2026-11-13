@@ -69,8 +69,39 @@ test('time left shows the pay screen with a running clock', () => {
     clock: 'running',
     showAddress: true,
     remainingMs: 30_000,
+    lifetimeMs: 60_000,
   })
 })
+
+test('the lifetime is unknown after a reload, until a new quote', () => {
+  const reloaded = startSequence(makePayment(), 'reload', D - 60_000)
+  expect(deriveScreen(input({ sequence: reloaded }))).toMatchObject({
+    clock: 'running',
+    lifetimeMs: null,
+  })
+  const next = withStatus('awaiting_payment', NEW_QUOTE)
+  const requoted = recordStatus(reloaded, next, D - 10_000)
+  expect(
+    deriveScreen(input({ payment: next, sequence: requoted })),
+  ).toMatchObject({
+    clock: 'running',
+    lifetimeMs: Date.parse(NEW_QUOTE.expires_at) - (D - 10_000),
+  })
+})
+
+test.each([
+  ['at', D],
+  ['after', D + 5_000],
+])(
+  'no lifetime when the page saw the quote begin %s its deadline',
+  (_name, startedAt) => {
+    const sequence = startSequence(makePayment(), 'creation', startedAt)
+    expect(deriveScreen(input({ sequence }))).toMatchObject({
+      clock: 'running',
+      lifetimeMs: null,
+    })
+  },
+)
 
 test.each([
   [

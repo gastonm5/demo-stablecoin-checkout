@@ -336,7 +336,7 @@ Measured in the running app with temporary counters, as commits of the payment v
 
 Before, ten of the commits in every row came from the clock. After, the clock accounts for commits only on `awaiting_payment`, and everything else is a poll answer arriving.
 
-**No bar under the time.** The agreed drawing has a progress bar under the countdown. A bar needs the quote's full lifetime, and the API gives only its deadline, so the build shows the time alone.
+**A bar under the time, when the page saw the quote begin.** The agreed drawing has a progress bar under the countdown. A bar needs the quote's full lifetime, and the API gives only its deadline, so the first build showed the time alone. I asked for the bar back. The page now notes the device time at which it first sees a quote, when it creates the payment or gets a new quote, and draws the time left as a share of the time between that moment and the deadline. After a reload it has no such moment, so it shows the time alone until the next quote. The bar is decoration: the number beside it is the information.
 
 **The tab returning is an event.** When the tab becomes visible again, the page recomputes at once and polls at once, so the shopper never acts on a stale screen.
 
@@ -514,7 +514,7 @@ Things I left out on purpose, and what each would need:
 - **Making "money was seen" permanent for a quote.** Today a quote that goes `detected`, back to `awaiting_payment`, then `expired` offers a new quote behind the tick box. Treating it as a dead end would be stricter, at the cost of the dropped-transaction path.
 - **A new quote after a partial payment.** Needs the backend to define what happens to funds already sent.
 - **Checking every poll against the shopper's choice.** Needs the choice to survive a reload (section 9).
-- **A bar under the countdown.** Needs the quote's lifetime or start time in the response.
+- **The countdown bar after a reload.** The bar is drawn only when the page saw the quote begin. Drawing it after a reload needs the quote's lifetime or start time in the response.
 - **A live readout and error messages in the dev panel.**
 - **Browser end-to-end tests.**
 - **A mock script that advances a payment by itself.** The dev panel's status buttons already reach every state.

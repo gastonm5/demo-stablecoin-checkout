@@ -19,6 +19,7 @@ export type Screen =
       clock: 'running'
       showAddress: true
       remainingMs: number
+      lifetimeMs: number | null // the deadline minus quoteStartedAt; null when that is null or not positive
     }
   | {
       kind: 'pay'
@@ -142,13 +143,22 @@ export function deriveScreen(input: ScreenInput): Screen {
 // The countdown is information, not authority: at zero only a server answer can show the address again.
 function payInFull(
   payment: With<'awaiting_payment'>,
-  { now, lastSuccessAt, lastFailureAt }: ScreenInput,
+  { sequence, now, lastSuccessAt, lastFailureAt }: ScreenInput,
 ): Screen {
   const deadline = Date.parse(payment.quote.expires_at)
   const left = remainingMs(payment.quote.expires_at, now)
   const pay = { kind: 'pay', mode: 'full', payment } as const
   if (left > 0) {
-    return { ...pay, clock: 'running', showAddress: true, remainingMs: left }
+    // Device start against a server deadline: the time left uses the same device clock, so the bar still empties at zero.
+    const lifetime =
+      sequence.quoteStartedAt === null ? 0 : deadline - sequence.quoteStartedAt
+    return {
+      ...pay,
+      clock: 'running',
+      showAddress: true,
+      remainingMs: left,
+      lifetimeMs: lifetime > 0 ? lifetime : null,
+    }
   }
   if (lastSuccessAt >= deadline && now - lastSuccessAt <= FRESH_ANSWER_MS) {
     return { ...pay, clock: 'still_valid', showAddress: true }
