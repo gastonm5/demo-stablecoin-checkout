@@ -10,6 +10,7 @@ export function useCopy(value: string): { state: CopyState; copy(): void } {
     state: 'idle',
   })
   const mounted = useRef(false)
+  const latest = useRef(0)
 
   useEffect(() => {
     mounted.current = true
@@ -28,9 +29,11 @@ export function useCopy(value: string): { state: CopyState; copy(): void } {
   }, [shown])
 
   function copy() {
-    // The clipboard can settle after the screen has moved on; that result is no longer anyone's.
+    // The clipboard can settle after the screen has moved on or after a newer copy; that result is no longer anyone's.
+    const attempt = ++latest.current
     const show = (state: CopyState) => {
-      if (mounted.current) setShown({ state, value })
+      if (mounted.current && attempt === latest.current)
+        setShown({ state, value })
     }
     try {
       navigator.clipboard.writeText(value).then(

@@ -183,4 +183,57 @@ test('shows copied for a copy of the new value', async () => {
   expect(result.current.state).toBe('copied')
 })
 
+function pendingWrite(): Settle {
+  const settle = {} as Settle
+  writeText.mockReturnValueOnce(
+    new Promise<void>((resolve, reject) =>
+      Object.assign(settle, { resolve, reject }),
+    ),
+  )
+  return settle
+}
+
+test.each([
+  [
+    'copied',
+    (settle: Settle) => settle.resolve(),
+    (settle: Settle) => settle.reject(new Error('denied')),
+  ],
+  [
+    'failed',
+    (settle: Settle) => settle.reject(new Error('denied')),
+    (settle: Settle) => settle.resolve(),
+  ],
+])(
+  'stays %s when an older copy of the same value settles last',
+  async (state, finishNewer, finishOlder) => {
+    const older = pendingWrite()
+    const newer = pendingWrite()
+    const { result } = renderCopy()
+    act(() => result.current.copy())
+    act(() => result.current.copy())
+    await act(async () => finishNewer(newer))
+    expect(result.current.state).toBe(state)
+    await act(async () => finishOlder(older))
+    expect(result.current.state).toBe(state)
+  },
+)
+
+test.each([
+  ['succeeds', (settle: Settle) => settle.resolve()],
+  ['fails', (settle: Settle) => settle.reject(new Error('denied'))],
+])(
+  'stays copied for the new value when a copy of the old value %s last',
+  async (_, finish) => {
+    const older = pendingWrite()
+    const { result, rerender } = renderCopyOf('163.69')
+    act(() => result.current.copy())
+    rerender({ value: '81.84' })
+    await copy(result)
+    expect(result.current.state).toBe('copied')
+    await act(async () => finish(older))
+    expect(result.current.state).toBe('copied')
+  },
+)
+
 type Settle = { resolve(): void; reject(reason: unknown): void }
