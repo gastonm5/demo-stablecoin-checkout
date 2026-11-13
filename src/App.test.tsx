@@ -75,20 +75,34 @@ test('a payment created past its deadline sends no check to the query it replace
   vi.mocked(createPayment).mockResolvedValue(makePayment())
   vi.mocked(getPayment).mockResolvedValue(makePayment())
   render(<App />)
+  await payWithUsdtOnTron()
+  expect(await screen.findByText(/This quote is still valid/)).toBeVisible()
+  expect(error).not.toHaveBeenCalled()
+})
+
+async function payWithUsdtOnTron() {
   const user = userEvent.setup()
-  await user.selectOptions(
-    await screen.findByRole('combobox', { name: 'Currency' }),
-    'USDT',
-  )
-  await user.selectOptions(
-    screen.getByRole('combobox', { name: 'Network' }),
-    'tron',
-  )
+  await user.click(await screen.findByRole('radio', { name: 'USDT Tether' }))
+  await user.click(screen.getByRole('radio', { name: /^Tron \(TRC-20\)/ }))
   await user.click(
     screen.getByRole('button', { name: 'Continue with USDT on Tron' }),
   )
-  expect(await screen.findByText(/This quote is still valid/)).toBeVisible()
-  expect(error).not.toHaveBeenCalled()
+}
+
+// jsdom has no layout, so this checks the classes that set the width and that one element keeps them.
+test('the checkout is 520 px wide without a payment and 940 px with one', async () => {
+  vi.mocked(getCurrencies).mockResolvedValue(currencies)
+  vi.mocked(createPayment).mockResolvedValue(makePayment())
+  vi.mocked(getPayment).mockResolvedValue(makePayment())
+  render(<App />)
+  const width = screen.getByRole('main').firstElementChild
+  expect(width).toHaveClass('max-w-[520px]')
+  expect(width).not.toHaveClass('max-w-[940px]')
+  await payWithUsdtOnTron()
+  await screen.findByText(/This quote is still valid/)
+  expect(screen.getByRole('main').firstElementChild).toBe(width)
+  expect(width).toHaveClass('max-w-[940px]')
+  expect(width).not.toHaveClass('max-w-[520px]')
 })
 
 test('opens on the picker', async () => {

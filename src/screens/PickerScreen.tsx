@@ -1,4 +1,5 @@
-import { useId } from 'react'
+import { useId, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { Choice } from '../api/endpoints'
 import type { Currency, OrderSummary } from '../api/schemas'
 import {
@@ -12,27 +13,27 @@ import { usePickerChoice } from '../hooks/usePickerChoice'
 import { Button } from '../components/Button'
 import { CheckoutCard } from '../components/CheckoutCard'
 import { NetworkChip } from '../components/NetworkChip'
+import { networkColours } from '../components/networkColours'
 import { Notice } from '../components/Notice'
 import { OrderHeader } from '../components/OrderHeader'
+import { PickerSection } from '../components/PickerSection'
 
 const STILL_WORKING_AFTER_MS = 4_000
 
-const label = 'mb-1.5 block text-label font-semibold text-ink-subtle'
 const note = 'text-small wrap-anywhere text-ink-subtle'
-const menu =
-  'peer w-full appearance-none rounded-control border-[1.5px] border-line bg-surface py-3 pr-10 pl-3.5 font-bold transition-colors duration-[120ms] disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-subtle'
-const chevron = (
-  <svg
-    aria-hidden="true"
-    viewBox="0 0 12 12"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    className="pointer-events-none absolute top-1/2 right-3.5 size-3 -translate-y-1/2 peer-disabled:text-ink-subtle"
-  >
-    <path d="M2.5 4.5 6 8l3.5-3.5" />
-  </svg>
+const CURRENCY_CHOSEN = 'border-ink bg-surface-sunken'
+const chip = 'size-6 text-label'
+
+const currencyText = (currency: Currency) => (
+  <span className="min-w-0 wrap-anywhere">
+    <b className="whitespace-nowrap">{currency.code}</b> {currency.name}
+  </span>
 )
+
+const chosenNetworkLook = (networkId: string) => {
+  const { border, tint } = networkColours(networkId)
+  return `${border} ${tint}`
+}
 
 export function PickerScreen({
   order,
@@ -57,6 +58,58 @@ export function PickerScreen({
   const { currency, network, choice } = picked
   const stillWorking = useDelayedFlag(submitting, STILL_WORKING_AFTER_MS)
   const id = useId()
+  // View state only: the section the shopper reopened with "Change".
+  const [changing, setChanging] = useState<'currency' | 'network' | null>(null)
+  // Adjusted while rendering: when a new currency clears the network, the closed row shrinks showing the one it had.
+  const [lastNetwork, setLastNetwork] = useState(network)
+  if (network && network !== lastNetwork) setLastNetwork(network)
+  const closedNetwork = network ?? lastNetwork
+  const currencySection = useRef<HTMLFieldSetElement>(null)
+  const networkSection = useRef<HTMLFieldSetElement>(null)
+  const continueButton = useRef<HTMLButtonElement>(null)
+
+  const currencyForm = !currency || changing === 'currency' ? 'open' : 'closed'
+  const networkForm = !currency
+    ? 'none'
+    : !network || changing === 'network'
+      ? 'open'
+      : 'closed'
+
+  // Each change is committed first, so what takes focus is no longer inert.
+  // A radio sits in a clipped box, which focus would otherwise scroll.
+  function chooseCurrency(code: string) {
+    flushSync(() => {
+      if (code !== picked.currencyCode) picked.setCurrency(code)
+      setChanging(null)
+    })
+    const networks = networkSection.current
+    const firstNetwork = networks?.querySelector('input')
+    // The network section stays closed only on a network already chosen.
+    if (networks?.querySelector('input:checked'))
+      continueButton.current?.focus()
+    else if (firstNetwork) firstNetwork.focus({ preventScroll: true })
+    // The server may list a currency with no networks, and then Change is the way back.
+    else
+      currencySection.current
+        ?.querySelector('button')
+        ?.focus({ preventScroll: true })
+  }
+
+  function chooseNetwork(networkId: string) {
+    flushSync(() => {
+      picked.setNetwork(networkId)
+      setChanging((section) => (section === 'network' ? null : section))
+    })
+    continueButton.current?.focus()
+  }
+
+  function reopen(section: 'currency' | 'network') {
+    flushSync(() => setChanging(section))
+    const fieldset = section === 'currency' ? currencySection : networkSection
+    fieldset.current
+      ?.querySelector<HTMLInputElement>('input:checked')
+      ?.focus({ preventScroll: true })
+  }
 
   let button = 'Continue'
   if (submitting) button = 'Working…'
@@ -75,127 +128,123 @@ export function PickerScreen({
               We couldn't find that payment. Choose how to pay to start again.
             </Notice>
           )}
-          <h1 className="mb-4 text-title font-extrabold tracking-[-.01em]">
+          <h1 className="text-title font-extrabold tracking-[-.01em]">
             Choose how to pay
           </h1>
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-            <div>
-              <label htmlFor={`${id}-currency`} className={label}>
-                Currency
-              </label>
-              <div className="relative">
-                <select
-                  id={`${id}-currency`}
-                  className={menu}
-                  value={picked.currencyCode}
-                  disabled={submitting}
-                  onChange={(event) => picked.setCurrency(event.target.value)}
-                >
-                  <option value="" disabled>
-                    Choose currency
-                  </option>
-                  {currencies.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {`${c.code}\u00a0 ${c.name}`}
-                    </option>
-                  ))}
-                </select>
-                {chevron}
-              </div>
-            </div>
-            <div>
-              <label htmlFor={`${id}-network`} className={label}>
-                Network
-              </label>
-              <div className="relative">
-                <select
-                  id={`${id}-network`}
-                  className={menu}
-                  value={picked.networkId}
-                  disabled={submitting || !currency}
-                  onChange={(event) => picked.setNetwork(event.target.value)}
-                >
-                  <option value="" disabled>
-                    Choose network
-                  </option>
-                  {currency?.networks.map((n) => (
-                    <option key={n.id} value={n.id}>
-                      {/* The closed menu shows the selected option's text, so the chosen one has the name alone to fit; its fee and time are on the line below. */}
-                      {n.id === picked.networkId
-                        ? n.name
-                        : `${n.name} · fee ${formatUsdFee(n.network_fee)} · usually ${usualTime(n.avg_confirmation_seconds)}`}
-                    </option>
-                  ))}
-                </select>
-                {chevron}
-              </div>
-            </div>
-          </div>
+          <PickerSection
+            ref={currencySection}
+            legend="Currency"
+            name={`${id}-currency`}
+            form={currencyForm}
+            options={currencies.map((c) => ({
+              value: c.code,
+              content: currencyText(c),
+              chosenLook: CURRENCY_CHOSEN,
+              accent: 'accent-ink',
+            }))}
+            value={picked.currencyCode}
+            chosen={currency && currencyText(currency)}
+            chosenLook={CURRENCY_CHOSEN}
+            disabled={submitting}
+            onChoose={chooseCurrency}
+            onReopen={() => reopen('currency')}
+          />
+          <PickerSection
+            ref={networkSection}
+            legend="Network"
+            name={`${id}-network`}
+            form={networkForm}
+            options={(currency?.networks ?? []).map((n) => ({
+              value: n.id,
+              content: (
+                <>
+                  <NetworkChip
+                    networkId={n.id}
+                    networkName={n.name}
+                    className={chip}
+                  />
+                  <span className="min-w-0 wrap-anywhere">
+                    <span className="block font-semibold">{n.name}</span>{' '}
+                    <span className="block text-small text-ink-subtle">
+                      {`Fee ${formatUsdFee(n.network_fee)} · usually ${usualTime(n.avg_confirmation_seconds)}`}
+                    </span>
+                  </span>
+                </>
+              ),
+              chosenLook: chosenNetworkLook(n.id),
+              accent: networkColours(n.id).accent,
+            }))}
+            value={picked.networkId}
+            chosen={
+              closedNetwork && (
+                <>
+                  <NetworkChip
+                    networkId={closedNetwork.id}
+                    networkName={closedNetwork.name}
+                    className={chip}
+                  />
+                  <span className="min-w-0 font-semibold wrap-anywhere">
+                    {closedNetwork.name}
+                  </span>
+                </>
+              )
+            }
+            chosenLook={
+              closedNetwork ? chosenNetworkLook(closedNetwork.id) : ''
+            }
+            disabled={submitting}
+            onChoose={chooseNetwork}
+            onReopen={() => reopen('network')}
+          />
           {/* Each entrance on this screen plays when its element mounts, so changing the network afterwards does not replay it. */}
           {network && (
             <p className={`mt-3.5 ${note} entrance entrance-settle`}>
               {`Fee ${formatUsdFee(network.network_fee)} · usually ${usualTime(network.avg_confirmation_seconds)} · ${confirmationsLabel(network.required_confirmations)}`}
             </p>
           )}
-        </>
-      }
-      right={
-        <>
-          {currency && network && (
-            <>
-              <div className="entrance entrance-settle">
-                <div className={label}>You are paying with</div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-surface-inverse py-1.5 pr-3.5 pl-1.5 text-small font-bold text-ink-inverse">
-                  <NetworkChip
-                    networkId={network.id}
-                    networkName={network.name}
-                    className="size-[26px] text-small"
-                  />
-                  <span className="min-w-0 wrap-anywhere">{`${currency.code} on ${network.name}`}</span>
-                </div>
-              </div>
+          <div className="mt-5 flex flex-col gap-4">
+            <Button
+              ref={continueButton}
+              variant="primary"
+              busy={submitting}
+              disabled={!choice}
+              colours={network && networkColours(network.id)}
+              className="w-full wrap-anywhere"
+              onClick={() => {
+                if (choice) onSubmit(choice)
+              }}
+            >
+              {button}
+            </Button>
+            {currency && network && (
               <p className={`${note} entrance entrance-settle`}>
                 {`Your wallet or exchange must be able to send ${currency.code} on the ${networkShortName(network.name)} network.`}
               </p>
-            </>
-          )}
-          <Button
-            variant="primary"
-            busy={submitting}
-            disabled={!choice}
-            className="w-full wrap-anywhere"
-            onClick={() => {
-              if (choice) onSubmit(choice)
-            }}
-          >
-            {button}
-          </Button>
-          {stillWorking && (
-            <p role="status" className={`${note} entrance entrance-fade`}>
-              Still working…
-            </p>
-          )}
-          {error != null && (
-            <p
-              role="alert"
-              className="text-small font-semibold text-bad entrance entrance-fade"
-            >
-              We couldn't reach the payment service. Try again.
-            </p>
-          )}
-          <p className={note}>
-            The amount to send and the address are shown next.
-          </p>
-          {mode === 'requote' && onCancel && (
-            <Button
-              variant="link"
-              className="self-start"
-              disabled={submitting}
-              onClick={onCancel}
-            >
-              Back
-            </Button>
-          )}
+            )}
+            {stillWorking && (
+              <p role="status" className={`${note} entrance entrance-fade`}>
+                Still working…
+              </p>
+            )}
+            {error != null && (
+              <p
+                role="alert"
+                className="text-small font-semibold text-bad entrance entrance-fade"
+              >
+                We couldn't reach the payment service. Try again.
+              </p>
+            )}
+            {mode === 'requote' && onCancel && (
+              <Button
+                variant="link"
+                className="self-start"
+                disabled={submitting}
+                onClick={onCancel}
+              >
+                Back
+              </Button>
+            )}
+          </div>
         </>
       }
     />

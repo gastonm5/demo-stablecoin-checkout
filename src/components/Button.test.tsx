@@ -51,3 +51,31 @@ test('a click reaches the handler, and not when disabled', async () => {
   await user.click(screen.getByRole('button'))
   expect(onClick).toHaveBeenCalledOnce()
 })
+
+test('a primary button given colours takes that fill, and keeps the disabled look', () => {
+  const colours = { fill: 'bg-network-solana', onFill: 'text-ink' }
+  const { rerender } = render(
+    <Button variant="primary" colours={colours}>
+      Go
+    </Button>,
+  )
+  const button = screen.getByRole('button', { name: 'Go' })
+  expect(button).toHaveClass(
+    'bg-network-solana',
+    'text-ink',
+    'hover:brightness-95',
+    'active:brightness-90',
+    'disabled:bg-action-disabled',
+    'disabled:text-ink-muted',
+    'disabled:brightness-100',
+  )
+  expect(button).not.toHaveClass('bg-action')
+  expect(button).not.toHaveClass('text-ink-inverse')
+  rerender(
+    // @ts-expect-error A fill is for a primary button only.
+    <Button variant="secondary" colours={colours}>
+      Go
+    </Button>,
+  )
+  expect(button).not.toHaveClass('bg-network-solana')
+})

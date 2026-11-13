@@ -60,7 +60,7 @@ export function PaymentView({
     if (!entry || !screen) {
       // A reload during an outage has no status to show yet, so the notice is the only thing that says why.
       return (
-        <div className="mx-auto w-full max-w-[940px] overflow-hidden rounded-card border border-line bg-surface text-body">
+        <div className="overflow-hidden rounded-card border border-line bg-surface text-body">
           <p className="px-8 py-7 text-center text-ink-muted">
             Loading your payment…
           </p>
