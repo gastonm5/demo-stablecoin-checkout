@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 988 318" width="988" height="318" role="img" aria-label="When the server says expired, the page asks two questions. If the status just before carried money, the screen is a dead end with no new quote. Otherwise, if the page's history started at a reload, the screen uses cautious wording. Otherwise it is the plain expired screen. Both of the last two offer a new quote behind a tick box.">
+<title>When the server says expired, the page asks two questions. If the status just before carried money, the screen is a dead end with no new quote. Otherwise, if the page's history started at a reload, the screen uses cautious wording. Otherwise it is the plain expired screen. Both of the last two offer a new quote behind a tick box.</title>
+<style>
+  svg {
+    --surface: #ffffff; --fg: #14161a; --muted: #586170; --line: #7b8594; --bg: #f5f6f9;
+    --move: #2a55cf; --move-bg: #e6edfd; --wait: #9a5b00; --wait-bg: #fbefd6;
+    --final: #4a5567; --final-bg: #e8ebf1; --stop: #b3261e; --stop-bg: #fbe8e6;
+    --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    color: var(--line);
+  }
+  @media (prefers-color-scheme: dark) {
+    svg {
+      --surface: #171b22; --fg: #e9ecf1; --muted: #9ca6b4; --line: #7f8a99; --bg: #0f1217;
+      --move: #93b2ff; --move-bg: #1a2742; --wait: #f0b65a; --wait-bg: #33270f;
+      --final: #b1bac8; --final-bg: #232a34; --stop: #ff8f85; --stop-bg: #3a1c1a;
+    }
+  }
+  .card { fill: var(--surface); stroke: none; }
+  .t-name { font-family: var(--mono); font-size: 13px; font-weight: 500; fill: var(--fg); }
+  .t-title { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--fg); }
+  .t-sub { font-family: var(--sans); font-size: 11.5px; fill: var(--muted); }
+  .t-lbl { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+  .t-band { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; font-weight: 600; }
+  .t-band.move { fill: var(--move); } .t-band.wait { fill: var(--wait); } .t-band.final { fill: var(--final); }
+  .edge { fill: none; stroke: currentColor; stroke-width: 1.4; }
+  .edge.rare { stroke-dasharray: 5 4; }
+  .band { stroke: none; opacity: .6; }
+  .band.move { fill: var(--move-bg); } .band.wait { fill: var(--wait-bg); } .band.final { fill: var(--final-bg); }
+  .node { stroke-width: 1.5; }
+  .node.move { fill: var(--surface); stroke: var(--move); }
+  .node.wait { fill: var(--surface); stroke: var(--wait); }
+  .node.final { fill: var(--surface); stroke: var(--final); }
+  .node.plain { fill: var(--surface); stroke: var(--line); }
+  .node.stop { fill: var(--stop-bg); stroke: var(--stop); }
+  .node.fn { fill: var(--fg); stroke: var(--fg); }
+  .t-fn { font-family: var(--mono); font-size: 15px; font-weight: 600; fill: var(--bg); }
+  .t-fnsub { font-family: var(--sans); font-size: 11.5px; fill: var(--bg); opacity: .75; }
+  .dot { fill: var(--move); stroke: none; }
+  .frame { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-dasharray: 3 5; }
+  .axis { stroke: currentColor; stroke-width: 1; opacity: .5; }
+  .poll { fill: var(--move); stroke: none; }
+  .poll.fail { fill: var(--surface); stroke: var(--stop); stroke-width: 1.6; }
+</style>
+<rect class="card" x="-14" y="-14" width="988" height="318" rx="14"/>
+          <defs>
+            <marker id="ex-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <text class="t-lbl" x="94" y="30" text-anchor="middle">server says</text>
+          <rect class="node move" x="24" y="38" width="140" height="44" rx="22"/>
+          <text class="t-name" x="94" y="65" text-anchor="middle">expired</text>
+
+          <path class="edge" d="M164,60 H230" marker-end="url(#ex-arrow)"/>
+          <rect class="node plain" x="230" y="30" width="290" height="60" rx="8"/>
+          <text class="t-title" x="375" y="56" text-anchor="middle">Did the status just before it</text>
+          <text class="t-title" x="375" y="74" text-anchor="middle">carry money?</text>
+
+          <path class="edge" d="M520,60 H620" marker-end="url(#ex-arrow)"/>
+          <text class="t-lbl" x="570" y="52" text-anchor="middle">yes</text>
+          <rect class="node stop" x="620" y="30" width="316" height="60" rx="8"/>
+          <text class="t-title" x="636" y="56">Dead end</text>
+          <text class="t-sub" x="636" y="74">no new quote, no change link · contact the merchant</text>
+
+          <path class="edge" d="M375,90 V150" marker-end="url(#ex-arrow)"/>
+          <text class="t-lbl" x="385" y="124">no</text>
+          <rect class="node plain" x="230" y="150" width="290" height="60" rx="8"/>
+          <text class="t-title" x="375" y="176" text-anchor="middle">Did this page's history</text>
+          <text class="t-title" x="375" y="194" text-anchor="middle">start at a reload?</text>
+
+          <path class="edge" d="M520,180 H620" marker-end="url(#ex-arrow)"/>
+          <text class="t-lbl" x="570" y="172" text-anchor="middle">yes</text>
+          <rect class="node move" x="620" y="150" width="316" height="60" rx="8"/>
+          <text class="t-title" x="636" y="176">Expired, cautious wording</text>
+          <text class="t-sub" x="636" y="194">"if you sent any funds, do not get a new quote"</text>
+
+          <path class="edge" d="M375,210 V252 H620" marker-end="url(#ex-arrow)"/>
+          <text class="t-lbl" x="385" y="240">no</text>
+          <rect class="node move" x="620" y="228" width="316" height="48" rx="8"/>
+          <text class="t-title" x="636" y="248">Expired</text>
+          <text class="t-sub" x="636" y="265">a new quote, behind "I have not sent a payment"</text>
+        </svg>

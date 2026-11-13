@@ -8,6 +8,7 @@ These describe the page as it is. When behaviour changes, they change in the sam
 | --- | --- |
 | [`design-doc.md`](design-doc.md) | What the page does and why: the flow, the state model, the structure, the countdown, decimals and failure states |
 | [`adr/`](adr/) | The five decisions with a real trade-off |
+| [`diagrams/`](diagrams/) | The figures the design doc shows, as hand-written SVG files |
 | [`../AGENTS.md`](../AGENTS.md) | The rules agents work under in this repo |
 
 ## Records

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 988 264" width="988" height="264" role="img" aria-label="Polling over one minute. Active statuses are polled every 3 seconds. Expired is polled every 15 seconds. When requests fail, the gap doubles from 6 to 12 to 24 seconds and is capped at 30, and a notice appears after the second failure in a row. After paid, overpaid, failed or a not-found answer, nothing is sent.">
+<title>Polling over one minute. Active statuses are polled every 3 seconds. Expired is polled every 15 seconds. When requests fail, the gap doubles from 6 to 12 to 24 seconds and is capped at 30, and a notice appears after the second failure in a row. After paid, overpaid, failed or a not-found answer, nothing is sent.</title>
+<style>
+  svg {
+    --surface: #ffffff; --fg: #14161a; --muted: #586170; --line: #7b8594; --bg: #f5f6f9;
+    --move: #2a55cf; --move-bg: #e6edfd; --wait: #9a5b00; --wait-bg: #fbefd6;
+    --final: #4a5567; --final-bg: #e8ebf1; --stop: #b3261e; --stop-bg: #fbe8e6;
+    --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    color: var(--line);
+  }
+  @media (prefers-color-scheme: dark) {
+    svg {
+      --surface: #171b22; --fg: #e9ecf1; --muted: #9ca6b4; --line: #7f8a99; --bg: #0f1217;
+      --move: #93b2ff; --move-bg: #1a2742; --wait: #f0b65a; --wait-bg: #33270f;
+      --final: #b1bac8; --final-bg: #232a34; --stop: #ff8f85; --stop-bg: #3a1c1a;
+    }
+  }
+  .card { fill: var(--surface); stroke: none; }
+  .t-name { font-family: var(--mono); font-size: 13px; font-weight: 500; fill: var(--fg); }
+  .t-title { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--fg); }
+  .t-sub { font-family: var(--sans); font-size: 11.5px; fill: var(--muted); }
+  .t-lbl { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+  .t-band { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; font-weight: 600; }
+  .t-band.move { fill: var(--move); } .t-band.wait { fill: var(--wait); } .t-band.final { fill: var(--final); }
+  .edge { fill: none; stroke: currentColor; stroke-width: 1.4; }
+  .edge.rare { stroke-dasharray: 5 4; }
+  .band { stroke: none; opacity: .6; }
+  .band.move { fill: var(--move-bg); } .band.wait { fill: var(--wait-bg); } .band.final { fill: var(--final-bg); }
+  .node { stroke-width: 1.5; }
+  .node.move { fill: var(--surface); stroke: var(--move); }
+  .node.wait { fill: var(--surface); stroke: var(--wait); }
+  .node.final { fill: var(--surface); stroke: var(--final); }
+  .node.plain { fill: var(--surface); stroke: var(--line); }
+  .node.stop { fill: var(--stop-bg); stroke: var(--stop); }
+  .node.fn { fill: var(--fg); stroke: var(--fg); }
+  .t-fn { font-family: var(--mono); font-size: 15px; font-weight: 600; fill: var(--bg); }
+  .t-fnsub { font-family: var(--sans); font-size: 11.5px; fill: var(--bg); opacity: .75; }
+  .dot { fill: var(--move); stroke: none; }
+  .frame { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-dasharray: 3 5; }
+  .axis { stroke: currentColor; stroke-width: 1; opacity: .5; }
+  .poll { fill: var(--move); stroke: none; }
+  .poll.fail { fill: var(--surface); stroke: var(--stop); stroke-width: 1.6; }
+</style>
+<rect class="card" x="-14" y="-14" width="988" height="264" rx="14"/>
+          <line class="axis" x1="220" y1="204" x2="920" y2="204"/>
+          <line class="axis" x1="220" y1="200" x2="220" y2="208"/><text class="t-sub" x="220" y="224" text-anchor="middle">0 s</text>
+          <line class="axis" x1="395" y1="200" x2="395" y2="208"/><text class="t-sub" x="395" y="224" text-anchor="middle">15 s</text>
+          <line class="axis" x1="570" y1="200" x2="570" y2="208"/><text class="t-sub" x="570" y="224" text-anchor="middle">30 s</text>
+          <line class="axis" x1="745" y1="200" x2="745" y2="208"/><text class="t-sub" x="745" y="224" text-anchor="middle">45 s</text>
+          <line class="axis" x1="920" y1="200" x2="920" y2="208"/><text class="t-sub" x="920" y="224" text-anchor="middle">60 s</text>
+
+          <text class="t-title" x="20" y="38">Active statuses</text>
+          <text class="t-sub" x="20" y="54">every 3 s</text>
+          <line class="axis" x1="220" y1="42" x2="920" y2="42"/>
+          <circle class="poll" cx="255" cy="42" r="4.5"/><circle class="poll" cx="290" cy="42" r="4.5"/><circle class="poll" cx="325" cy="42" r="4.5"/><circle class="poll" cx="360" cy="42" r="4.5"/><circle class="poll" cx="395" cy="42" r="4.5"/>
+          <circle class="poll" cx="430" cy="42" r="4.5"/><circle class="poll" cx="465" cy="42" r="4.5"/><circle class="poll" cx="500" cy="42" r="4.5"/><circle class="poll" cx="535" cy="42" r="4.5"/><circle class="poll" cx="570" cy="42" r="4.5"/>
+          <circle class="poll" cx="605" cy="42" r="4.5"/><circle class="poll" cx="640" cy="42" r="4.5"/><circle class="poll" cx="675" cy="42" r="4.5"/><circle class="poll" cx="710" cy="42" r="4.5"/><circle class="poll" cx="745" cy="42" r="4.5"/>
+          <circle class="poll" cx="780" cy="42" r="4.5"/><circle class="poll" cx="815" cy="42" r="4.5"/><circle class="poll" cx="850" cy="42" r="4.5"/><circle class="poll" cx="885" cy="42" r="4.5"/><circle class="poll" cx="920" cy="42" r="4.5"/>
+
+          <text class="t-name" x="20" y="84">expired</text>
+          <text class="t-sub" x="20" y="100">every 15 s, for a late payment</text>
+          <line class="axis" x1="220" y1="88" x2="920" y2="88"/>
+          <circle class="poll" cx="395" cy="88" r="4.5"/><circle class="poll" cx="570" cy="88" r="4.5"/><circle class="poll" cx="745" cy="88" r="4.5"/><circle class="poll" cx="920" cy="88" r="4.5"/>
+
+          <text class="t-title" x="20" y="130">Requests failing</text>
+          <text class="t-sub" x="20" y="146">gaps of 6, 12, 24, then 30 s</text>
+          <line class="axis" x1="220" y1="134" x2="920" y2="134"/>
+          <circle class="poll fail" cx="255" cy="134" r="4.5"/><circle class="poll fail" cx="325" cy="134" r="4.5"/><circle class="poll fail" cx="465" cy="134" r="4.5"/><circle class="poll fail" cx="745" cy="134" r="4.5"/>
+          <text class="t-lbl" x="333" y="122">notice appears after the 2nd failure in a row</text>
+
+          <text class="t-title" x="20" y="176">Final, or not found</text>
+          <text class="t-sub" x="20" y="192">paid, overpaid, failed, 404</text>
+          <line class="axis" x1="220" y1="180" x2="920" y2="180"/>
+          <text class="t-lbl" x="232" y="174">nothing is sent: not from the timer, the tab returning, a reconnect or "Try now"</text>
+        </svg>

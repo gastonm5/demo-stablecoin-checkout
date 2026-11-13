@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 988 378" width="988" height="378" role="img" aria-label="While the server says awaiting_payment, the pay screen has four states. Counting down shows the address. At zero it becomes Time's up, checking, with the address hidden. If the server still says awaiting_payment the address returns without a timer. If the check fails the page says it cannot confirm. An expired answer from the server, at any point, leads to the expired screen.">
+<title>While the server says awaiting_payment, the pay screen has four states. Counting down shows the address. At zero it becomes Time's up, checking, with the address hidden. If the server still says awaiting_payment the address returns without a timer. If the check fails the page says it cannot confirm. An expired answer from the server, at any point, leads to the expired screen.</title>
+<style>
+  svg {
+    --surface: #ffffff; --fg: #14161a; --muted: #586170; --line: #7b8594; --bg: #f5f6f9;
+    --move: #2a55cf; --move-bg: #e6edfd; --wait: #9a5b00; --wait-bg: #fbefd6;
+    --final: #4a5567; --final-bg: #e8ebf1; --stop: #b3261e; --stop-bg: #fbe8e6;
+    --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    color: var(--line);
+  }
+  @media (prefers-color-scheme: dark) {
+    svg {
+      --surface: #171b22; --fg: #e9ecf1; --muted: #9ca6b4; --line: #7f8a99; --bg: #0f1217;
+      --move: #93b2ff; --move-bg: #1a2742; --wait: #f0b65a; --wait-bg: #33270f;
+      --final: #b1bac8; --final-bg: #232a34; --stop: #ff8f85; --stop-bg: #3a1c1a;
+    }
+  }
+  .card { fill: var(--surface); stroke: none; }
+  .t-name { font-family: var(--mono); font-size: 13px; font-weight: 500; fill: var(--fg); }
+  .t-title { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--fg); }
+  .t-sub { font-family: var(--sans); font-size: 11.5px; fill: var(--muted); }
+  .t-lbl { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+  .t-band { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; font-weight: 600; }
+  .t-band.move { fill: var(--move); } .t-band.wait { fill: var(--wait); } .t-band.final { fill: var(--final); }
+  .edge { fill: none; stroke: currentColor; stroke-width: 1.4; }
+  .edge.rare { stroke-dasharray: 5 4; }
+  .band { stroke: none; opacity: .6; }
+  .band.move { fill: var(--move-bg); } .band.wait { fill: var(--wait-bg); } .band.final { fill: var(--final-bg); }
+  .node { stroke-width: 1.5; }
+  .node.move { fill: var(--surface); stroke: var(--move); }
+  .node.wait { fill: var(--surface); stroke: var(--wait); }
+  .node.final { fill: var(--surface); stroke: var(--final); }
+  .node.plain { fill: var(--surface); stroke: var(--line); }
+  .node.stop { fill: var(--stop-bg); stroke: var(--stop); }
+  .node.fn { fill: var(--fg); stroke: var(--fg); }
+  .t-fn { font-family: var(--mono); font-size: 15px; font-weight: 600; fill: var(--bg); }
+  .t-fnsub { font-family: var(--sans); font-size: 11.5px; fill: var(--bg); opacity: .75; }
+  .dot { fill: var(--move); stroke: none; }
+  .frame { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-dasharray: 3 5; }
+  .axis { stroke: currentColor; stroke-width: 1; opacity: .5; }
+  .poll { fill: var(--move); stroke: none; }
+  .poll.fail { fill: var(--surface); stroke: var(--stop); stroke-width: 1.6; }
+</style>
+<rect class="card" x="-14" y="-14" width="988" height="378" rx="14"/>
+          <defs>
+            <marker id="cz-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <rect class="frame" x="16" y="14" width="904" height="218" rx="12"/>
+          <text class="t-lbl" x="30" y="36">while the server says</text>
+          <text class="t-name" x="164" y="36">awaiting_payment</text>
+
+          <path class="edge" d="M230,178 H350" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="290" y="170" text-anchor="middle">clock reaches zero</text>
+          <text class="t-lbl" x="290" y="194" text-anchor="middle">asks the server</text>
+
+          <path class="edge" d="M560,166 H610 V78 H660" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="602" y="118" text-anchor="end">server: awaiting_payment</text>
+          <path class="edge" d="M560,190 H660" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="610" y="184" text-anchor="middle">check fails</text>
+
+          <path class="edge" d="M720,106 V150" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="712" y="132" text-anchor="end">silent 10 s</text>
+          <path class="edge" d="M820,150 V106" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="828" y="132">fresh answer</text>
+
+          <path class="edge" d="M455,206 V292 H660" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="465" y="284">server: expired</text>
+          <path class="edge" d="M135,206 V316 H660" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="145" y="308">server: expired, even with time left on the clock</text>
+          <path class="edge" d="M770,206 V276" marker-end="url(#cz-arrow)"/>
+          <text class="t-lbl" x="780" y="246">server: expired</text>
+
+          <rect class="node move" x="40" y="150" width="190" height="56" rx="8"/>
+          <text class="t-title" x="135" y="174" text-anchor="middle">Counting down</text>
+          <text class="t-sub" x="135" y="192" text-anchor="middle">address shown · timer</text>
+          <circle class="dot" cx="218" cy="162" r="4"/>
+
+          <rect class="node plain" x="350" y="150" width="210" height="56" rx="8"/>
+          <text class="t-title" x="455" y="174" text-anchor="middle">Time's up, checking</text>
+          <text class="t-sub" x="455" y="192" text-anchor="middle">address hidden</text>
+
+          <rect class="node move" x="660" y="50" width="220" height="56" rx="8"/>
+          <text class="t-title" x="770" y="74" text-anchor="middle">Quote still valid</text>
+          <text class="t-sub" x="770" y="92" text-anchor="middle">address shown · no timer</text>
+          <circle class="dot" cx="868" cy="62" r="4"/>
+
+          <rect class="node plain" x="660" y="150" width="220" height="56" rx="8"/>
+          <text class="t-title" x="770" y="174" text-anchor="middle">Can't confirm</text>
+          <text class="t-sub" x="770" y="192" text-anchor="middle">address hidden</text>
+
+          <rect class="node move" x="660" y="276" width="220" height="56" rx="8"/>
+          <text class="t-title" x="770" y="300" text-anchor="middle">Expired screen</text>
+          <text class="t-sub" x="770" y="318" text-anchor="middle">a new quote, behind a tick box</text>
+        </svg>

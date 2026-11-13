@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 1028 538" width="1028" height="538" role="img" aria-label="State chart of the eight payment statuses. A payment starts at awaiting_payment. Full payment moves it to detected, confirming, then paid or overpaid. A partial payment moves it to underpaid, and the rest arriving moves it to detected. The deadline moves awaiting_payment to expired, and a requote moves expired back to awaiting_payment. Any non-final status can fail.">
+<title>State chart of the eight payment statuses. A payment starts at awaiting_payment. Full payment moves it to detected, confirming, then paid or overpaid. A partial payment moves it to underpaid, and the rest arriving moves it to detected. The deadline moves awaiting_payment to expired, and a requote moves expired back to awaiting_payment. Any non-final status can fail.</title>
+<style>
+  svg {
+    --surface: #ffffff; --fg: #14161a; --muted: #586170; --line: #7b8594; --bg: #f5f6f9;
+    --move: #2a55cf; --move-bg: #e6edfd; --wait: #9a5b00; --wait-bg: #fbefd6;
+    --final: #4a5567; --final-bg: #e8ebf1; --stop: #b3261e; --stop-bg: #fbe8e6;
+    --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    color: var(--line);
+  }
+  @media (prefers-color-scheme: dark) {
+    svg {
+      --surface: #171b22; --fg: #e9ecf1; --muted: #9ca6b4; --line: #7f8a99; --bg: #0f1217;
+      --move: #93b2ff; --move-bg: #1a2742; --wait: #f0b65a; --wait-bg: #33270f;
+      --final: #b1bac8; --final-bg: #232a34; --stop: #ff8f85; --stop-bg: #3a1c1a;
+    }
+  }
+  .card { fill: var(--surface); stroke: none; }
+  .t-name { font-family: var(--mono); font-size: 13px; font-weight: 500; fill: var(--fg); }
+  .t-title { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--fg); }
+  .t-sub { font-family: var(--sans); font-size: 11.5px; fill: var(--muted); }
+  .t-lbl { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+  .t-band { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; font-weight: 600; }
+  .t-band.move { fill: var(--move); } .t-band.wait { fill: var(--wait); } .t-band.final { fill: var(--final); }
+  .edge { fill: none; stroke: currentColor; stroke-width: 1.4; }
+  .edge.rare { stroke-dasharray: 5 4; }
+  .band { stroke: none; opacity: .6; }
+  .band.move { fill: var(--move-bg); } .band.wait { fill: var(--wait-bg); } .band.final { fill: var(--final-bg); }
+  .node { stroke-width: 1.5; }
+  .node.move { fill: var(--surface); stroke: var(--move); }
+  .node.wait { fill: var(--surface); stroke: var(--wait); }
+  .node.final { fill: var(--surface); stroke: var(--final); }
+  .node.plain { fill: var(--surface); stroke: var(--line); }
+  .node.stop { fill: var(--stop-bg); stroke: var(--stop); }
+  .node.fn { fill: var(--fg); stroke: var(--fg); }
+  .t-fn { font-family: var(--mono); font-size: 15px; font-weight: 600; fill: var(--bg); }
+  .t-fnsub { font-family: var(--sans); font-size: 11.5px; fill: var(--bg); opacity: .75; }
+  .dot { fill: var(--move); stroke: none; }
+  .frame { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-dasharray: 3 5; }
+  .axis { stroke: currentColor; stroke-width: 1; opacity: .5; }
+  .poll { fill: var(--move); stroke: none; }
+  .poll.fail { fill: var(--surface); stroke: var(--stop); stroke-width: 1.6; }
+</style>
+<rect class="card" x="-14" y="-14" width="1028" height="538" rx="14"/>
+          <defs>
+            <marker id="lc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <rect class="band move" x="50" y="36" width="270" height="404" rx="12"/>
+          <rect class="band wait" x="384" y="36" width="396" height="124" rx="12"/>
+          <rect class="band final" x="800" y="36" width="180" height="404" rx="12"/>
+          <text class="t-band move" x="64" y="58">YOUR MOVE</text>
+          <text class="t-band wait" x="398" y="58">WAIT</text>
+          <text class="t-band final" x="814" y="58">FINAL</text>
+          <circle cx="225" cy="12" r="5" fill="currentColor"/>
+          <path class="edge" d="M225,17 V80" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="236" y="28">POST /api/payments</text>
+          <path class="edge" d="M300,102 H400" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="350" y="94" text-anchor="middle">money seen</text>
+          <text class="t-lbl" x="350" y="118" text-anchor="middle">0 confirmed</text>
+          <path class="edge" d="M530,102 H630" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="580" y="94" text-anchor="middle">1st confirmation</text>
+          <path class="edge" d="M760,102 H820" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="790" y="94" text-anchor="middle">N of N</text>
+          <path class="edge" d="M695,124 V242 H820" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="757" y="234" text-anchor="middle">more than due</text>
+          <path class="edge" d="M225,124 V220" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="235" y="176">less than due</text>
+          <path class="edge" d="M300,242 H445 V124" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="372" y="234" text-anchor="middle">the rest arrives</text>
+          <path class="edge rare" d="M225,264 V360" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="235" y="316">only if the server ends it</text>
+          <path class="edge" d="M150,110 H110 V374 H150" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="101" y="242" text-anchor="middle" transform="rotate(-90 101 242)">deadline passes</text>
+          <path class="edge" d="M150,392 H80 V94 H150" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="71" y="242" text-anchor="middle" transform="rotate(-90 71 242)">requote</text>
+          <path class="edge rare" d="M300,382 H490 V124" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="395" y="374" text-anchor="middle">late payment accepted</text>
+          <text class="t-lbl" x="786" y="376" text-anchor="end">from awaiting_payment, underpaid,</text>
+          <text class="t-lbl" x="786" y="392" text-anchor="end">detected or confirming</text>
+          <path class="edge" d="M792,382 H820" marker-end="url(#lc-arrow)"/>
+          <rect class="node move" x="150" y="80" width="150" height="44" rx="8"/>
+          <text class="t-name" x="225" y="107" text-anchor="middle">awaiting_payment</text>
+          <circle class="dot" cx="288" cy="91" r="4"/>
+          <rect class="node move" x="150" y="220" width="150" height="44" rx="8"/>
+          <text class="t-name" x="225" y="247" text-anchor="middle">underpaid</text>
+          <circle class="dot" cx="288" cy="231" r="4"/>
+          <rect class="node move" x="150" y="360" width="150" height="44" rx="8"/>
+          <text class="t-name" x="225" y="387" text-anchor="middle">expired</text>
+
+          <rect class="node wait" x="400" y="80" width="130" height="44" rx="8"/>
+          <text class="t-name" x="465" y="107" text-anchor="middle">detected</text>
+          <rect class="node wait" x="630" y="80" width="130" height="44" rx="8"/>
+          <text class="t-name" x="695" y="107" text-anchor="middle">confirming</text>
+
+          <rect class="node final" x="820" y="80" width="140" height="44" rx="8"/>
+          <text class="t-name" x="890" y="107" text-anchor="middle">paid</text>
+          <rect class="node final" x="820" y="220" width="140" height="44" rx="8"/>
+          <text class="t-name" x="890" y="247" text-anchor="middle">overpaid</text>
+          <rect class="node final" x="820" y="360" width="140" height="44" rx="8"/>
+          <text class="t-name" x="890" y="387" text-anchor="middle">failed</text>
+          <text class="t-lbl" x="890" y="462" text-anchor="middle">no request is sent after these</text>
+          <path class="edge" d="M60,490 H100" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="110" y="494">expected</text>
+          <path class="edge rare" d="M200,490 H240" marker-end="url(#lc-arrow)"/>
+          <text class="t-lbl" x="250" y="494">rare, and the page allows for it</text>
+          <circle class="dot" cx="470" cy="490" r="4"/>
+          <text class="t-lbl" x="482" y="494">the address and QR can be on screen</text>
+        </svg>

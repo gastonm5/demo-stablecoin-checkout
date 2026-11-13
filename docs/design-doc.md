@@ -60,27 +60,9 @@ The brief's lifecycle diagram shows four and says "there are six more". The API 
 
 ### 3.2 State chart
 
-```mermaid
-stateDiagram-v2
-    [*] --> awaiting_payment: POST /api/payments
-    awaiting_payment --> detected: money seen, 0 confirmations
-    detected --> confirming
-    confirming --> paid
-    confirming --> overpaid: more than due
-    awaiting_payment --> underpaid: less than due
-    underpaid --> detected: the rest arrives
-    awaiting_payment --> expired: deadline passes
-    underpaid --> expired: only if the server ends it
-    expired --> awaiting_payment: requote
-    expired --> detected: late payment accepted
-    awaiting_payment --> failed
-    underpaid --> failed
-    detected --> failed
-    confirming --> failed
-    paid --> [*]
-    overpaid --> [*]
-    failed --> [*]
-```
+![State chart of the eight payment statuses, grouped by what the shopper can do: your move, wait, final. Solid arrows are the transitions expected from a real server; dashed arrows are rare ones the page allows for.](diagrams/lifecycle.svg)
+
+The three shaded groups are the ones section 3.3 describes. A dot marks the two statuses where the address and QR can be on screen.
 
 These are the transitions I expect from a real server. **The page does not enforce them.** It renders whatever status the server reports, in any order, because the server is the only party that knows what happened on chain. The dev panel can set any status at any time, and the page has to cope with every order.
 
@@ -101,6 +83,8 @@ Fixable problems are `underpaid` (send the rest) and `expired` when no money was
 ### 3.4 From status to screen
 
 The screen is the output of one pure function. Its inputs are the server's status, the sequence of statuses seen (3.5), the device clock and the connection state.
+
+![Four inputs feed the pure function deriveScreen: the server's latest answer, the statuses seen so far, the device clock and the request history. It returns one of six screens. The request history also drives a notice strip laid over any screen.](diagrams/status-to-screen.svg)
 
 | Server status | Condition | Screen | Address and QR | Countdown | Poll |
 |---|---|---|---|---|---|
@@ -137,6 +121,10 @@ Its rules:
 - "For this quote" means the entries since the last creation or requote. A partial payment on an earlier quote does not change the wording for a later one.
 - The sequence records whether it started at creation or from a reload. After a reload the page cannot know whether money arrived earlier, so `expired` and `failed` use cautious wording: "If you sent any funds for this payment, do not get a new quote. Contact Nordwind Audio." If a resumed sequence later sees money, that evidence wins over the cautious wording.
 - `failed` carries only a reason and `expired` only a time. Any amount on those screens comes from the sequence, never from `total_due`.
+
+How the sequence decides which `expired` screen appears:
+
+![When the server says expired: if the status just before carried money, the screen is a dead end. Otherwise, if the page's history started at a reload, it uses cautious wording. Otherwise it is the plain expired screen.](diagrams/expired-three-screens.svg)
 
 ### 3.6 Unknown statuses
 
@@ -233,6 +221,8 @@ Further rules:
 
 Polling uses TanStack Query's own interval on one query per payment reference. The interval is a function of the last result: 3 s while active, 15 s on `expired`, off on final statuses, and doubling up to 30 s after consecutive failures.
 
+![Polling over one minute, to scale: every 3 seconds on active statuses, every 15 seconds on expired, gaps of 6, 12, 24 then 30 seconds while requests fail, and nothing after a final status or a not-found answer.](diagrams/polling-cadence.svg)
+
 - The library's built-in retries are off for this query, because the next poll is the retry.
 - A hidden tab pauses polling. One poll fires as the tab returns.
 - There is one query per payment reference, and every trigger goes through it: the interval, the tab returning, the check at zero and "Try now". A trigger that fires during a request joins that request instead of starting another.
@@ -324,6 +314,10 @@ Errors are `application/problem+json` with `type`, `title`, `status` and `detail
 | Server says `underpaid`, `detected` or later | The countdown is gone for good |
 
 Without a timer the page has no local deadline to rely on, which is why the untimed state depends on a recent answer from the server.
+
+![While the server says awaiting_payment, the pay screen has four states: counting down, time's up and checking, quote still valid, and can't confirm. An expired answer from the server at any point leads to the expired screen.](diagrams/countdown-at-zero.svg)
+
+In the figure, "silent 10 s" points at "can't confirm". More exactly, the address hides as "checking" while the page waits and as "can't confirm" once a request has failed.
 
 The clock errors behave differently, and I accept all three:
 
