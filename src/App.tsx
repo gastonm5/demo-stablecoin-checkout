@@ -39,6 +39,7 @@ function Checkout({ checkout }: { checkout: UseCheckoutResult }) {
         catalogue.error != null ? "We couldn't load the payment options." : null
       }
       onRetry={catalogue.retry}
+      stacked
     />
   )
 }
@@ -49,7 +50,12 @@ function Page() {
   return (
     <div className="flex">
       <main className="min-h-screen min-w-0 flex-1 bg-page px-4 py-8 text-ink md:py-16">
-        <Checkout checkout={checkout} />
+        {/* Mounted whatever the screen, so the width moves between the picker and a payment instead of jumping. */}
+        <div
+          className={`mx-auto w-full transition-[max-width] duration-200 ease-[cubic-bezier(.2,0,0,1)] ${checkout.view.kind === 'payment' ? 'max-w-[940px]' : 'max-w-[520px]'}`}
+        >
+          <Checkout checkout={checkout} />
+        </div>
       </main>
       <DevPanel reference={checkout.reference} entry={checkout.payment.entry} />
     </div>
