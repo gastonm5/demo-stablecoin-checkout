@@ -8,6 +8,7 @@ import { Button } from '../components/Button'
 import { CopyButton } from '../components/CopyButton'
 import { NetworkBanner } from '../components/NetworkBanner'
 import { Notice } from '../components/Notice'
+import { STRIP, STRIP_TEXT } from '../components/NoticeStrip'
 import { OrderHeader } from '../components/OrderHeader'
 import { QrFrame } from '../components/QrFrame'
 
@@ -145,10 +146,10 @@ export function PayScreen({
         )
       }
       strip={
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className={STRIP}>
           {notice ??
             (clockText && (
-              <span>
+              <span className={STRIP_TEXT}>
                 <strong>{clockText[0]}</strong> {clockText[1]}
               </span>
             ))}
@@ -156,7 +157,7 @@ export function PayScreen({
             <Button
               variant="link"
               onClick={onChange}
-              className="ml-auto whitespace-nowrap"
+              className="whitespace-nowrap"
             >
               Change currency or network
             </Button>

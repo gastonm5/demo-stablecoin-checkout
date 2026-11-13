@@ -12,7 +12,7 @@ import { ConfirmChangeDialog } from '../components/ConfirmChangeDialog'
 import { ExpiredScreen } from './ExpiredScreen'
 import { FailedScreen } from './FailedScreen'
 import { LoadingCard } from '../components/LoadingCard'
-import { connectionNotice } from '../components/NoticeStrip'
+import { connectionNotice, STRIP } from '../components/NoticeStrip'
 import { PayScreen } from './PayScreen'
 import { headline } from './statusText'
 import { WaitingScreen } from './WaitingScreen'
@@ -65,7 +65,9 @@ export function PaymentView({
             Loading your payment…
           </p>
           {notice && (
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line px-5 py-3.5 text-small md:px-8">
+            <div
+              className={`${STRIP} border-t border-line px-5 py-3.5 text-small md:px-8`}
+            >
               {notice}
             </div>
           )}
@@ -92,7 +94,7 @@ export function PaymentView({
               catalogue.retry()
               payment.checkNow()
             }}
-            strip={notice}
+            strip={notice && <div className={STRIP}>{notice}</div>}
           />
         )
       case 'waiting':

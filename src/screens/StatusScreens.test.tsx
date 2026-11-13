@@ -94,8 +94,12 @@ function expectAmount(digits: string, unit = 'USDT') {
   expect(within(amount).getByText(unit)).toHaveClass('whitespace-nowrap')
 }
 
-const buttonNames = () =>
-  screen.getAllByRole('button').map((button) => button.textContent)
+// By the name a screen reader hears: a copy button also holds an unseen copy of its label.
+function expectButtons(...names: string[]) {
+  expect(screen.getAllByRole('button')).toEqual(
+    names.map((name) => screen.getByRole('button', { name })),
+  )
+}
 
 test.each(['plain', 'cautious'] as const)(
   'expired, %s: the new quote and the change link need the tick box',
@@ -213,10 +217,7 @@ test('expired after a partial payment is a dead end', () => {
   expect(
     screen.queryByText('Change currency or network'),
   ).not.toBeInTheDocument()
-  expect(buttonNames()).toEqual([
-    'Copy transaction hash',
-    'Copy payment reference',
-  ])
+  expectButtons('Copy transaction hash', 'Copy payment reference')
 })
 
 test('expired after a full payment was seen is a dead end too', () => {
@@ -238,10 +239,7 @@ test('expired after a full payment was seen is a dead end too', () => {
   expect(
     screen.queryByText('Change currency or network'),
   ).not.toBeInTheDocument()
-  expect(buttonNames()).toEqual([
-    'Copy transaction hash',
-    'Copy payment reference',
-  ])
+  expectButtons('Copy transaction hash', 'Copy payment reference')
 })
 
 test('overpaid tells the truth about the extra', () => {
@@ -416,7 +414,9 @@ test.each(['yes', 'no', 'unknown'] as const)(
   'failed, money %s, has no button but the copy ones, and shows the reason code',
   (moneySeen) => {
     render(failed(moneySeen))
-    expect(buttonNames().every((name) => name?.startsWith('Copy '))).toBe(true)
+    expect(screen.getAllByRole('button')).toEqual(
+      screen.getAllByRole('button', { name: /^Copy / }),
+    )
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
     expect(
       screen.getByText('Reason code: settlement_rejected'),

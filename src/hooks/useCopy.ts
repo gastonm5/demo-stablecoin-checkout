@@ -6,7 +6,9 @@ const SHOWN_FOR_MS = { copied: 2_000, failed: 4_000 } as const
 
 export function useCopy(value: string): { state: CopyState; copy(): void } {
   // A new object on every copy, so a second copy restarts the timer even when the state is unchanged.
-  const [shown, setShown] = useState<{ state: CopyState }>({ state: 'idle' })
+  const [shown, setShown] = useState<{ state: CopyState; value?: string }>({
+    state: 'idle',
+  })
   const mounted = useRef(false)
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export function useCopy(value: string): { state: CopyState; copy(): void } {
   function copy() {
     // The clipboard can settle after the screen has moved on; that result is no longer anyone's.
     const show = (state: CopyState) => {
-      if (mounted.current) setShown({ state })
+      if (mounted.current) setShown({ state, value })
     }
     try {
       navigator.clipboard.writeText(value).then(
@@ -41,5 +43,6 @@ export function useCopy(value: string): { state: CopyState; copy(): void } {
     }
   }
 
-  return { state: shown.state, copy }
+  // Feedback belongs to the value it was for: once the value beside the button changes, it says nothing.
+  return { state: shown.value === value ? shown.state : 'idle', copy }
 }

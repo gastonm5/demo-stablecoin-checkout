@@ -21,10 +21,26 @@ afterEach(() => {
 })
 
 async function clickCopy() {
-  render(<CopyButton value="163.69" label="Copy amount" />)
+  const { container } = render(
+    <CopyButton value="163.69" label="Copy amount" />,
+  )
+  // Taken before the click, to show the sentence lands in a region that was already there.
+  const regions = [...container.querySelectorAll('[aria-live="polite"]')]
   const button = screen.getByRole('button', { name: 'Copy amount' })
   await act(async () => fireEvent.click(button))
+  return { button, regions }
 }
+
+// The sentence is on a line under the button, which keeps its label.
+function expectFailedUnder({ button, regions }: Clicked) {
+  const sentence = screen.getByText(FAILED)
+  expect(sentence).toHaveAttribute('aria-live', 'polite')
+  expect(regions).toContain(sentence)
+  expect(button).not.toContainElement(sentence)
+  expect(button).toHaveAccessibleName('Copy amount')
+}
+
+type Clicked = Awaited<ReturnType<typeof clickCopy>>
 
 test('says Copied, then goes back to its label', async () => {
   vi.useFakeTimers()
@@ -33,6 +49,8 @@ test('says Copied, then goes back to its label', async () => {
   expect(writeText).toHaveBeenCalledExactlyOnceWith('163.69')
   expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
   expect(screen.getByText('Copied')).toHaveAttribute('aria-live', 'polite')
+  // The unseen label that holds the button's width is not read out.
+  expect(screen.getByText('Copy amount')).toHaveAttribute('aria-hidden', 'true')
   act(() => vi.advanceTimersByTime(2_000))
   expect(screen.getByRole('button', { name: 'Copy amount' })).toBeVisible()
   expect(screen.queryByText('Copied')).not.toBeInTheDocument()
@@ -44,12 +62,10 @@ test('says copying failed when the clipboard rejects', async () => {
       new DOMException('Denied', 'NotAllowedError'),
     ),
   })
-  await clickCopy()
-  expect(screen.getByText(FAILED)).toHaveAttribute('aria-live', 'polite')
+  expectFailedUnder(await clickCopy())
 })
 
 test('says copying failed when there is no clipboard', async () => {
   setClipboard(undefined)
-  await clickCopy()
-  expect(screen.getByText(FAILED)).toHaveAttribute('aria-live', 'polite')
+  expectFailedUnder(await clickCopy())
 })
