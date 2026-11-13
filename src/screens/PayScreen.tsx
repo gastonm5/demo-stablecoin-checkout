@@ -61,14 +61,26 @@ export function PayScreen({
             networkId={quote.network}
             networkName={networkName}
           />
-          <p className={`mb-0.5 ${label}`}>
-            {remaining ? 'Send the remaining' : 'Send exactly'}
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="min-w-0 text-amount leading-[1.1] font-extrabold tracking-[-.02em] tabular-nums wrap-anywhere">
-              {amount} <span className="whitespace-nowrap">{currency}</span>
+          {/* Keyed by mode so the wash plays once when underpaid arrives, not on every poll. */}
+          <div
+            key={screen.mode}
+            className={
+              remaining
+                ? 'border-l-3 border-warn pl-3 motion-safe:animate-wash'
+                : undefined
+            }
+          >
+            <p
+              className={`mb-0.5 text-label font-semibold ${remaining ? 'text-warn' : 'text-ink-subtle'}`}
+            >
+              {remaining ? 'Send the remaining' : 'Send exactly'}
             </p>
-            <CopyButton value={amount} label="Copy amount" />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="min-w-0 text-amount leading-[1.1] font-extrabold tracking-[-.02em] tabular-nums wrap-anywhere">
+                {amount} <span className="whitespace-nowrap">{currency}</span>
+              </p>
+              <CopyButton value={amount} label="Copy amount" />
+            </div>
           </div>
           {!remaining && (
             <p className="mt-1 text-small wrap-anywhere text-ink-subtle">

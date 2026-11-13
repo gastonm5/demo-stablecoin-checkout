@@ -42,6 +42,16 @@
 
   --radius-card: 22px;
   --radius-control: 12px;
+
+  --animate-wash: wash 1.5s ease-out 1;
+  @keyframes wash {
+    from {
+      background-color: var(--color-warn-surface);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
 }
 
 @utility text-amount {

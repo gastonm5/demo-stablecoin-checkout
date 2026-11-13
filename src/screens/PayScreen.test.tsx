@@ -292,6 +292,51 @@ test('underpaid copies the remaining amount', async () => {
   expect(writeText).toHaveBeenCalledExactlyOnceWith('43.69')
 })
 
+// The block that holds the label, the amount and its copy button.
+function amountBlock(labelText: string) {
+  const block = screen.getByText(labelText).parentElement
+  expect(
+    within(block!).getByRole('button', { name: 'Copy amount' }),
+  ).toBeInTheDocument()
+  return block
+}
+const emphasis = ['border-l-3', 'border-warn', 'motion-safe:animate-wash']
+
+test('underpaid sets the amount to send apart, so the full amount is not sent again', () => {
+  renderPay({ screen: remaining, onChange: null })
+  expect(screen.getByText('Send the remaining')).toHaveClass('text-warn')
+  expect(amountBlock('Send the remaining')).toHaveClass(...emphasis)
+  expectAmount('43.69', 'USDT')
+})
+
+test('a full quote has no emphasis', () => {
+  renderPay()
+  expect(screen.getByText('Send exactly')).not.toHaveClass('text-warn')
+  const block = amountBlock('Send exactly')
+  for (const name of emphasis) expect(block).not.toHaveClass(name)
+})
+
+test('a new underpaid answer replaces the amount in the same block, so the wash does not replay', () => {
+  const { rerender } = renderPay({ screen: remaining, onChange: null })
+  const block = amountBlock('Send the remaining')
+  const payment = paymentWith('underpaid', {
+    amount_received: '150.00',
+    amount_outstanding: '13.69',
+  })
+  rerender(<PayScreen screen={{ ...remaining, payment }} onChange={null} />)
+  expect(amountBlock('Send the remaining')).toBe(block)
+  expectAmount('13.69', 'USDT')
+})
+
+test('going from a full quote to underpaid mounts a new block, so the wash plays', () => {
+  const { rerender } = renderPay()
+  const full = amountBlock('Send exactly')
+  rerender(<PayScreen screen={remaining} onChange={null} />)
+  expect(amountBlock('Send the remaining')).not.toBe(full)
+  expect(full).not.toBeInTheDocument()
+  expectAmount('43.69', 'USDT')
+})
+
 test('underpaid shows the address its own status gives', async () => {
   const other = 'TXYZ9w8v7u6t5s4r3q2p1n9m8k7j6h5g4f'
   const payment = paymentWith('underpaid', { crypto_address: other })
