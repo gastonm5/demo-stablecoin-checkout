@@ -66,7 +66,7 @@ export function StatusCard({
   children,
   strip,
   notice,
-  link,
+  action,
 }: {
   payment: Payment
   money?: SequenceEntry // supplies the transaction when the status itself carries none
@@ -81,7 +81,7 @@ export function StatusCard({
   children: ReactNode
   strip?: ReactNode
   notice?: ReactNode // a connection notice replaces the strip text
-  link?: ReactNode
+  action?: ReactNode
 }) {
   const hash = 'tx_hash' in payment ? payment.tx_hash : money?.tx_hash
   return (
@@ -137,10 +137,10 @@ export function StatusCard({
         </div>
       }
       strip={
-        (notice ?? strip ?? link) && (
+        (notice ?? strip ?? action) && (
           <div className={STRIP}>
             {notice ?? <span className={STRIP_TEXT}>{strip}</span>}
-            {link}
+            {action}
           </div>
         )
       }

@@ -88,7 +88,7 @@ export function ExpiredScreen({
         <Row label="Expired at">{formatDateTime(payment.expired_at)}</Row>
       }
       icon="clock"
-      link={
+      action={
         <Button
           variant="secondary"
           disabled={locked}

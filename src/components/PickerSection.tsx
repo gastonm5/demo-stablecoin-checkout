@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react'
 import { Button } from './Button'
 
-export type PickerOption = {
+type PickerOption = {
   value: string
   content: ReactNode
   chosenLook: string // border and background once chosen

@@ -102,19 +102,19 @@ function expectButtons(...names: string[]) {
 }
 
 test.each(['plain', 'cautious'] as const)(
-  'expired, %s: the new quote and the change link need the tick box',
+  'expired, %s: the new quote and the change button need the tick box',
   async (variant) => {
     const { props, node } = expired({ variant })
     render(node)
     const user = userEvent.setup()
     const button = screen.getByRole('button', { name: 'Get a new quote' })
-    const link = screen.getByRole('button', {
+    const changeButton = screen.getByRole('button', {
       name: 'Change currency or network',
     })
     expect(button).toBeDisabled()
-    expect(link).toBeDisabled()
+    expect(changeButton).toBeDisabled()
     await user.click(button)
-    await user.click(link)
+    await user.click(changeButton)
     expect(props.onRequote).not.toHaveBeenCalled()
     expect(props.onChange).not.toHaveBeenCalled()
     await user.click(
@@ -122,7 +122,7 @@ test.each(['plain', 'cautious'] as const)(
     )
     await user.click(button)
     expect(props.onRequote).toHaveBeenCalledTimes(1)
-    await user.click(link)
+    await user.click(changeButton)
     expect(props.onChange).toHaveBeenCalledTimes(1)
   },
 )

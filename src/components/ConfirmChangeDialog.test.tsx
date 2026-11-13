@@ -81,7 +81,7 @@ test('opens once under Strict Mode, which runs the effect twice', () => {
   expect(screen.getByRole('dialog', { name: TITLE })).toHaveAttribute('open')
 })
 
-// Opens the dialog from a link, as the pay screen does, so focus has somewhere to go back to.
+// Opens the dialog from a button, as the pay screen does, so focus has somewhere to go back to.
 function Opener() {
   const [open, setOpen] = useState(false)
   return (
@@ -102,7 +102,7 @@ test.each([
   ['Stay on this payment', 'click'],
   ['Escape', 'cancel'],
 ] as const)(
-  'closing with %s gives focus back to the link that opened it',
+  'closing with %s gives focus back to the button that opened it',
   async (_, how) => {
     // As a browser does: nothing in a closed dialog is rendered, so it cannot take focus,
     // and showModal() opens the dialog and focuses its first button.
@@ -133,16 +133,16 @@ test.each([
       </StrictMode>,
     )
     const user = userEvent.setup()
-    const link = screen.getByRole('button', {
+    const opener = screen.getByRole('button', {
       name: 'Change currency or network',
     })
-    await user.click(link)
+    await user.click(opener)
     const stay = screen.getByRole('button', { name: 'Stay on this payment' })
     expect(stay).toHaveFocus()
     if (how === 'click') await user.click(stay)
     else fireEvent(screen.getByRole('dialog'), new Event('cancel'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(link).toHaveFocus()
+    expect(opener).toHaveFocus()
   },
 )
 

@@ -1,4 +1,4 @@
-export type NetworkColours = {
+type NetworkColours = {
   chip: string
   fill: string
   onFill: string

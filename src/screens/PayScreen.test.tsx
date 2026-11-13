@@ -412,7 +412,7 @@ test('a connection notice replaces the strip text', () => {
   ).toBeInTheDocument()
 })
 
-test('the change link asks the caller to change', async () => {
+test('the change button asks the caller to change', async () => {
   const onChange = vi.fn()
   renderPay({ onChange })
   await userEvent
