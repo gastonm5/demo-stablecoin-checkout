@@ -4,62 +4,68 @@ import { Button } from './Button'
 const FAILED = 'Copy failed. Select the text and copy it.'
 const COPIED = 'Copied'
 
-// A column moving between 1fr and 0fr moves the grid between its label's width and none, with no measuring.
-const SLOT =
-  'grid min-w-0 transition-[grid-template-columns] duration-[180ms] ease-[cubic-bezier(.2,0,0,1)]'
-const UNSEEN = 'invisible min-w-0 overflow-hidden whitespace-nowrap'
+const CELL =
+  'col-start-1 row-start-1 flex max-w-full items-center gap-1.5 text-left'
+// A percentage and a length interpolate, so the width moves both ways with no measuring. `enabled:` only outranks Button's own transition classes, whatever their order in the CSS, without the !important that would beat the reduced-motion rule; the background stays listed so hover still fades.
+const MOVE =
+  'enabled:transition-[width,background-color] enabled:duration-[180ms] ease-[cubic-bezier(.2,0,0,1)]'
 
-export function CopyButton({ value, label }: { value: string; label: string }) {
+// The twin and the button draw their insides from here, so the space the twin holds is the idle button's own.
+function Face({ text, live = false }: { text: string; live?: boolean }) {
+  return (
+    <>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        className="size-3.5 shrink-0"
+      >
+        <rect x="5" y="5" width="9" height="9" rx="2" />
+        <path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
+      </svg>
+      <span
+        aria-live={live ? 'polite' : undefined}
+        className="min-w-0 wrap-anywhere"
+      >
+        {text}
+      </span>
+    </>
+  )
+}
+
+export function CopyButton({
+  value,
+  label,
+  align = 'start',
+}: {
+  value: string
+  label: string
+  align?: 'start' | 'end' // end keeps the right edge still, for a button at the end of a row
+}) {
   const { state, copy } = useCopy(value)
   const copied = state === 'copied'
   const failed = state === 'failed'
   return (
-    <span className="inline-flex max-w-full flex-col">
+    <span className="inline-grid max-w-full">
+      {/* The idle button, unseen, holds the width and height in the row, wrapped or not, so nothing beside or under moves while the button narrows. */}
+      <Button
+        variant="secondary"
+        aria-hidden="true"
+        inert
+        tabIndex={-1}
+        className={`${CELL} pointer-events-none invisible`}
+      >
+        <Face text={label} />
+      </Button>
       <Button
         variant="secondary"
         onClick={copy}
-        className="inline-flex max-w-full items-center gap-1.5 self-start text-left"
+        className={`${CELL} ${MOVE} self-start ${align === 'end' ? 'justify-self-end' : 'justify-self-start'} ${copied ? 'w-[6.75rem] min-w-min' : 'w-full'}`}
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className="size-3.5 shrink-0"
-        >
-          <rect x="5" y="5" width="9" height="9" rx="2" />
-          <path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
-        </svg>
-        <span className="relative inline-flex min-w-0">
-          <span
-            className={`${SLOT} ${copied ? 'grid-cols-[0fr]' : 'grid-cols-[1fr]'}`}
-          >
-            <span aria-hidden="true" className={UNSEEN}>
-              {label}
-            </span>
-          </span>
-          <span
-            className={`${SLOT} ${copied ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
-          >
-            <span aria-hidden="true" className={UNSEEN}>
-              {COPIED}
-            </span>
-          </span>
-          {/* Laid over the moving width, so on the way back the label shows as the button widens. */}
-          <span aria-live="polite" className="absolute inset-0 truncate">
-            {copied ? COPIED : label}
-          </span>
-        </span>
+        <Face text={copied ? COPIED : label} live />
       </Button>
-      {/* The secondary button's border, padding, icon and gap around the normal label, with no height: the space the button takes in the row never changes while it narrows. */}
-      <span
-        aria-hidden="true"
-        className="invisible flex h-0 gap-1.5 overflow-hidden border-x px-4 text-small font-semibold whitespace-nowrap"
-      >
-        <span className="w-3.5 shrink-0" />
-        {label}
-      </span>
       {/* There before a failure, so the sentence is announced; it wraps inside the button's width instead of widening it. */}
       <span
         aria-live="polite"

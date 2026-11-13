@@ -44,48 +44,52 @@ function expectFailedUnder({ button, regions }: Clicked) {
 
 type Clicked = Awaited<ReturnType<typeof clickCopy>>
 
-// The text people see and hear: the unseen copies that hold the widths are left out.
+// The text people see and hear: the twin that holds the button's space is left out.
 const seen = { ignore: '[aria-hidden="true"], [aria-hidden="true"] *' }
 
 test('says Copied, then goes back to its label', async () => {
   vi.useFakeTimers()
   setClipboard({ writeText: writeText.mockResolvedValue(undefined) })
-  await clickCopy()
+  const { button } = await clickCopy()
   expect(writeText).toHaveBeenCalledExactlyOnceWith('163.69')
-  expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Copied' })).toBe(button)
   expect(screen.getByText('Copied', seen)).toHaveAttribute(
     'aria-live',
     'polite',
   )
-  // The unseen labels that hold the widths are not read out.
-  for (const copy of screen.getAllByText('Copy amount'))
-    expect(copy).toHaveAttribute('aria-hidden', 'true')
+  // The normal label is now only in the twin, so it is not read out.
+  expect(screen.queryByText('Copy amount', seen)).not.toBeInTheDocument()
   act(() => vi.advanceTimersByTime(2_000))
   expect(screen.getByRole('button', { name: 'Copy amount' })).toBeVisible()
   expect(screen.queryByText('Copied', seen)).not.toBeInTheDocument()
 })
 
-test('its unseen copies are hidden from assistive technology and take no focus', () => {
+test('the twin that holds its space is hidden from assistive technology and takes no focus', () => {
   const { container } = render(
     <CopyButton value="163.69" label="Copy amount" />,
   )
   const button = screen.getByRole('button', { name: 'Copy amount' })
-  expect(screen.getByText('Copy amount', seen)).toHaveAttribute(
+  expect(screen.getAllByRole('button')).toEqual([button])
+  expect(within(button).getByText('Copy amount')).toHaveAttribute(
     'aria-live',
     'polite',
   )
-  // One in the button, which it narrows from; one outside, which holds the button's space in the row.
-  const copies = screen
-    .getAllByText('Copy amount')
-    .filter((copy) => copy.getAttribute('aria-hidden') === 'true')
-  expect(copies).toHaveLength(2)
-  expect(copies.filter((copy) => button.contains(copy))).toHaveLength(1)
-  // The width it narrows to.
-  expect(within(button).getByText('Copied')).toHaveAttribute(
-    'aria-hidden',
-    'true',
-  )
-  expect(container.querySelectorAll('button, [tabindex]')).toHaveLength(1)
+  const twin = container.querySelector('button[aria-hidden="true"]')
+  expect(twin).not.toBe(button)
+  expect(twin).toHaveTextContent('Copy amount')
+  // jsdom does not implement inert, so the attributes that keep focus out stand in for a focus check.
+  expect(twin).toHaveAttribute('inert')
+  expect(twin).toHaveAttribute('tabindex', '-1')
+  expect(twin).not.toHaveAttribute('aria-live')
+  expect(twin?.querySelector('[aria-live]')).toBeNull()
+})
+
+test('narrows towards its start, or towards its end when asked', () => {
+  const { rerender } = render(<CopyButton value="163.69" label="Copy amount" />)
+  expect(screen.getByRole('button')).toHaveClass('justify-self-start')
+  rerender(<CopyButton value="163.69" label="Copy amount" align="end" />)
+  expect(screen.getByRole('button')).toHaveClass('justify-self-end')
+  expect(screen.getByRole('button')).not.toHaveClass('justify-self-start')
 })
 
 test('says copying failed when the clipboard rejects', async () => {

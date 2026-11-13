@@ -45,7 +45,7 @@ function CopyRow({
     <Row label={label}>
       <span className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
         <span className="font-mono break-all">{value}</span>
-        <CopyButton value={value} label={copyLabel} />
+        <CopyButton value={value} label={copyLabel} align="end" />
       </span>
     </Row>
   )
