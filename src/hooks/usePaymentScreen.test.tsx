@@ -24,12 +24,15 @@ const catalogue = (over: Partial<Catalogue> = {}): Catalogue => ({
 
 const checkNow = vi.fn()
 
-function result(payment: Payment): UsePaymentResult {
+function result(
+  payment: Payment,
+  lastSuccessAt = DEADLINE - 61_000,
+): UsePaymentResult {
   return {
     entry: { payment, sequence: startSequence(payment, 'creation', 0) },
     isLoading: false,
     error: null,
-    lastSuccessAt: DEADLINE - 61_000,
+    lastSuccessAt,
     lastFailureAt: null,
     consecutiveFailures: 0,
     // A new function on every render, as usePayment returns, so a render alone re-runs any effect that uses it.
@@ -100,6 +103,81 @@ test('does not ask at zero for a status with no clock', () => {
   mount(withStatus('underpaid'))
   advance(120_000)
   expect(checkNow).not.toHaveBeenCalled()
+})
+
+test.each([
+  'underpaid',
+  'detected',
+  'confirming',
+  'paid',
+  'overpaid',
+  'expired',
+  'failed',
+])('runs no clock on %s', (status) => {
+  mount(withStatus(status))
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+test('runs the clock on awaiting_payment', () => {
+  mount(withStatus('awaiting_payment'))
+  expect(vi.getTimerCount()).toBe(1)
+})
+
+function fromExpired() {
+  return renderHook(
+    ({ p, at }) => usePaymentScreen(result(p, at), catalogue()),
+    { initialProps: { p: withStatus('expired'), at: Date.now() } },
+  )
+}
+
+test('a new quote after a stopped clock counts down from the time of its answer', () => {
+  const hook = fromExpired()
+  // Set without a tick, so the clock's own value is sixty seconds old whatever runs it.
+  vi.setSystemTime(Date.now() + 60_000)
+  const awaiting = withStatus('awaiting_payment', NEXT_QUOTE)
+  hook.rerender({ p: awaiting, at: Date.now() })
+  expect(hook.result.current.screen).toEqual({
+    kind: 'pay',
+    mode: 'full',
+    payment: awaiting,
+    clock: 'running',
+    showAddress: true,
+    remainingMs: Date.parse(NEXT_QUOTE.expires_at) - Date.now(),
+  })
+})
+
+test('a quote past its deadline after a stopped clock is still valid, not counting down', () => {
+  const hook = fromExpired()
+  // Past the new deadline on the device, while the clock's own value is still before it.
+  vi.setSystemTime(Date.parse(NEXT_QUOTE.expires_at) + 5_000)
+  const awaiting = withStatus('awaiting_payment', NEXT_QUOTE)
+  hook.rerender({ p: awaiting, at: Date.now() })
+  expect(hook.result.current.screen).toEqual({
+    kind: 'pay',
+    mode: 'full',
+    payment: awaiting,
+    clock: 'still_valid',
+    showAddress: true,
+  })
+  expect(checkNow).not.toHaveBeenCalled()
+})
+
+test('a still valid screen hides the address once its answer is more than ten seconds old', () => {
+  vi.setSystemTime(DEADLINE + 1_000)
+  const awaiting = withStatus('awaiting_payment')
+  const { result: state } = renderHook(() =>
+    usePaymentScreen(result(awaiting, DEADLINE + 1_000), catalogue()),
+  )
+  advance(10_000)
+  expect(state.current.screen).toMatchObject({ clock: 'still_valid' })
+  advance(1_000)
+  expect(state.current.screen).toEqual({
+    kind: 'pay',
+    mode: 'full',
+    payment: awaiting,
+    clock: 'checking',
+    showAddress: false,
+  })
 })
 
 // The card that waits for the list, with "Try again" when the list cannot check this payment.

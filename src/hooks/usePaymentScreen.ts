@@ -23,10 +23,12 @@ export function usePaymentScreen(
   payment: UsePaymentResult,
   catalogue: Catalogue,
 ): PaymentScreenState {
-  const now = useNow()
-  const online = useOnline()
   const { entry, checkNow } = payment
   const current = entry?.payment
+  const clock = useNow(current?.status === 'awaiting_payment')
+  // A stopped clock is stale, and the answer that made the status awaiting_payment arrived after it stopped.
+  const now = Math.max(clock, payment.lastSuccessAt)
+  const online = useOnline()
   const quote = current?.quote
   // Looked up apart from the check: a status screen shows the usual time without waiting for it.
   const network = catalogue.currencies
