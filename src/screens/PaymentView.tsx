@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Payment } from '../api/schemas'
+import { toSend } from '../domain/money'
 import type { Screen } from '../domain/screen'
 import type { UseCheckoutResult } from '../hooks/useCheckout'
 import type { Catalogue } from '../hooks/useCurrencies'
@@ -26,13 +27,8 @@ function announcement(
   detailsProblem: boolean,
 ): string {
   switch (screen.kind) {
-    case 'pay': {
-      const amount =
-        screen.mode === 'remaining' && payment.status === 'underpaid'
-          ? payment.amount_outstanding
-          : payment.quote.total_due
-      return `Send ${amount} ${payment.quote.crypto_currency} on ${payment.quote.network_name}`
-    }
+    case 'pay':
+      return `Send ${toSend(payment).amount} ${payment.quote.crypto_currency} on ${payment.quote.network_name}`
     case 'pay_loading':
       return detailsProblem ? DETAILS_FAILED : ''
     default:

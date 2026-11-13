@@ -8,6 +8,16 @@ export function fitsDecimals(amount: DecimalString, decimals: number): boolean {
   return fractionDigits(amount) <= decimals
 }
 
+export function toSend(payment: Payment): {
+  amount: DecimalString
+  address: string
+} {
+  // The underpaid status carries its own address: the server's latest word on where the rest goes.
+  return payment.status === 'underpaid'
+    ? { amount: payment.amount_outstanding, address: payment.crypto_address }
+    : { amount: payment.quote.total_due, address: payment.quote.crypto_address }
+}
+
 export function amountsToSend(payment: Payment): DecimalString[] {
   return payment.status === 'underpaid'
     ? [payment.quote.total_due, payment.amount_outstanding]

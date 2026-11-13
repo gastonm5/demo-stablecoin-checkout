@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { Payment } from '../api/schemas'
 import { formatRemaining } from '../domain/countdown'
 import { networkShortName } from '../domain/format'
+import { toSend } from '../domain/money'
 import type { ClockState, Screen } from '../domain/screen'
 import { CheckoutCard } from '../components/CheckoutCard'
 import { CopyButton } from '../components/CopyButton'
@@ -25,13 +26,8 @@ export function PayScreen({
   const { quote } = payment
   const currency = quote.crypto_currency
   const networkName = quote.network_name
-  const remaining =
-    screen.mode === 'remaining' && payment.status === 'underpaid'
-      ? payment
-      : null
-  const toSend = remaining ? remaining.amount_outstanding : quote.total_due
-  // The underpaid status carries its own address: the server's latest word on where the rest goes.
-  const address = remaining ? remaining.crypto_address : quote.crypto_address
+  const remaining = payment.status === 'underpaid' ? payment : null
+  const { amount, address } = toSend(payment)
 
   const clockText = (
     {
@@ -70,9 +66,9 @@ export function PayScreen({
           </p>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="min-w-0 text-[32px] leading-[1.1] font-extrabold tracking-[-.02em] tabular-nums break-all sm:text-[40px]">
-              {`${toSend} ${currency}`}
+              {`${amount} ${currency}`}
             </p>
-            <CopyButton value={toSend} label="Copy amount" />
+            <CopyButton value={amount} label="Copy amount" />
           </div>
           {!remaining && (
             <p className="mt-1 text-[13.5px] wrap-anywhere text-gray-500">

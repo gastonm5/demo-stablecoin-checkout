@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 import type { DecimalString } from '../api/schemas'
 import { makePayment, STATE_FIXTURES } from '../test/fixtures'
-import { amountsToSend, fitsDecimals, fractionDigits } from './money'
+import { amountsToSend, fitsDecimals, fractionDigits, toSend } from './money'
 
 test.each([
   ['163.69', 2],
@@ -28,4 +28,26 @@ test('amountsToSend is the total, plus the outstanding amount on underpaid', () 
       makePayment({ status: 'underpaid', ...STATE_FIXTURES.underpaid }),
     ),
   ).toEqual(['163.69', '43.69'])
+})
+
+test('toSend on awaiting_payment is the quote total and the quote address', () => {
+  expect(toSend(makePayment())).toEqual({
+    amount: '163.69',
+    address: 'TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e',
+  })
+})
+
+test('toSend on underpaid is the outstanding amount and the address the status gives', () => {
+  const payment = makePayment({
+    status: 'underpaid',
+    ...STATE_FIXTURES.underpaid,
+    crypto_address: 'TXYZ9w8v7u6t5s4r3q2p1n9m8k7j6h5g4f',
+  })
+  expect(payment.quote.crypto_address).toBe(
+    'TQ5Nn8kLpVv3xJ7wYcR2bF9aH4dM6sGz1e',
+  )
+  expect(toSend(payment)).toEqual({
+    amount: '43.69',
+    address: 'TXYZ9w8v7u6t5s4r3q2p1n9m8k7j6h5g4f',
+  })
 })
