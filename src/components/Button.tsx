@@ -18,11 +18,10 @@ export function Button({
   disabled,
   className = '',
   ...props
-}: Omit<ComponentProps<'button'>, 'type'> & {
-  variant: keyof typeof VARIANTS
-  busy?: boolean
-  colours?: { fill: string; onFill: string } // primary only: a fill and the text on it
-}) {
+}: Omit<ComponentProps<'button'>, 'type'> & { busy?: boolean } & (
+    | { variant: 'primary'; colours?: { fill: string; onFill: string } } // a fill and the text on it
+    | { variant: 'secondary' | 'link'; colours?: never }
+  )) {
   // Brightness, not an alpha, so hover and pressed show on any fill.
   const look =
     variant === 'primary' && colours

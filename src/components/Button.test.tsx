@@ -72,6 +72,7 @@ test('a primary button given colours takes that fill, and keeps the disabled loo
   expect(button).not.toHaveClass('bg-action')
   expect(button).not.toHaveClass('text-ink-inverse')
   rerender(
+    // @ts-expect-error A fill is for a primary button only.
     <Button variant="secondary" colours={colours}>
       Go
     </Button>,
