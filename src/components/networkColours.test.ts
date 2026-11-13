@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { networkColours } from './networkColours'
 
@@ -46,4 +48,23 @@ test('gives an id it does not know the neutral colours, even one that names a bu
   expect(other.chip).toBe('bg-network-other')
   expect(networkColours('constructor')).toEqual(other)
   expect(networkColours('__proto__')).toEqual(other)
+})
+
+// Tailwind emits nothing, and no error, for a class whose colour token is missing.
+test('names only colours that index.css defines, for every network', () => {
+  const css = readFileSync(`${import.meta.dirname}/../index.css`, 'utf8')
+  const classes = ['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'].flatMap(
+    (networkId) =>
+      Object.values(networkColours(networkId)).flatMap((slot) =>
+        slot.split(' '),
+      ),
+  )
+  const prefix = /^(?:bg|text|border|accent)-/
+  expect(classes.filter((name) => !prefix.test(name))).toEqual([])
+  expect(
+    classes.filter((name) => {
+      const token = name.replace(prefix, '').replace(/\/\d+$/, '')
+      return !css.includes(`--color-${token}:`)
+    }),
+  ).toEqual([])
 })
