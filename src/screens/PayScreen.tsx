@@ -66,9 +66,7 @@ export function PayScreen({
           <div
             key={screen.mode}
             className={
-              remaining
-                ? 'border-l-3 border-warn pl-3 motion-safe:animate-wash'
-                : undefined
+              remaining ? 'border-l-3 border-warn pl-3 animate-wash' : undefined
             }
           >
             <p

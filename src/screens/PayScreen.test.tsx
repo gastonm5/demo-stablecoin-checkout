@@ -317,7 +317,7 @@ function amountBlock(labelText: string) {
   ).toBeInTheDocument()
   return block
 }
-const emphasis = ['border-l-3', 'border-warn', 'motion-safe:animate-wash']
+const emphasis = ['border-l-3', 'border-warn', 'animate-wash']
 
 test('underpaid sets the amount to send apart, so the full amount is not sent again', () => {
   renderPay({ screen: remaining, onChange: null })

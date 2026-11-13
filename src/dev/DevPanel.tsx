@@ -86,8 +86,7 @@ function remember(open: boolean): void {
   }
 }
 
-const SLIDE =
-  'transition-[width] duration-200 ease-[cubic-bezier(.2,0,0,1)] motion-reduce:transition-none'
+const SLIDE = 'transition-[width] duration-200 ease-[cubic-bezier(.2,0,0,1)]'
 
 const BUTTON =
   'rounded-md border border-[#39404b] px-[7px] py-[5px] text-center disabled:opacity-40 aria-pressed:border-[#fbbf24] aria-pressed:bg-[#fbbf24] aria-pressed:font-bold aria-pressed:text-[#101318]'
@@ -302,7 +301,7 @@ export function DevPanel({
           inert={open}
           aria-hidden={open}
           onClick={() => toggle(true)}
-          className={`absolute top-0 bottom-0 left-0 w-[34px] border-l border-black bg-[#101318] font-mono text-xs font-bold tracking-[.1em] text-[#fbbf24] transition-opacity duration-200 ease-[cubic-bezier(.2,0,0,1)] [writing-mode:vertical-rl] motion-reduce:transition-none ${open ? 'opacity-0' : ''}`}
+          className={`absolute top-0 bottom-0 left-0 w-[34px] border-l border-black bg-[#101318] font-mono text-xs font-bold tracking-[.1em] text-[#fbbf24] transition-opacity duration-200 ease-[cubic-bezier(.2,0,0,1)] [writing-mode:vertical-rl] ${open ? 'opacity-0' : ''}`}
         >
           <span aria-hidden="true">« </span>DEV
         </button>
