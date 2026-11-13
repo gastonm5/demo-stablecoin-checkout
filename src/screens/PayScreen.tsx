@@ -156,7 +156,7 @@ export function PayScreen({
             ))}
           {onChange && (
             <Button
-              variant="link"
+              variant="secondary"
               onClick={onChange}
               className="whitespace-nowrap"
             >
