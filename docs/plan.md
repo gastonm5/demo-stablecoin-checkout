@@ -2141,6 +2141,144 @@ Added on 13 Nov 2026, at my request, after I saw a drawing of the panel with the
 
 ---
 
+## Tasks 29 to 34: the picker as radio sections, chain colours, and three smaller changes
+
+Added on 13 Nov 2026, after I saw drawings of the options and chose. Nothing here changes a status, a request, an amount or an ADR. No new dependency.
+
+**What I decided:**
+
+- Both pickers become vertical sections of radio buttons that open and close with an animation, on every window width, laid out like the phone drawing. Choosing an option is animated too.
+- A network option shows the network's name only. Its fee and usual time are on a line under the network section once a network is chosen.
+- The picker has no right-hand column. The Continue button sits under the pickers.
+- The pay screen keeps its two columns.
+- The chain colours go into the design system: Ethereum `#627EEA`, Solana `#9945FF`, Polygon `#8247E5`, Tron `#DC062B`.
+- The Continue button takes the chosen chain's colour.
+- "Change currency or network" becomes an outlined button, on the pay screen and on the expired screen.
+- The copy button narrows to fit "Copied" and widens back, animated both ways.
+- Each copy button on the pay screen sits in line with what it copies, the amount or the address, and no longer beside the label or under the amount.
+
+**What the planning agent recommended and I did not take:** keeping both groups open with no collapsing, and a black Continue button on every network, on the grounds that a red "Continue with USDT on Tron" reads as a delete button.
+
+**Not decided yet.** The planning agent's default is in brackets. Nothing is built on a default until I answer.
+
+1. The pay screen's network banner and QR frame: filled with the chain colour, or dark with a chain-coloured edge and chip. [Dark with an edge. Task 32 waits for this.]
+2. The two sentences that lived in the right-hand column: "Your wallet or exchange must be able to send USDC on the Polygon network." and "The amount to send and the address are shown next." [Keep both: the first under the fee line, the second under the button. Only the "You are paying with" pill goes.]
+3. White text on Ethereum's blue is 3.69:1, under the 4.5:1 that 15 px text needs. Solana is 4.52:1, Polygon 5.27:1, Tron 5.12:1. [The Continue button on Ethereum uses a blue 11% darker, `#5770d0`, 4.53:1. Every other use keeps `#627EEA`.]
+4. The colour of a chosen currency, which has no chain. [The page's near-black.]
+5. With names only in the options, comparing two networks' fees takes a click on each. [As I decided. The planning agent would keep the fee as small text in each option.]
+
+**Rules for every task below:**
+
+- Every rule of Tasks 19 to 27 still holds: every digit of every amount stays visible; the address and QR are shown exactly when they are now; shopper-facing words change only where a task says so; the dev panel's colours are not touched; tests keep their assertions, or assert the same fact another way.
+- Colours, sizes and radii come from `src/index.css`. A network's colour is never used for a status.
+- Reduced motion is handled by the one rule in `src/index.css`. No component adds its own.
+- Each task is checked in a real browser at 1200, 768, 390 and 320 px before it is called done.
+
+### Task 29: The chain colours, named once
+
+**Files:** `src/index.css`, `src/components/NetworkChip.tsx`, create `src/components/networkColours.ts` and its test.
+
+- [ ] `@theme`: `network-ethereum` `#627eea`, `network-solana` `#9945ff`, `network-polygon` `#8247e5`, `network-tron` `#dc062b`, `network-other` `#6b7280` as now. One more, per decision 3: `network-ethereum-fill` `#5770d0`, with a comment giving the two contrast figures.
+- [ ] `networkColours(networkId: string): { chip: string; fill: string; border: string; tint: string; accent: string }` returns whole class names Tailwind can see: the chip's background, the background of a filled control that carries white text, a border, the 10% tint for a chosen option's background, and the radio's accent colour. An id it does not know gets `network-other` in every slot. `fill` is the chain's own colour except for Ethereum.
+- [ ] `NetworkChip` takes its background from it. Nothing else changes in this task.
+- [ ] Test: each of the four ids and an unknown one returns five non-empty classes, and Ethereum's `fill` differs from its `chip`. The built CSS has a rule for every class returned.
+- [ ] Solana's and Polygon's purples are close. The network's name is always beside its colour, so colour is still never the only signal.
+- [ ] Commit: "Name the chain colours once, with a fill that carries white text".
+
+### Task 30: The picker as two sections of radio buttons
+
+**Files:** `src/screens/PickerScreen.tsx` and its test, a small collapsible section component in `src/components` if it earns one, `src/components/CheckoutCard.tsx`, `src/components/LoadingCard.tsx`, `src/components/Button.tsx`, `src/App.tsx`, `src/App.test.tsx`, `src/index.css`, the documents named at the end. `usePickerChoice` keeps its interface: it already clears the network when the currency changes and fills in a currency's only network.
+
+**The card.** The picker's card is one column, at most 520 px wide, at every window width, with no minimum height. The loading card shown before the picker uses the same narrow card, so the frame does not jump when the list arrives. The pay screen and every status screen keep the 940 px two-column card.
+
+**Top to bottom:** the order header; the "payment not found" notice when there is one; "Choose how to pay"; the Currency section; the Network section; the fee line; the Continue button; "Still working…" or the error; the "Back" link when changing an expired quote. The sentences of decision 2 go where it says.
+
+**A section** is a `fieldset` with a `legend` ("Currency", "Network") and has two forms:
+
+- [ ] Open: a column of options. Each is a `label` at least 44 px tall holding a native radio and the option's text: for a currency its code in bold and its name, for a network its chip and its name. No fee, no time.
+- [ ] Closed: one row with the chosen option's text and an outlined "Change" button whose accessible name says which section it changes.
+- [ ] The Currency section is open while no currency is chosen, and after its "Change" until a currency is chosen again. The Network section is not shown at all until a currency is chosen; then it is open while no network is chosen, and after its "Change". Choosing closes the section. Choosing a currency with one network leaves the Network section closed on that network. Changing the currency opens the Network section with nothing chosen.
+- [ ] A chosen option has a border in its colour and a 10% tint of it behind: the chain's colour for a network, and per decision 4 for a currency. The radio's accent matches.
+
+**Motion.**
+
+- [ ] Choosing: the option's border and background reach their colour over 120 ms. Then the section closes.
+- [ ] Opening and closing: the height moves over 200 ms with `cubic-bezier(.2,0,0,1)`. Both forms are always in the document so each can shrink while the other grows; the one not showing is `inert` and `aria-hidden`.
+- [ ] The fee line appears with the existing 160 ms, 6 px entrance when a network is first chosen, and updates in place when the network changes.
+
+**Focus.** A choice made with the keyboard must never leave focus on something hidden.
+
+- [ ] After a currency is chosen: the first network radio if the Network section opened, otherwise the Continue button.
+- [ ] After a network is chosen: the Continue button.
+- [ ] After "Change": the chosen radio of that section.
+- [ ] Nothing takes focus when the page loads.
+- [ ] Arrow keys choose, as native radios do, so each press chooses and closes. Every option stays reachable: the first with Space, the others with the arrows, and again after "Change".
+
+**The button.**
+
+- [ ] `Button` gains one prop for the fill of a primary button. The picker passes `networkColours(network.id).fill` once a currency and a network are chosen; nothing else uses it. Its words do not change ("Continue with USDC on Polygon", "Get a new quote with …", "Working…"). Before both are chosen it is the disabled grey it is now. Hover and pressed states stay visible on every chain colour.
+- [ ] While a create or requote is in flight, the radios and the "Change" buttons are disabled.
+
+**What goes.** The right-hand column and the "You are paying with" pill. The two menus and their chevron.
+
+**Tests.** The existing picker and app tests drive two menus; they are rewritten to drive the radios and keep what they assert. New ones: which section is open in each state above; a currency with one network; changing the currency clears the network and reopens its section; the hidden form of a section cannot be reached by a role query; focus after each choice and after "Change"; the fee line appears only after a network is chosen and shows that network's fee and time; the button's label and that its fill is the chosen chain's; nothing is chosen or focused on load.
+
+**Documents, in the same commit.**
+
+- [ ] `AGENTS.md`, "Look and motion": "Things may fade in. Nothing is animated out." becomes "Things may fade in. Nothing the server takes away is animated out. The picker's sections open and close with the shopper's own choice." The line about never animating a change of amount or the removal of an address, a QR, a notice or a screen stays.
+- [ ] `docs/design-doc.md`: the paragraph before the first drawing (the picker is now radio sections, not menus, and has no right-hand column); section 7.4 (nothing is preselected, a currency's only network is filled in, the network is named on the button); section 11's "Picker menus" entry, rewritten as "Picker sections"; section 11.1's rows for the picker's motion and for "Buttons and the picker's menus", its sentence that the network colours are used by the chip alone, and its sentence that nothing in the checkout is animated out.
+- [ ] Commit: "Choose the currency and the network from two sections of radio buttons".
+
+### Task 31: Outlined buttons for "Change currency or network"
+
+**Files:** `src/screens/PayScreen.tsx`, `src/screens/ExpiredScreen.tsx`, their tests.
+
+- [ ] Both become `Button variant="secondary"`. Their words, their handlers, and the expired screen's tick box that enables it do not change. The picker's "Back" stays a link.
+- [ ] On the pay screen the strip keeps its shape: text on the left, "Try now" and this button together on the right. Focus still returns to it when the dialog closes on "Stay on this payment" or Escape.
+- [ ] Commit: "Make Change currency or network an outlined button".
+
+### Task 32: The chain's colour on the pay screen
+
+Waits for decision 1.
+
+**Files:** `src/components/NetworkBanner.tsx`, `src/components/QrFrame.tsx`, their tests.
+
+- [ ] The QR frame's border takes the chain's colour in either answer. The four-module quiet zone inside it stays white.
+- [ ] If filled: the banner and the frame's label bar use `fill` with white text, and the chip inside them turns white with the chain's colour for its letter. If dark with an edge: both stay `surface-inverse`, the banner gains a 4 px edge in the chain's colour, and the chip keeps it.
+- [ ] The banner's and the frame's words do not change.
+- [ ] Commit: "Carry the chain's colour onto the pay screen".
+
+### Task 34: Each copy button beside the value it copies
+
+Today "Copy amount" drops under the amount whenever the two do not fit on a line, and "Copy … address" sits on the label's row, above the address. I asked for both to line up with the value they copy. Built before Task 33, which animates the button where this task puts it.
+
+**Files:** `src/screens/PayScreen.tsx` and its test. The status screens' rows already have the button beside the value.
+
+- [ ] The amount: the amount on the left and "Copy amount" at the right end of the same row, centred on the amount. The currency code may move to a second line to make room. The digits may not: an amount's digits are never broken because of the button.
+- [ ] The address: its label on a line of its own; under it the address on the left and "Copy … address" at the right end of the same row, centred on the address, which may take two lines beside the button.
+- [ ] Where a row cannot hold both without breaking the digits, or without putting the address on more than two lines, the button sits directly under the value, at its left edge. That is the layout on a phone.
+- [ ] Nothing is clipped at 320 px with the long names and the 20-digit amount the earlier checks use, and the unit still never splits.
+- [ ] The words, the copied values and the order a keyboard reaches them in do not change.
+- [ ] Commit: "Put each copy button beside the value it copies".
+
+### Task 33: A copy button that narrows to "Copied" and widens back
+
+This changes something Task 22 fixed. Task 22 made the button keep the width of its normal label, because its width used to jump and move what was beside it. I now want it to narrow to fit "Copied" and widen back, as a movement and not a jump.
+
+**Files:** `src/components/CopyButton.tsx` and its test, `src/index.css` if it needs a rule, the documents named below.
+
+- [ ] On a successful copy the button's width moves to the width of "Copied" over 180 ms with `cubic-bezier(.2,0,0,1)`, and back the same way when the label returns. The edge it is aligned to stays where it is: the right edge when it sits at the end of a row, the left edge when it sits under the value.
+- [ ] The space the button takes in its row never changes: the row is laid out for the normal label throughout. So nothing beside or under the button moves, and the button cannot jump to another line while it is narrow.
+- [ ] No measuring in JavaScript, no timer, no observer. One way that needs none: two one-column grids side by side, each holding an unseen copy of one label, with their single column moving between `1fr` and `0fr` in opposite directions, and the label people see laid over them.
+- [ ] A failed copy is as it is now: the button keeps its label and its width, and the sentence appears under it.
+- [ ] What a screen reader hears does not change.
+- [ ] The labels inside the button no longer wrap. A network name too long for the button is cut with an ellipsis in the button only; it is whole in the address label and in the banner. Nothing may extend past the card.
+- [ ] Tests: the label reads "Copied" after a copy and the normal label after two seconds; both unseen copies are hidden from assistive technology; the failure line is unchanged.
+- [ ] `docs/design-doc.md`: section 11's "Copy buttons" entry and section 11.1's "Things that keep their place" say that the space the button takes is fixed and the button narrows and widens inside it.
+- [ ] Commit: "Narrow the copy button to Copied and widen it back".
+
+---
+
 ## How this plan is executed
 
 - **Tasks 1 to 13** are implemented one at a time, in order, each by a fresh implementer on Opus that is given this plan, the spec and its own task.
@@ -2155,4 +2293,5 @@ Added on 13 Nov 2026, at my request, after I saw a drawing of the panel with the
 - **Tasks 19 to 27** follow a review of the rendered page: each is built by an implementer on Opus in a separate worktree, checked by the planning agent with screenshots and measurements at four widths, and reviewed by Codex. Nothing is pushed until I have tested it.
 - **Task 28** adds Start over to the dev panel and makes it slide. It was planned after Task 20 and is built next: one implementer on Opus in the same worktree, checked by the planning agent in a browser, and reviewed by Codex.
 - **From Task 21 on, the tasks ran in lanes,** once I asked whether they could run in parallel. Tasks 28, 21 and 24 were built at the same time, then Tasks 22, 23 with 26, and 25, then Task 27 by itself. Each lane had its own worktree and branch and touched files the others did not, was checked in a browser and reviewed by Codex on its own, and was then merged with a merge commit.
+- **Tasks 29 to 34** were planned after I chose from drawings. Task 29 goes first, because the others use its colours. Then three lanes run side by side in their own worktrees: Task 30; Task 31; and Task 34 followed by Task 33, which share the copy button. Task 32 joins them once I have answered its question. Each is checked in a browser and reviewed by Codex before it is merged.
 - Nothing is pushed until the human says so.
