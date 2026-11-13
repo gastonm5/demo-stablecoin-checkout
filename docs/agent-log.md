@@ -349,3 +349,5 @@ Task 29 went first. Then three lanes ran side by side: the picker (Task 30), the
 ## 13 Nov 2026: testing the picker branch
 
 - **A fee shown twice.** With the Network section opened again by "Change", the fee line stayed under it while every option above showed its own fee and time. I saw it while testing and asked for the line to show only while the section is closed. The task had said the line "updates in place when the network changes", and that is what kept it there.
+
+- **A frame cut at its corners.** The QR frame was drawn with padding in the chain's colour, so that one class could colour both the frame and its label. The white code inside kept square corners, and at the frame's bottom corners they reached the rounded edge and the colour was gone. The implementing agent had noted that the inner corners "round less", by half a pixel. I saw it in the browser. It is a real border again, in a colour slot of its own.

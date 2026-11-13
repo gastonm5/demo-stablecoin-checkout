@@ -3,19 +3,44 @@ import { expect, test } from 'vitest'
 import { QrFrame } from './QrFrame'
 
 test.each([
-  ['tron', 'Tron (TRC-20)', 'bg-network-tron', 'text-ink-inverse'],
+  [
+    'tron',
+    'Tron (TRC-20)',
+    'bg-network-tron',
+    'text-ink-inverse',
+    'border-network-tron',
+  ],
   [
     'ethereum',
     'Ethereum (ERC-20)',
     'bg-network-ethereum-fill',
     'text-ink-inverse',
+    'border-network-ethereum-fill',
   ],
-  ['polygon', 'Polygon', 'bg-network-polygon', 'text-ink-inverse'],
-  ['solana', 'Solana', 'bg-network-solana', 'text-ink'],
-  ['bitcoin', 'Bitcoin', 'bg-network-other', 'text-ink-inverse'],
+  [
+    'polygon',
+    'Polygon',
+    'bg-network-polygon',
+    'text-ink-inverse',
+    'border-network-polygon',
+  ],
+  [
+    'solana',
+    'Solana',
+    'bg-network-solana',
+    'text-ink',
+    'border-network-solana',
+  ],
+  [
+    'bitcoin',
+    'Bitcoin',
+    'bg-network-other',
+    'text-ink-inverse',
+    'border-network-other',
+  ],
 ])(
   'frames the %s code in its colour, the bar in the colour that reads on it and its chip reversed',
-  (networkId, networkName, fill, text) => {
+  (networkId, networkName, fill, text, fillBorder) => {
     render(
       <QrFrame
         address="TQ4xGx7b2mD1Rv5sYbF8yZc3kJpLwNhE9a"
@@ -28,9 +53,9 @@ test.each([
       `${networkName.toUpperCase()} ONLY`,
     ).parentElement
     expect(bar).toHaveClass(fill, text)
-    // The frame is the bar's own fill, not a border colour that could drift from it.
-    expect(bar?.parentElement).toHaveClass(fill)
-    expect(bar?.parentElement?.className).not.toMatch(/(^|\s)border/)
+    // A border, not padding: content inside a rounded border is clipped to its inner curve, so the code's square corners cannot cut the frame away.
+    expect(bar?.parentElement).toHaveClass(fillBorder, 'border-[3px]')
+    expect(bar?.parentElement).not.toHaveClass('p-[3px]')
     expect(screen.getByText(networkName[0])).toHaveClass(
       text.replace('text-', 'bg-'),
       fill.replace('bg-', 'text-'),

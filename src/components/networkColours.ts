@@ -1,6 +1,7 @@
 type NetworkColours = {
   chip: string
   fill: string
+  fillBorder: string // the fill's own colour as a border; `border` is darker on Solana
   onFill: string
   chipOnFill: string // the chip on a fill: the pair reversed, so it stays visible
   border: string
@@ -13,6 +14,7 @@ const COLOURS: Record<string, NetworkColours> = {
   tron: {
     chip: 'bg-network-tron',
     fill: 'bg-network-tron',
+    fillBorder: 'border-network-tron',
     onFill: 'text-ink-inverse',
     chipOnFill: 'bg-ink-inverse text-network-tron',
     border: 'border-network-tron',
@@ -22,6 +24,7 @@ const COLOURS: Record<string, NetworkColours> = {
   ethereum: {
     chip: 'bg-network-ethereum',
     fill: 'bg-network-ethereum-fill',
+    fillBorder: 'border-network-ethereum-fill',
     onFill: 'text-ink-inverse',
     chipOnFill: 'bg-ink-inverse text-network-ethereum-fill',
     border: 'border-network-ethereum',
@@ -31,6 +34,7 @@ const COLOURS: Record<string, NetworkColours> = {
   polygon: {
     chip: 'bg-network-polygon',
     fill: 'bg-network-polygon',
+    fillBorder: 'border-network-polygon',
     onFill: 'text-ink-inverse',
     chipOnFill: 'bg-ink-inverse text-network-polygon',
     border: 'border-network-polygon',
@@ -40,6 +44,7 @@ const COLOURS: Record<string, NetworkColours> = {
   solana: {
     chip: 'bg-network-solana',
     fill: 'bg-network-solana',
+    fillBorder: 'border-network-solana',
     onFill: 'text-ink',
     chipOnFill: 'bg-ink text-network-solana',
     border: 'border-network-solana-line',
@@ -51,6 +56,7 @@ const COLOURS: Record<string, NetworkColours> = {
 const OTHER: NetworkColours = {
   chip: 'bg-network-other',
   fill: 'bg-network-other',
+  fillBorder: 'border-network-other',
   onFill: 'text-ink-inverse',
   chipOnFill: 'bg-ink-inverse text-network-other',
   border: 'border-network-other',

@@ -13,11 +13,13 @@ export function QrFrame({
   networkName: string
   note: string
 }) {
-  const { fill, onFill } = networkColours(networkId)
+  const { fill, fillBorder, onFill } = networkColours(networkId)
   return (
     <div className="flex flex-col items-center gap-3.5 text-center">
-      {/* Padding, not a border, draws the frame, so it is the bar's own fill class. */}
-      <div className={`overflow-hidden rounded-control p-[3px] ${fill}`}>
+      {/* A border, not padding, draws the frame: what is inside a rounded border is clipped to its inner curve, so the code's square corners cannot cut the colour away. */}
+      <div
+        className={`overflow-hidden rounded-control border-[3px] ${fillBorder}`}
+      >
         <div
           className={`flex items-center justify-center gap-2 px-3 py-[7px] text-label font-extrabold tracking-[.06em] ${fill} ${onFill}`}
         >

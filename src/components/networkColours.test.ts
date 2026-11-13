@@ -3,7 +3,7 @@ import css from '../index.css?raw'
 import { networkColours } from './networkColours'
 
 test.each(['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'])(
-  'gives %s a class for each of the seven slots',
+  'gives %s a class for each of the eight slots',
   (networkId) => {
     const colours = networkColours(networkId)
     expect(Object.keys(colours).sort()).toEqual(
@@ -13,6 +13,7 @@ test.each(['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'])(
         'chip',
         'chipOnFill',
         'fill',
+        'fillBorder',
         'onFill',
         'tint',
       ].sort(),
@@ -28,6 +29,14 @@ test.each(['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'])(
     expect(chipOnFill).toBe(
       `${onFill.replace('text-', 'bg-')} ${fill.replace('bg-', 'text-')}`,
     )
+  },
+)
+
+test.each(['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'])(
+  'draws a %s border in its fill colour, so a frame and the label on it match',
+  (networkId) => {
+    const { fill, fillBorder } = networkColours(networkId)
+    expect(fillBorder).toBe(fill.replace('bg-', 'border-'))
   },
 )
 
