@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 988 318" width="988" height="318" role="img" aria-label="When the server says expired, the page asks two questions. If the status just before carried money, the screen is a dead end with no new quote. Otherwise, if the page's history started at a reload, the screen uses cautious wording. Otherwise it is the plain expired screen. Both of the last two offer a new quote behind a tick box.">
-<title>When the server says expired, the page asks two questions. If the status just before carried money, the screen is a dead end with no new quote. Otherwise, if the page's history started at a reload, the screen uses cautious wording. Otherwise it is the plain expired screen. Both of the last two offer a new quote behind a tick box.</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 988 318" width="988" height="318" role="img" aria-label="When the server says expired, the page asks two questions. If the last status the page knows before it carried money, the screen is a dead end with no new quote. Otherwise, if the page's history started at a reload, the screen uses cautious wording. Otherwise it is the plain expired screen. Both of the last two offer a new quote behind a tick box.">
+<title>When the server says expired, the page asks two questions. If the last status the page knows before it carried money, the screen is a dead end with no new quote. Otherwise, if the page's history started at a reload, the screen uses cautious wording. Otherwise it is the plain expired screen. Both of the last two offer a new quote behind a tick box.</title>
 <style>
   svg {
     --surface: #ffffff; --fg: #14161a; --muted: #586170; --line: #7b8594; --bg: #f5f6f9;
@@ -55,8 +55,8 @@
 
           <path class="edge" d="M164,60 H230" marker-end="url(#ex-arrow)"/>
           <rect class="node plain" x="230" y="30" width="290" height="60" rx="8"/>
-          <text class="t-title" x="375" y="56" text-anchor="middle">Did the status just before it</text>
-          <text class="t-title" x="375" y="74" text-anchor="middle">carry money?</text>
+          <text class="t-title" x="375" y="56" text-anchor="middle">Did the last status the page knows</text>
+          <text class="t-title" x="375" y="74" text-anchor="middle">before it carry money?</text>
 
           <path class="edge" d="M520,60 H620" marker-end="url(#ex-arrow)"/>
           <text class="t-lbl" x="570" y="52" text-anchor="middle">yes</text>

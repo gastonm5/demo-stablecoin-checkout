@@ -64,7 +64,7 @@
           <circle class="poll" cx="395" cy="88" r="4.5"/><circle class="poll" cx="570" cy="88" r="4.5"/><circle class="poll" cx="745" cy="88" r="4.5"/><circle class="poll" cx="920" cy="88" r="4.5"/>
 
           <text class="t-title" x="20" y="130">Requests failing</text>
-          <text class="t-sub" x="20" y="146">gaps of 6, 12, 24, then 30 s</text>
+          <text class="t-sub" x="20" y="146">active status: 6, 12, 24, then 30 s</text>
           <line class="axis" x1="220" y1="134" x2="920" y2="134"/>
           <circle class="poll fail" cx="255" cy="134" r="4.5"/><circle class="poll fail" cx="325" cy="134" r="4.5"/><circle class="poll fail" cx="465" cy="134" r="4.5"/><circle class="poll fail" cx="745" cy="134" r="4.5"/>
           <text class="t-lbl" x="333" y="122">notice appears after the 2nd failure in a row</text>

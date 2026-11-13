@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 1048 538" width="1048" height="538" role="img" aria-label="How the hooks pass data. The URL gives useCheckout the payment reference, and useCheckout hands it to usePayment, which polls the API and keeps the payment and its status sequence in the query cache. usePaymentScreen receives that entry together with the clock from useNow, the connection from useOnline and the currency list from useCurrencies, passes four inputs to the pure function deriveScreen, and PaymentView shows the screen that comes back. PickerScreen sends the shopper's choice to useCheckout, which creates or requotes through the API. usePaymentScreen calls back into usePayment once, to check at zero.">
-<title>How the hooks pass data. The URL gives useCheckout the payment reference, and useCheckout hands it to usePayment, which polls the API and keeps the payment and its status sequence in the query cache. usePaymentScreen receives that entry together with the clock from useNow, the connection from useOnline and the currency list from useCurrencies, passes four inputs to the pure function deriveScreen, and PaymentView shows the screen that comes back. PickerScreen sends the shopper's choice to useCheckout, which creates or requotes through the API. usePaymentScreen calls back into usePayment once, to check at zero.</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 1048 538" width="1048" height="538" role="img" aria-label="How the hooks pass data. The URL gives useCheckout the payment reference, and useCheckout hands it to usePayment, which polls the API and keeps the payment and its status sequence in the query cache. usePaymentScreen receives that entry together with the clock from useNow, the connection from useOnline and the currency list from useCurrencies, passes its inputs to the pure function deriveScreen, and PaymentView shows the screen that comes back. PickerScreen sends the shopper's choice to useCheckout, which creates or requotes through the API. usePaymentScreen calls back into usePayment once, to check at zero.">
+<title>How the hooks pass data. The URL gives useCheckout the payment reference, and useCheckout hands it to usePayment, which polls the API and keeps the payment and its status sequence in the query cache. usePaymentScreen receives that entry together with the clock from useNow, the connection from useOnline and the currency list from useCurrencies, passes its inputs to the pure function deriveScreen, and PaymentView shows the screen that comes back. PickerScreen sends the shopper's choice to useCheckout, which creates or requotes through the API. usePaymentScreen calls back into usePayment once, to check at zero.</title>
 <style>
   svg {
     --surface: #ffffff; --fg: #14161a; --muted: #586170; --line: #7b8594; --bg: #f5f6f9;
@@ -76,7 +76,7 @@
           <path class="edge" d="M930,76 V150 H870 V180" marker-end="url(#hk-arrow)"/>
           <text class="t-lbl" x="938" y="116">online</text>
           <path class="edge" d="M800,240 V310" marker-end="url(#hk-arrow)"/>
-          <text class="t-lbl" x="810" y="280">four inputs</text>
+          <text class="t-lbl" x="810" y="280">its inputs</text>
           <path class="edge" d="M800,356 V420" marker-end="url(#hk-arrow)"/>
           <text class="t-lbl" x="810" y="392">screen</text>
           <rect class="node plain" x="20" y="40" width="150" height="40" rx="8"/>
@@ -108,7 +108,7 @@
 
           <rect class="node move" x="720" y="30" width="120" height="46" rx="8"/>
           <text class="t-name" x="780" y="50" text-anchor="middle">useNow</text>
-          <text class="t-sub" x="780" y="66" text-anchor="middle">ticks each second</text>
+          <text class="t-sub" x="780" y="66" text-anchor="middle">ticks on a live quote</text>
 
           <rect class="node move" x="860" y="30" width="140" height="46" rx="8"/>
           <text class="t-name" x="930" y="50" text-anchor="middle">useOnline</text>

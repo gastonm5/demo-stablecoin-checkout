@@ -150,7 +150,7 @@ Each of these is deliberate. The design doc's follow-ups section has the detail.
 I used Claude Code throughout. One Claude model handled design, planning and coordination, a second wrote the code, and OpenAI's Codex reviewed as an outside opinion.
 
 - **Design first, one decision at a time.** Before any code, the planning agent read the brief and raised each decision with options and a recommendation. I chose. That conversation produced the design doc, the ADRs and `AGENTS.md`.
-- **A plan, then one task per agent.** Thirteen build tasks, and one more I added after seeing the finished page, each built test-first by a fresh agent that saw only its own task and the design.
+- **A plan, then one task per agent.** Thirteen build tasks, and four more I added after seeing the finished page, each built test-first by an agent that saw only its own task and the design.
 - **A second model reviewed everything.** Codex reviewed the design, the plan, and every task's commit before the next task began, then the whole branch at the end. The planning agent read each diff and re-ran the tests itself. That last pass found the largest gap: nothing checked that a server answer was about the payment the page had asked for.
 - **Nothing rewritten.** Review fixes are new commits. The history shows the wrong turns.
 
@@ -162,11 +162,17 @@ I used Claude Code throughout. One Claude model handled design, planning and coo
 2. **An order endpoint in the mock.** The agent drew the first screen with the merchant name and "You pay €149.90", and I approved the drawing. Neither value exists before a payment does. The agent noticed later and proposed adding an endpoint to the mock to supply them. I refused: we had declined to invent API everywhere else. The first screen went without them for the whole build. At the end I put the header back another way: the page already assumed it is handed an order id, so it now assumes the rest of the order summary arrives with it, for display only. No endpoint was invented.
 3. **The first double-click guard.** The agent's guard against a second "Continue" was released the moment the first request finished. That is a few milliseconds before React re-renders, and a click in that gap would have created a second payment. The implementing agent flagged it in its own report, without being able to reproduce it, and Codex rated it a blocker. It was replaced by a guard that holds until the result is on screen.
 
-### One place I did it my own way, and the code got better
+### Where I did it my own way, and the code got better
 
-To tell "expired" from "expired after a partial payment", the agent proposed remembering one fact: that money had arrived. I asked for the full sequence of statuses the page has seen, with the amounts that came with each.
+**The status sequence.** To tell "expired" from "expired after a partial payment", the agent proposed remembering one fact: that money had arrived. I asked for the full sequence of statuses the page has seen, with the amounts that came with each.
 
 That sequence ended up carrying most of the safety rules. It is how the page knows not to show the address again when a status goes backwards. It is how the failed screen can say "we saw your payment". It is how the page knows, after a reload, that its own history is incomplete and words things more carefully. A single flag could not have done any of those.
+
+**The clock.** The agents built a clock that ticked once a second for as long as a payment was on screen. On `paid` or `failed`, where nothing is polled and nothing can change, the page still re-rendered ten times in ten seconds. No implementing agent, no review and not the planning agent noticed it during the build.
+
+I asked for the timer to stop whenever time cannot change what the shopper sees, on three conditions: hook calls stay unconditional, a stale clock value is never shown, and the two usual shortcuts are not taken. Memoising everything would hide the cost without removing it. Moving the timer into the countdown alone would leave the screen above it unaware of the deadline that hides the address.
+
+The agent measured the running app before changing anything. Time turned out to be read in one status only, `awaiting_payment`, so the clock runs there and nowhere else. In ten seconds the payment view now commits 13 times on a live quote, 3 times on a waiting status and not at all on a final one. Before, it was 13, 13 and 10. Hiding the address at the deadline, the ten-second window after a "still valid" answer and the one check at zero all still run from that one clock. Codex then found the case my second condition was about: with the device clock set back while the timer was stopped, a new quote could inherit the old reading. A stopped clock now has no value at all.
 
 ### What the agent got wrong about the payment state machine
 
@@ -176,6 +182,8 @@ That sequence ended up carrying most of the safety rules. It is how the page kno
 - **Polling did not quite stop.** After `paid`, the timer stopped, but returning to the tab, reconnecting or pressing "Try now" each still sent a request. The plan's own settings caused it.
 - **The check at zero could go to the wrong place.** When a payment was created on a device whose clock runs far ahead, the pay screen was past its deadline on its first render, and its check ran before the polling hook had switched to the new payment. The shopper saw the right screen; the browser console showed a library error. No test and no review found it. Driving the real page through every state did.
 - **It stated a library's behaviour from memory.** ADR 0002 said the polling interval was fixed-rate. The tests showed the library restarts its timer after every answer. The ADR is corrected, and says it was corrected.
+- **A wrong amount waiting behind a double check.** The pay screen chose the amount to send by checking both the screen's mode and the payment's status, and fell back to the full amount if the two disagreed. They never could, but nothing in the types said so, and the fallback would have put the wrong amount under "Send exactly". A review I asked for found it. Each screen now receives only the payment its status guarantees, so the disagreement does not compile.
+- **It let the design doc drift from the code.** I asked for the two to be compared claim by claim. Of about 520 claims in the design doc, about 50 did not match, every one on the document's side: messages quoted from memory, a fifth input to the screen function that the text never mentioned, a rule about failed answers that held for two requests out of three. The document is corrected, and the log lists what was wrong.
 - **The brief's own count.** The brief says there are "six more states" beyond the four in its diagram. The API defines four more. I noticed that before the agent read the brief, so it did not get the chance to miscount.
 
 I also changed my own mind once because of a review. I had decided a partial payment would still expire at the quote's deadline. Codex read the brief's line, that a payment on its way must never expire under the shopper, as covering a partial payment, and it was right. [ADR 0003](docs/adr/0003-partial-and-late-payments.md) records how that decision moved.

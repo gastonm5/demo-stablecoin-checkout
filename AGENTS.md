@@ -21,7 +21,8 @@ This repo is a hosted crypto payment page and the mock API behind it. A shopper 
 ## The server is the authority
 
 - The page never decides a payment's status. No timer and no failed request may show `expired` or `failed`.
-- The screen is derived by pure functions from four inputs: the server's status, the sequence of statuses seen, the device clock, and the connection state.
+- The screen is derived by pure functions from the server's answer, the sequence of statuses seen, the time, the times of the last answer and the last failed request, and whether the payment's details passed the check against the currency list. The connection notice is derived from the browser's online state and the count of failed polls.
+- The clock runs only while the status is `awaiting_payment`, and a stopped clock has no value. The time used is the later of the clock and the last answer, so a new quote cannot inherit an old reading.
 - A status the page does not know is not an error. It shows the "we're checking" screen and keeps polling.
 
 ## Shopper safety
