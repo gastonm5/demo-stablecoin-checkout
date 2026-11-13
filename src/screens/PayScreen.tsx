@@ -8,6 +8,7 @@ import { Button } from '../components/Button'
 import { CopyButton } from '../components/CopyButton'
 import { NetworkBanner } from '../components/NetworkBanner'
 import { Notice } from '../components/Notice'
+import { STRIP, STRIP_TEXT } from '../components/NoticeStrip'
 import { OrderHeader } from '../components/OrderHeader'
 import { QrFrame } from '../components/QrFrame'
 
@@ -133,10 +134,10 @@ export function PayScreen({
         )
       }
       strip={
-        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+        <div className={STRIP}>
           {notice ??
             (clockText && (
-              <span className="min-w-0 grow basis-full md:basis-0">
+              <span className={STRIP_TEXT}>
                 <strong>{clockText[0]}</strong> {clockText[1]}
               </span>
             ))}
