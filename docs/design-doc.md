@@ -53,8 +53,8 @@ The API forces part of this. `POST /api/payments/:reference/requote` returns 409
 
 **Changing the choice:**
 
-- **While the quote is live** (`awaiting_payment`, with its address on screen): "Change currency or network" asks for confirmation first, because a payment sent to the old address after the change would not be tracked on this page. If the shopper confirms they have not sent anything, the page returns to the picker and the next choice creates a new payment. The confirmation cannot rule out a transfer started on another device a moment earlier. I accept that, because the alternative is to make a shopper who picked the wrong network wait for the quote to expire before they can correct it. The link is not offered while the address is hidden at the deadline.
-- **After the quote expired with no money seen:** the same link returns to the picker, and the next choice calls requote on the same reference. Requote takes a currency and a network, so it can change both. No payment is abandoned, and the page keeps polling the payment while the picker is open, in case a late payment arrives.
+- **While the quote is live** (`awaiting_payment`, with its address on screen): "Change currency or network" asks for confirmation first, because a payment sent to the old address after the change would not be tracked on this page. If the shopper confirms they have not sent anything, the page returns to the picker and the next choice creates a new payment. The confirmation cannot rule out a transfer started on another device a moment earlier. I accept that, because the alternative is to make a shopper who picked the wrong network wait for the quote to expire before they can correct it. The button is not offered while the address is hidden at the deadline.
+- **After the quote expired with no money seen:** the same button returns to the picker, and the next choice calls requote on the same reference. Requote takes a currency and a network, so it can change both. No payment is abandoned, and the page keeps polling the payment while the picker is open, in case a late payment arrives.
 - **While a status that carries money is showing** (`underpaid`, `detected` and later): there is no way to change. The remainder goes to the address the `underpaid` answer carries, on the same network. Section 3.4 has the one case where a quote that saw money can still be replaced: its status went back to `awaiting_payment` and then it expired.
 - **If the server ends a partial payment** (`expired` straight after `underpaid`): there is no change and no new quote. The page sends the shopper to the merchant ([ADR 0003](adr/0003-partial-and-late-payments.md)).
 
@@ -198,7 +198,7 @@ In `App.tsx`, `Page` calls `useCheckout` and `Checkout` calls `useCurrencies`, a
 | `src/domain` | Status groups, `deriveScreen` and `deriveConnection`, the status sequence, countdown maths, the decimals check, the check of a payment against the currency list (`detailsMatch`), and the amount and address to pay (`toSend`) | Pure functions, no React, no I/O |
 | `src/hooks` | `useCheckout`, `usePayment`, `usePaymentScreen`, `useCurrencies`, `useNow`, `useOnline`, and small ones for the picker's selection, copying and the dialog. The URL reader and the payment cache helpers sit beside the hooks that use them | Own all behaviour and timing |
 | `src/screens` | Whole checkout screens: `PickerScreen`, and `PaymentView`, which shows one of `PayScreen`, `WaitingScreen`, `CompleteScreen`, `ExpiredScreen`, `FailedScreen` or `CheckingScreen`, or the shared loading card while a payment's details are being checked. Each screen receives the payment narrowed to the statuses that can produce it. Also the wording those screens share | Render only. A screen is one state of the checkout and is used once |
-| `src/components` | The pieces screens are built from: the card, the status card, the loading card, the order header, the copy button, the network banner and chip, the QR frame, the notice strip, the change dialog, and the three every screen shares: the button, the notice box and the status icon | Render only, and do not know which screen they are in. A screen or a component may keep view state that nothing else reads, such as a ticked box or an open dialog |
+| `src/components` | The pieces screens are built from: the card, the status card, the loading card, the order header, the copy button, the network banner and chip, the QR frame, the notice strip, the change dialog, and three reused across screens: the button, the notice box and the status icon | Render only, and do not know which screen they are in. A screen or a component may keep view state that nothing else reads, such as a ticked box or an open dialog |
 | `src/config` | The assumed input the page starts with: the order summary it is handed before a payment exists | For display, apart from the order id, which is sent when a payment is created. Once a payment is loaded, its own values are the authority for what the header shows |
 | `src/dev` | The dev panel and its own small request helper | The only code that knows the mock exists. It calls the mock's control endpoints itself and never goes through `src/api` |
 | `src/test` | Fixtures and helpers the tests share | |
@@ -453,7 +453,7 @@ The mock is a small Express app mounted inside the dev server, so `npm run dev` 
 - `POST /api/payments` creates a payment with a new reference every time.
 - Quotes come from a hand-written table, one row per currency and network, each with its own rate, fee and address.
 - `GET /api/payments/:reference` returns the whole payment (merchant, order, quote) plus the status fields.
-- `awaiting_payment` becomes `expired` when the deadline passes. A payment that has received money never expires by itself.
+- `awaiting_payment` becomes `expired` when the deadline passes. No other status expires by itself, so a payment that is showing money does not. The mock keeps only the current status: a payment put back to `awaiting_payment` from the dev panel can expire again.
 - Requote succeeds only from `expired`. Anything else gets the 409.
 
 **How reviewers drive it.** The control lives in the mock, not in the app's requests. The dev panel calls control endpoints under `/__mock`, and the app's own request code never knows a mock exists. The same endpoints work with `curl`.
@@ -527,14 +527,14 @@ These were not discussed one by one. I set them while writing this document, and
 - **Order summary:** the assumed object is order `ORD-88213` for Nordwind Audio, EUR 149.90, the same values the mock returns. `?order_id=` in the URL replaces the id and nothing else.
 - **Merchant logo:** the header shows `merchant.logo_url` when there is one, with an empty `alt`, because the merchant's name beside it is its text. With no logo, or one that fails to load, it shows the first letter of the name. The brief's merchant has no logo, so the running page shows the letter; tests cover the image.
 - **Exchange rate:** shown under the amount, exactly as sent ("1 USDT = 0.9214 EUR").
-- **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens, and focus returns to the link when it closes.
+- **Going back from a live quote:** the browser's modal dialog. "Have you already sent a payment? Only change if you have not sent anything." The safe answer, "Stay on this payment", has focus when it opens. Staying, or pressing Escape, returns focus to the "Change currency or network" button. Confirming opens the picker.
 - **`expired` tick box:** on the plain and cautious `expired` screens it enables both "Get a new quote" and "Change currency or network".
 - **`expired` straight after `detected` or `confirming`:** this should not happen on a real server, but the dev panel can force it. It gets the same dead end as after a partial payment, with the headline "This payment expired".
 - **Picker menus:** the browser's own, with the fee and usual time in each option's text. Once a network is chosen its menu shows the name alone, so it is not cut off, and the fee and usual time are on the line under the menus. A currency with one network (ETH) has it filled in.
 - **Payment not found on resume:** back to the picker with a notice.
 - **Copy buttons:** keep the width of their normal label. A successful copy reads "Copied" inside the button for two seconds. A failed one keeps the label and puts "Copy failed. Select the text and copy it." on a line under the button for four seconds. Both are announced to screen readers. The feedback belongs to the value that was copied: if the value beside the button changes, the feedback goes at once, so "Copied" never sits beside an amount that is not on the clipboard.
 - **Dates and times:** formatted for the shopper's locale and time zone.
-- **Accessibility:** a change of screen is announced. Focus moves to the new screen's heading when the kind of screen changes, except onto the pay screen and the loading card, which have no heading and leave focus where it is. The countdown is not read out every second, and colour is never the only signal. Keyboard focus shows as an outline on every control (section 11.1).
+- **Accessibility:** a change of screen is announced. Within a payment, focus moves to the new screen's heading when the kind of screen changes, except onto the pay screen and the loading card, which have no heading and leave focus where it is. The picker does not take focus. The countdown is not read out every second, and colour is never the only signal. Keyboard focus shows as an outline on every control in the checkout (section 11.1).
 - **Mock control endpoints:** `GET /__mock/state`, `POST /__mock/payments/:reference/status`, `POST /__mock/payments/:reference/restart`, `POST /__mock/settings`.
 - **Tools:** Vite, React and TypeScript in strict mode; Tailwind; TanStack Query; zod; `qrcode.react` for the QR; Express for the mock; Vitest and React Testing Library; ESLint and Prettier; npm.
 - **Browsers:** written for current Chrome, Safari, Firefox and Edge. Checked in Chrome only.
@@ -549,23 +549,23 @@ Checked during the build: TypeScript's typings do not accept the amount string i
 
 Added on 13 Nov 2026, after I asked for a review of the rendered page at 1200, 768, 390 and 320 px. It changed how the screens look and nothing they say. Tasks 19 to 27 of the plan did the work.
 
-**One set of values.** Colours, text sizes and corner radii are named once, in the `@theme` block of `src/index.css`, and the screens use only those names.
+**One set of values.** Colours, six text sizes and two corner radii are named once, in the `@theme` block of `src/index.css`. The large amount's fluid size is a utility defined beside them, `text-amount`, and fully round shapes use Tailwind's own `rounded-full`. The screens use only these.
 
 | Kind | Values |
 |---|---|
 | Colour | Named by role, not by shade: `page`, `surface`, `ink` and its three lighter steps, `line`, `action`, `link`, `focus`, and `ok`, `warn`, `bad` and `pending` for status. The network colours are used by the network chip alone |
-| Text size | 12, 14, 15, 16, 18 and 22 px, and one fluid size for the amount to send, from 28 to 40 px with the window's width |
+| Text size | 12, 14, 15, 16, 18 and 22 px, and one fluid size for the large crypto amount on a screen, from 28 to 40 px with the window's width |
 | Radius | 22 px for the card and the dialog, 12 px for controls and boxes, and fully round |
 
 No colour code and no other text size or radius appears in `src/screens` or `src/components`. The dev panel keeps its own colours, so it never looks like part of the checkout.
 
-Three pieces are shared by every screen: `Button` (a black pill for the main action, a bordered control for copy and "Try now", and an underlined link), `Notice` (the amber box) and `StatusIcon` (the pending, clock, check and alert marks, drawn as SVG).
+Three pieces are reused across screens: `Button` (a black pill for the main action, a bordered control for copy and "Try now", and an underlined one that looks like a link; all three are buttons), `Notice` (the amber box) and `StatusIcon` (the pending, clock, check and alert marks, drawn as SVG).
 
 **Nothing is cut off.** Down to 320 px wide, a long merchant name, network name, order id or amount wraps inside the card. A currency code is never split across two lines: the amount breaks at the space before it. Under 480 px the order id and the fiat amount take a row of their own under the merchant. From 768 px up, the card's two columns are at least 460 px tall, so a short screen does not make the card jump.
 
-**Things that keep their place.** A copy button always has the width of its normal label. A connection notice takes the left of the strip and wraps there, with "Try now" and the link together on the right. At 1200 px it makes the card 22 px taller, where it used to make it 49 px taller.
+**Things that keep their place.** A copy button always has the width of its normal label. A connection notice takes the left of the strip and wraps there, with "Try now" and the "Change currency or network" button together on the right. At 1200 px it makes the card 22 px taller, where it used to make it 49 px taller.
 
-**Keyboard focus** shows as a 2 px outline, 2 px off the control, on every button, link, menu and tick box.
+**Keyboard focus** shows as a 2 px outline, 2 px off the control, on every button, menu and tick box in the checkout. The dev panel keeps the browser's own.
 
 **A partial payment's new amount** is marked in two ways that last as long as the status does: the label "Send the remaining" is in the `warn` colour, and the amount has a `warn` rule down its left side. When it first appears, the block is also washed in the pale `warn` colour for 1.5 s. The lasting marks do not depend on that motion.
 
@@ -573,7 +573,7 @@ Three pieces are shared by every screen: `Button` (a black pill for the main act
 
 | What | Motion |
 |---|---|
-| A new screen's content | Fades in and rises 8 px, 180 ms. The card's frame does not move |
+| A new screen's two columns | Fade in and rise 8 px, 180 ms. The card's frame and the strip under it do not move |
 | The picker's fee line and "You are paying with" group, when a network is first chosen | Fades in and rises 6 px, 160 ms |
 | "Still working…", a create or requote error, the copy failure line, a connection notice, and the address and QR coming back | Fades in, 150 ms |
 | The confirmations bar | Moves to the server's count over 300 ms, in either direction |
@@ -581,7 +581,7 @@ Three pieces are shared by every screen: `Button` (a black pill for the main act
 | The change dialog and its backdrop | Fade in over 150 ms, the dialog from 98% of its size |
 | Buttons and the picker's menus | Change colour over 120 ms |
 
-Nothing fades out. When the server's answer takes the address and QR away, they are gone in the same render, and the same goes for a notice, the dialog and a whole screen. An amount and the countdown's digits are never animated: they are replaced in one frame. With "reduce motion" set on the device, one rule makes every transition and animation instant.
+Nothing in the checkout is animated out. When the server's answer takes the address and QR away, they are gone in the same render, and the same goes for a notice, the dialog and a whole screen. The only things that fade away are the wash, which is a tint behind the amount and not the amount, and, outside the checkout, the dev panel's tab as the panel opens. A change of amount and each tick of the countdown happen in one frame: the digits are never counted, tweened or cross-faded. They do fade in with the rest of their column when a screen first appears. With "reduce motion" set on the device, one rule makes every transition and animation instant.
 
 The fades use the browser's `@starting-style`. A browser without it shows the content at once, with no fade, and nothing else changes.
 
