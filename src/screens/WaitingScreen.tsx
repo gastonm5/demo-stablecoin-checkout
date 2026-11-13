@@ -55,7 +55,7 @@ export function WaitingScreen({
         </div>
       </div>
       {usualSeconds !== undefined && (
-        <p className="text-[13px] text-gray-600">
+        <p className="max-w-full text-[13px] text-gray-600 wrap-anywhere">
           {`Usually about ${usualTime(usualSeconds)} on ${networkShortName(quote.network_name)}.`}
         </p>
       )}

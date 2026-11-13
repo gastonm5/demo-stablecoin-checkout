@@ -11,7 +11,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#cfd4da] bg-white px-3 py-2 text-left text-[13px] font-semibold text-[#14161a] hover:bg-gray-50"
+      className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#cfd4da] bg-white px-3 py-2 text-left text-[13px] font-semibold text-[#14161a] hover:bg-gray-50 max-w-full"
     >
       <svg
         aria-hidden="true"
@@ -24,7 +24,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
         <rect x="5" y="5" width="9" height="9" rx="2" />
         <path d="M11 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
       </svg>
-      <span aria-live="polite">
+      <span aria-live="polite" className="min-w-0 wrap-anywhere">
         {state === 'idle' ? label : FEEDBACK[state]}
       </span>
     </button>

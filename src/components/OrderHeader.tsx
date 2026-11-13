@@ -40,7 +40,7 @@ export function OrderHeader({ order }: { order: OrderSummary }) {
         <div className={`${key} min-w-0 wrap-anywhere`}>
           Order {order.order_id}
         </div>
-        <div className={value}>
+        <div className={`${value} min-w-0 text-right wrap-anywhere`}>
           {formatFiat(order.order.amount, order.order.currency)}
         </div>
       </div>

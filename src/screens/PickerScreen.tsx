@@ -161,7 +161,7 @@ export function PickerScreen({
           )}
           <button
             type="button"
-            className="w-full rounded-full bg-[#14161a] px-[18px] py-3.5 text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-600"
+            className="w-full rounded-full bg-[#14161a] px-[18px] py-3.5 text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-600 wrap-anywhere"
             disabled={submitting || !choice}
             onClick={() => {
               if (choice) onSubmit(choice)
