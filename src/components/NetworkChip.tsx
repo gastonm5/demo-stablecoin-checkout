@@ -1,9 +1,9 @@
 // Decoration only: the network's name is always in text beside the chip.
 const COLOURS: Record<string, string> = {
-  tron: 'bg-[#ff060a]',
-  ethereum: 'bg-[#627eea]',
-  polygon: 'bg-[#8247e5]',
-  solana: 'bg-[#14b8a6]',
+  tron: 'bg-network-tron',
+  ethereum: 'bg-network-ethereum',
+  polygon: 'bg-network-polygon',
+  solana: 'bg-network-solana',
 }
 
 export function NetworkChip({
@@ -18,7 +18,7 @@ export function NetworkChip({
   return (
     <span
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center rounded-full font-extrabold text-white ${COLOURS[networkId] ?? 'bg-[#6b7280]'} ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-full font-extrabold text-ink-inverse ${COLOURS[networkId] ?? 'bg-network-other'} ${className}`}
     >
       {[...networkName][0]}
     </span>

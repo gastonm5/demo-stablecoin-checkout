@@ -11,7 +11,7 @@ export function NetworkBanner({
   networkName: string
 }) {
   return (
-    <div className="mb-5 flex items-center gap-3 rounded-xl bg-[#14161a] px-3.5 py-3 text-white">
+    <div className="mb-5 flex items-center gap-3 rounded-xl bg-surface-inverse px-3.5 py-3 text-ink-inverse">
       <NetworkChip
         networkId={networkId}
         networkName={networkName}
@@ -19,7 +19,7 @@ export function NetworkBanner({
       />
       <div className="min-w-0 wrap-anywhere">
         <p className="text-base font-bold">{`${networkName} network`}</p>
-        <p className="text-[13px] text-[#c9ced4]">
+        <p className="text-[13px] text-ink-inverse-muted">
           {`Send ${currency} on ${networkShortName(networkName)} only. Any other network loses your funds.`}
         </p>
       </div>

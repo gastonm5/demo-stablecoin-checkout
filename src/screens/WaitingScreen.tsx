@@ -46,16 +46,16 @@ export function WaitingScreen({
         </div>
         <div
           aria-hidden="true"
-          className="mt-1.5 h-[5px] overflow-hidden rounded-[3px] bg-[#e6e8eb]"
+          className="mt-1.5 h-[5px] overflow-hidden rounded-[3px] bg-track"
         >
           <div
-            className="h-full bg-[#14161a]"
+            className="h-full bg-surface-inverse"
             style={{ width: `${share * 100}%` }}
           />
         </div>
       </div>
       {usualSeconds !== undefined && (
-        <p className="max-w-full text-[13px] text-gray-600 wrap-anywhere">
+        <p className="max-w-full text-[13px] text-ink-muted wrap-anywhere">
           {`Usually about ${usualTime(usualSeconds)} on ${networkShortName(quote.network_name)}.`}
         </p>
       )}

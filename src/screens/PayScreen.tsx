@@ -9,7 +9,7 @@ import { NetworkBanner } from '../components/NetworkBanner'
 import { OrderHeader } from '../components/OrderHeader'
 import { QrFrame } from '../components/QrFrame'
 
-const label = 'text-xs font-semibold text-gray-500'
+const label = 'text-xs font-semibold text-ink-subtle'
 
 export function PayScreen({
   screen,
@@ -49,7 +49,7 @@ export function PayScreen({
         <>
           <OrderHeader order={payment} />
           {remaining && (
-            <p className="mb-3.5 rounded-xl border border-[#f3d999] bg-[#fff7e6] px-3.5 py-3 text-sm wrap-anywhere text-[#6b4e00]">
+            <p className="mb-3.5 rounded-xl border border-warn-line bg-warn-surface px-3.5 py-3 text-sm wrap-anywhere text-warn-ink">
               <strong>Part of your payment arrived.</strong>{' '}
               {`We received ${remaining.amount_received} of ${quote.total_due} ${currency}.`}
             </p>
@@ -69,12 +69,12 @@ export function PayScreen({
             <CopyButton value={amount} label="Copy amount" />
           </div>
           {!remaining && (
-            <p className="mt-1 text-[13.5px] wrap-anywhere text-gray-500">
+            <p className="mt-1 text-[13.5px] wrap-anywhere text-ink-subtle">
               {`${quote.crypto_amount} ${currency} + ${quote.network_fee} ${currency} network fee · 1 ${currency} = ${quote.exchange_rate} ${payment.order.currency}`}
             </p>
           )}
           {screen.showAddress && (
-            <div className="mt-5 rounded-xl border border-[#dfe3e8] bg-[#fafbfc] px-3.5 py-3">
+            <div className="mt-5 rounded-xl border border-line bg-surface-sunken px-3.5 py-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2.5">
                 <p
                   className={`min-w-0 wrap-anywhere ${label}`}
@@ -112,7 +112,7 @@ export function PayScreen({
             }
           />
         ) : (
-          <p className="text-center text-[14.5px] text-gray-600">
+          <p className="text-center text-[14.5px] text-ink-muted">
             The address is hidden until we can confirm this quote.
           </p>
         )
@@ -129,7 +129,7 @@ export function PayScreen({
             <button
               type="button"
               onClick={onChange}
-              className="ml-auto whitespace-nowrap text-[#3b5bdb] underline"
+              className="ml-auto whitespace-nowrap text-link underline"
             >
               Change currency or network
             </button>

@@ -91,7 +91,7 @@ export function ExpiredScreen({
           type="button"
           disabled={locked}
           onClick={onChange}
-          className="whitespace-nowrap text-[#3b5bdb] underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
+          className="whitespace-nowrap text-link underline disabled:cursor-not-allowed disabled:text-ink-subtle disabled:no-underline"
         >
           Change currency or network
         </button>
@@ -119,12 +119,12 @@ export function ExpiredScreen({
         type="button"
         disabled={locked}
         onClick={onRequote}
-        className="rounded-full bg-[#14161a] px-5 py-[13px] text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#d5d9de]"
+        className="rounded-full bg-action px-5 py-[13px] text-[15px] font-bold text-ink-inverse disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-ink-muted"
       >
         {requoting ? 'Working…' : 'Get a new quote'}
       </button>
       {error != null && (
-        <p role="alert" className="text-sm font-semibold text-red-700">
+        <p role="alert" className="text-sm font-semibold text-bad">
           We couldn't get a new quote. Try again.
         </p>
       )}

@@ -15,10 +15,10 @@ import { OrderHeader } from '../components/OrderHeader'
 
 const STILL_WORKING_AFTER_MS = 4_000
 
-const label = 'mb-1.5 block text-xs font-semibold text-gray-500'
-const note = 'text-[13.5px] wrap-anywhere text-gray-500'
+const label = 'mb-1.5 block text-xs font-semibold text-ink-subtle'
+const note = 'text-[13.5px] wrap-anywhere text-ink-subtle'
 const menu =
-  'peer w-full appearance-none rounded-xl border-[1.5px] border-[#dfe3e8] bg-white py-3 pr-10 pl-3.5 font-bold disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500'
+  'peer w-full appearance-none rounded-xl border-[1.5px] border-line bg-surface py-3 pr-10 pl-3.5 font-bold disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-subtle'
 const chevron = (
   <svg
     aria-hidden="true"
@@ -26,7 +26,7 @@ const chevron = (
     fill="none"
     stroke="currentColor"
     strokeWidth="1.75"
-    className="pointer-events-none absolute top-1/2 right-3.5 size-3 -translate-y-1/2 peer-disabled:text-gray-500"
+    className="pointer-events-none absolute top-1/2 right-3.5 size-3 -translate-y-1/2 peer-disabled:text-ink-subtle"
   >
     <path d="M2.5 4.5 6 8l3.5-3.5" />
   </svg>
@@ -71,7 +71,7 @@ export function PickerScreen({
           {notice === 'payment_not_found' && (
             <p
               role="status"
-              className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-sm"
+              className="mb-4 rounded-xl border border-warn-line bg-warn-surface px-3.5 py-2.5 text-sm"
             >
               We couldn't find that payment. Choose how to pay to start again.
             </p>
@@ -145,7 +145,7 @@ export function PickerScreen({
             <>
               <div>
                 <div className={label}>You are paying with</div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#14161a] py-1.5 pr-3.5 pl-1.5 text-sm font-bold text-white">
+                <div className="inline-flex items-center gap-2 rounded-full bg-surface-inverse py-1.5 pr-3.5 pl-1.5 text-sm font-bold text-ink-inverse">
                   <NetworkChip
                     networkId={network.id}
                     networkName={network.name}
@@ -161,7 +161,7 @@ export function PickerScreen({
           )}
           <button
             type="button"
-            className="w-full rounded-full bg-[#14161a] px-[18px] py-3.5 text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-600 wrap-anywhere"
+            className="w-full rounded-full bg-action px-[18px] py-3.5 text-[15px] font-bold text-ink-inverse disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-ink-muted wrap-anywhere"
             disabled={submitting || !choice}
             onClick={() => {
               if (choice) onSubmit(choice)
@@ -175,7 +175,7 @@ export function PickerScreen({
             </p>
           )}
           {error != null && (
-            <p role="alert" className="text-sm font-semibold text-red-700">
+            <p role="alert" className="text-sm font-semibold text-bad">
               We couldn't reach the payment service. Try again.
             </p>
           )}
@@ -185,7 +185,7 @@ export function PickerScreen({
           {mode === 'requote' && onCancel && (
             <button
               type="button"
-              className="self-start text-sm font-semibold text-blue-700 underline underline-offset-2 disabled:cursor-not-allowed disabled:text-gray-500"
+              className="self-start text-sm font-semibold text-link underline underline-offset-2 disabled:cursor-not-allowed disabled:text-ink-subtle"
               disabled={submitting}
               onClick={onCancel}
             >

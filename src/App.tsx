@@ -48,7 +48,7 @@ function Page() {
   const checkout = useCheckout()
   return (
     <div className="flex">
-      <main className="min-h-screen min-w-0 flex-1 bg-[#f5f5f7] px-4 py-8 text-[#14161a] md:py-16">
+      <main className="min-h-screen min-w-0 flex-1 bg-page px-4 py-8 text-ink md:py-16">
         <Checkout checkout={checkout} />
       </main>
       <DevPanel reference={checkout.reference} entry={checkout.payment.entry} />

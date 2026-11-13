@@ -1,5 +1,38 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-page: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #fafbfc;
+  --color-surface-inverse: #14161a;
+  --color-ink: #14161a;
+  --color-ink-muted: #4b5563;
+  --color-ink-subtle: #6b7280;
+  --color-ink-faint: #838a94;
+  --color-ink-inverse: #ffffff;
+  --color-ink-inverse-muted: #c9ced4;
+  --color-line: #dfe3e8;
+  --color-line-strong: #cfd4da;
+  --color-line-faint: #eef0f2;
+  --color-track: #e6e8eb;
+  --color-action: #14161a;
+  --color-action-disabled: #e5e7eb;
+  --color-link: #3b5bdb;
+  --color-focus: #3b5bdb;
+  --color-ok: #15803d;
+  --color-warn: #b45309;
+  --color-warn-surface: #fff7e6;
+  --color-warn-line: #f3d999;
+  --color-warn-ink: #6b4e00;
+  --color-bad: #b91c1c;
+  --color-pending: #6b7280;
+  --color-network-tron: #ff060a;
+  --color-network-ethereum: #627eea;
+  --color-network-polygon: #8247e5;
+  --color-network-solana: #14b8a6;
+  --color-network-other: #6b7280;
+}
+
 @utility text-amount {
   font-size: clamp(1.75rem, 7.5vw, 2.5rem);
 }

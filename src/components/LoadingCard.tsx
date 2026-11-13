@@ -27,13 +27,13 @@ export function LoadingCard({
               <button
                 type="button"
                 onClick={onRetry}
-                className="rounded-full bg-[#14161a] px-5 py-3 font-bold text-white"
+                className="rounded-full bg-action px-5 py-3 font-bold text-ink-inverse"
               >
                 Try again
               </button>
             </>
           ) : (
-            <p className="text-gray-600">{loading}</p>
+            <p className="text-ink-muted">{loading}</p>
           )}
         </div>
       }

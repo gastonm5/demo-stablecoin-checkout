@@ -5,17 +5,17 @@ import { CheckoutCard } from './CheckoutCard'
 import { CopyButton } from './CopyButton'
 import { OrderHeader } from './OrderHeader'
 
-export const BODY = 'max-w-[320px] text-[14.5px] wrap-anywhere text-gray-600'
+export const BODY = 'max-w-[320px] text-[14.5px] wrap-anywhere text-ink-muted'
 export const NOTICE =
-  'rounded-xl border border-[#f3d999] bg-[#fff7e6] px-3.5 py-3 text-left text-sm wrap-anywhere text-[#6b4e00]'
-export const WARN = 'text-[#b45309]'
+  'rounded-xl border border-warn-line bg-warn-surface px-3.5 py-3 text-left text-sm wrap-anywhere text-warn-ink'
+export const WARN = 'text-warn'
 
 const ICONS = {
-  wait: ['text-[#6b7280]', '●'],
-  clock: ['text-[#6b7280]', '◷'],
-  ok: ['text-[#15803d]', '✓'],
+  wait: ['text-pending', '●'],
+  clock: ['text-pending', '◷'],
+  ok: ['text-ok', '✓'],
   warn: [WARN, '!'],
-  bad: ['text-[#b91c1c]', '!'],
+  bad: ['text-bad', '!'],
 } as const
 
 export function Row({
@@ -28,8 +28,8 @@ export function Row({
   className?: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-[#eef0f2] py-[9px] text-sm">
-      <dt className="shrink-0 text-gray-500">{label}</dt>
+    <div className="flex items-center justify-between gap-3 border-t border-line-faint py-[9px] text-sm">
+      <dt className="shrink-0 text-ink-subtle">{label}</dt>
       <dd
         className={`min-w-0 text-right font-semibold wrap-anywhere ${className}`}
       >
@@ -99,11 +99,11 @@ export function StatusCard({
           <OrderHeader order={payment} />
           {amount && (
             <>
-              <p className="mb-0.5 text-xs font-semibold text-gray-500">
+              <p className="mb-0.5 text-xs font-semibold text-ink-subtle">
                 {label}
               </p>
               <p
-                className={`mb-3.5 text-amount leading-[1.1] font-extrabold tracking-[-.02em] wrap-anywhere ${muted ? 'text-[#9aa1ab]' : ''}`}
+                className={`mb-3.5 text-amount leading-[1.1] font-extrabold tracking-[-.02em] wrap-anywhere ${muted ? 'text-ink-faint' : ''}`}
               >
                 {amount}{' '}
                 <span className="whitespace-nowrap">

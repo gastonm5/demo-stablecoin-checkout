@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { Connection } from '../domain/screen'
 
-const dot = 'mr-2 inline-block size-[9px] rounded-full bg-[#b45309]'
+const dot = 'mr-2 inline-block size-[9px] rounded-full bg-warn'
 
 // A failed request says nothing about the payment, so neither notice says it is safe.
 export function connectionNotice(
@@ -28,7 +28,7 @@ export function connectionNotice(
       <button
         type="button"
         onClick={onTryNow}
-        className="rounded-[10px] border border-[#cfd4da] bg-white px-3 py-2 text-[13px] font-semibold whitespace-nowrap hover:bg-gray-50"
+        className="rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-[13px] font-semibold whitespace-nowrap hover:bg-surface-sunken"
       >
         Try now
       </button>

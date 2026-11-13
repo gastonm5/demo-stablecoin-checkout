@@ -11,7 +11,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#cfd4da] bg-white px-3 py-2 text-left text-[13px] font-semibold text-[#14161a] hover:bg-gray-50 max-w-full"
+      className="inline-flex items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-surface-sunken max-w-full"
     >
       <svg
         aria-hidden="true"

@@ -25,7 +25,7 @@ export function ConfirmChangeDialog({
         event.preventDefault()
         onCancel()
       }}
-      className="fixed inset-0 z-10 m-auto h-fit w-[440px] max-w-[calc(100%-32px)] rounded-[22px] border border-[#dfe3e8] bg-white p-6 text-[#14161a] backdrop:bg-[#14161a]/45"
+      className="fixed inset-0 z-10 m-auto h-fit w-[440px] max-w-[calc(100%-32px)] rounded-[22px] border border-line bg-surface p-6 text-ink backdrop:bg-surface-inverse/45"
     >
       <h2
         id={`${id}-title`}
@@ -33,7 +33,7 @@ export function ConfirmChangeDialog({
       >
         Have you already sent a payment?
       </h2>
-      <p id={`${id}-body`} className="mt-2 text-[14.5px] text-gray-600">
+      <p id={`${id}-body`} className="mt-2 text-[14.5px] text-ink-muted">
         Only change if you have not sent anything. A payment sent to the current
         address after you change will not be tracked on this page.
       </p>
@@ -43,14 +43,14 @@ export function ConfirmChangeDialog({
           type="button"
           autoFocus
           onClick={onCancel}
-          className={`${button} bg-[#14161a] text-white`}
+          className={`${button} bg-action text-ink-inverse`}
         >
           Stay on this payment
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className={`${button} border border-[#cfd4da]`}
+          className={`${button} border border-line-strong`}
         >
           I haven't sent anything, change
         </button>
