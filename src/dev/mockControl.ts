@@ -59,6 +59,10 @@ export async function setMockStatus(
   })
 }
 
+export async function restartMockPayment(reference: string): Promise<void> {
+  await call(`/payments/${encodeURIComponent(reference)}/restart`, {})
+}
+
 export function updateMockSettings(
   patch: Partial<MockSettings>,
 ): Promise<MockSettings> {

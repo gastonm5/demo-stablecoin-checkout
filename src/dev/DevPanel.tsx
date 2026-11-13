@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import type { PaymentEntry } from '../hooks/paymentCache'
-import { setMockStatus } from './mockControl'
+import { restartMockPayment, setMockStatus } from './mockControl'
 import type { MockSettings } from './mockControl'
+import { openPicker, reloadPage } from './navigation'
 import { useMockSettings } from './useMockSettings'
 
 const STATUSES = [
@@ -65,6 +67,28 @@ const matches = (
     ([key, value]) => settings[key as keyof MockSettings] === value,
   )
 
+const OPEN_KEY = 'dev-panel-open'
+
+// A browser that refuses storage gets the panel collapsed on every load, as before it remembered.
+function remembered(): boolean {
+  try {
+    return sessionStorage.getItem(OPEN_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function remember(open: boolean): void {
+  try {
+    sessionStorage.setItem(OPEN_KEY, String(open))
+  } catch {
+    // See remembered.
+  }
+}
+
+const SLIDE =
+  'transition-[width] duration-200 ease-[cubic-bezier(.2,0,0,1)] motion-reduce:transition-none'
+
 const BUTTON =
   'rounded-md border border-[#39404b] px-[7px] py-[5px] text-center disabled:opacity-40 aria-pressed:border-[#fbbf24] aria-pressed:bg-[#fbbf24] aria-pressed:font-bold aria-pressed:text-[#101318]'
 
@@ -105,19 +129,19 @@ export function DevPanel({
   reference: string | null
   entry: PaymentEntry | undefined
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(remembered)
   const { settings, update } = useMockSettings(open)
+  const hide = useRef<HTMLButtonElement>(null)
+  const tab = useRef<HTMLButtonElement>(null)
 
-  if (!open)
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-[34px] shrink-0 border-l border-black bg-[#101318] font-mono text-xs font-bold tracking-[.1em] text-[#fbbf24] [writing-mode:vertical-rl]"
-      >
-        <span aria-hidden="true">« </span>DEV
-      </button>
-    )
+  const toggle = (next: boolean) => {
+    // Committed first, so the part coming in is no longer inert when it takes focus.
+    flushSync(() => setOpen(next))
+    remember(next)
+    const target = next ? hide.current : tab.current
+    // The panel clips what is outside its width, and focus would otherwise scroll the clipped part in.
+    target?.focus({ preventScroll: true })
+  }
 
   const payment = entry?.payment
   const confirmations =
@@ -126,106 +150,162 @@ export function DevPanel({
     // A failed command changes nothing; the card beside the panel shows whether a status took.
     if (reference !== null) setMockStatus(reference, ...args).catch(() => {})
   }
+  // Only a reload clears the statuses the page has seen. A failed restart changes nothing, like a failed status.
+  const restart = () => {
+    if (reference !== null)
+      restartMockPayment(reference).then(reloadPage, () => {})
+  }
 
   return (
-    // Under 900 px there is no room beside the card, so the panel lies over the page.
-    <aside
-      aria-label="Mock controls"
-      className="fixed inset-y-0 right-0 z-10 w-[330px] overflow-y-auto border-l border-black bg-[#101318] p-3.5 font-mono text-xs leading-[1.45] text-[#d7dce3] min-[900px]:static min-[900px]:shrink-0"
-    >
-      <div className="mb-3 flex items-center justify-between">
-        <b className="tracking-[.08em] text-[#fbbf24]">DEV · MOCK CONTROLS</b>
-        <button
-          type="button"
-          // Mounted only by a click on the tab, so this never takes focus from the page on load.
-          autoFocus
-          onClick={() => setOpen(false)}
-          className="rounded-md border border-[#39404b] px-2 py-0.5 text-[#9aa4b2]"
+    <>
+      {/* Holds the panel's room in the row. Under 900 px there is no room beside the card, so the open panel lies over the page. */}
+      <div
+        className={`w-[34px] shrink-0 ${SLIDE} ${open ? 'min-[900px]:w-[330px]' : ''}`}
+      />
+      <div
+        className={`fixed inset-y-0 right-0 z-10 overflow-hidden ${SLIDE} ${open ? 'w-[330px]' : 'w-[34px]'}`}
+      >
+        {/* A fixed width, clipped by the box around it, so nothing inside reflows while it slides. */}
+        <aside
+          aria-label="Mock controls"
+          inert={!open}
+          aria-hidden={!open}
+          className="h-full w-[330px] overflow-y-auto border-l border-black bg-[#101318] p-3.5 font-mono text-xs leading-[1.45] text-[#d7dce3]"
         >
-          hide<span aria-hidden="true"> »</span>
-        </button>
-      </div>
-
-      <Section title="Current payment">
-        {reference === null ? (
-          <p>No payment yet.</p>
-        ) : (
-          <>
-            <p className="flex justify-between gap-2">
-              <span className="text-[#7d8796]">reference</span>
-              {reference}
-            </p>
-            <p className="text-[#9aa4b2]">
-              seen:{' '}
-              {entry?.sequence.entries.map((seen) => seen.status).join(' → ')}
-            </p>
-          </>
-        )}
-      </Section>
-
-      <Section title="Set status">
-        <div className="grid grid-cols-2 gap-1.5">
-          {STATUSES.map((status) => (
-            <Toggle
-              key={status}
-              label={status}
-              pressed={payment?.status === status}
-              disabled={reference === null}
-              onClick={() => send(status)}
-            />
-          ))}
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-[#7d8796]">confirmations</span>
-          <span className="flex items-center gap-2">
+          <div className="mb-3 flex items-center justify-between">
+            <b className="tracking-[.08em] text-[#fbbf24]">
+              DEV · MOCK CONTROLS
+            </b>
             <button
+              ref={hide}
               type="button"
-              disabled={reference === null || confirmations === 0}
-              onClick={() => send('confirming', confirmations - 1)}
-              className={BUTTON}
+              onClick={() => toggle(false)}
+              className="rounded-md border border-[#39404b] px-2 py-0.5 text-[#9aa4b2]"
             >
-              −
+              hide<span aria-hidden="true"> »</span>
             </button>
-            <span>
-              {payment
-                ? `${confirmations} of ${payment.quote.required_confirmations}`
-                : confirmations}
-            </span>
-            <button
-              type="button"
-              disabled={reference === null}
-              onClick={() => send('confirming', confirmations + 1)}
-              className={BUTTON}
-            >
-              +
-            </button>
-          </span>
-        </div>
-      </Section>
+          </div>
 
-      {SETTINGS.map(([title, rows]) => (
-        <Section key={title} title={title}>
-          {rows.map((row) => (
-            <div
-              key={row[0][0]}
-              className="mb-1.5 grid auto-cols-fr grid-flow-col gap-1.5 last:mb-0"
-            >
-              {row.map(([label, patch]) => (
+          <Section title="Current payment">
+            {reference === null ? (
+              <p>No payment yet.</p>
+            ) : (
+              <>
+                <p className="flex justify-between gap-2">
+                  <span className="text-[#7d8796]">reference</span>
+                  {reference}
+                </p>
+                <p className="text-[#9aa4b2]">
+                  seen:{' '}
+                  {entry?.sequence.entries
+                    .map((seen) => seen.status)
+                    .join(' → ')}
+                </p>
+              </>
+            )}
+          </Section>
+
+          <Section title="Set status">
+            <div className="grid grid-cols-2 gap-1.5">
+              {STATUSES.map((status) => (
                 <Toggle
-                  key={label}
-                  label={label}
-                  pressed={matches(settings, patch)}
-                  onClick={() => update(patch)}
+                  key={status}
+                  label={status}
+                  pressed={payment?.status === status}
+                  disabled={reference === null}
+                  onClick={() => send(status)}
                 />
               ))}
             </div>
-          ))}
-        </Section>
-      ))}
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[#7d8796]">confirmations</span>
+              <span className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={reference === null || confirmations === 0}
+                  onClick={() => send('confirming', confirmations - 1)}
+                  className={BUTTON}
+                >
+                  −
+                </button>
+                <span>
+                  {payment
+                    ? `${confirmations} of ${payment.quote.required_confirmations}`
+                    : confirmations}
+                </span>
+                <button
+                  type="button"
+                  disabled={reference === null}
+                  onClick={() => send('confirming', confirmations + 1)}
+                  className={BUTTON}
+                >
+                  +
+                </button>
+              </span>
+            </div>
+          </Section>
 
-      <p className="border-t border-[#262c35] pt-2.5 text-[#7d8796]">
-        Offline: use the browser's own offline switch.
-      </p>
-    </aside>
+          <Section title="Start over">
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                disabled={reference === null}
+                onClick={restart}
+                className={BUTTON}
+              >
+                restart this payment
+              </button>
+              <button
+                type="button"
+                disabled={reference === null}
+                onClick={openPicker}
+                className={BUTTON}
+              >
+                new payment
+              </button>
+            </div>
+            <p className="mt-2 text-[#7d8796]">
+              restart: same reference, awaiting_payment with a fresh quote, then
+              the page reloads. new: back to the picker.
+            </p>
+          </Section>
+
+          {SETTINGS.map(([title, rows]) => (
+            <Section key={title} title={title}>
+              {rows.map((row) => (
+                <div
+                  key={row[0][0]}
+                  className="mb-1.5 grid auto-cols-fr grid-flow-col gap-1.5 last:mb-0"
+                >
+                  {row.map(([label, patch]) => (
+                    <Toggle
+                      key={label}
+                      label={label}
+                      pressed={matches(settings, patch)}
+                      onClick={() => update(patch)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </Section>
+          ))}
+
+          <p className="border-t border-[#262c35] pt-2.5 text-[#7d8796]">
+            Offline: use the browser's own offline switch.
+          </p>
+        </aside>
+        {/* Over the content, so it fades out over it while the panel widens and back in while it narrows. */}
+        <button
+          ref={tab}
+          type="button"
+          inert={open}
+          aria-hidden={open}
+          onClick={() => toggle(true)}
+          className={`absolute inset-y-0 left-0 w-[34px] border-l border-black bg-[#101318] font-mono text-xs font-bold tracking-[.1em] text-[#fbbf24] transition-opacity duration-200 ease-[cubic-bezier(.2,0,0,1)] [writing-mode:vertical-rl] motion-reduce:transition-none ${open ? 'opacity-0' : ''}`}
+        >
+          <span aria-hidden="true">« </span>DEV
+        </button>
+      </div>
+    </>
   )
 }

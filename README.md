@@ -71,20 +71,22 @@ docs/           Current specifications and historical material
 
 Click the **DEV** tab on the right edge of the page. From 900 px wide the panel sits beside the checkout card, so you can change something and watch the page react. On a narrower window it opens over the page.
 
-| To see                      | Do this                                                                                            |
-| --------------------------- | -------------------------------------------------------------------------------------------------- |
-| Any payment status          | Create a payment, then press that status under **Set status**. The eight buttons work in any order |
-| Confirmations moving        | Use the **confirmations − n +** stepper                                                            |
-| The countdown reaching zero | Set **New quotes last** to 30 s, then create a payment                                             |
-| A slow response             | Set **Faults** to 3 s. 15 s is longer than the page's 10 s timeout                                 |
-| A server error              | Set **Faults** to HTTP 500                                                                         |
-| A network error             | Set **Faults** to drop, which closes the connection with no response                               |
-| A clock difference          | Set **Server clock offset** to −5 min or +5 min, then create a payment                             |
-| An offline browser          | Use the browser's own switch: DevTools, Network, Offline                                           |
+| To see                          | Do this                                                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Any payment status              | Create a payment, then press that status under **Set status**. The eight buttons work in any order                            |
+| Confirmations moving            | Use the **confirmations − n +** stepper                                                                                       |
+| The countdown reaching zero     | Set **New quotes last** to 30 s, then create a payment                                                                        |
+| A slow response                 | Set **Faults** to 3 s. 15 s is longer than the page's 10 s timeout                                                            |
+| A server error                  | Set **Faults** to HTTP 500                                                                                                    |
+| A network error                 | Set **Faults** to drop, which closes the connection with no response                                                          |
+| A clock difference              | Set **Server clock offset** to −5 min or +5 min, then create a payment                                                        |
+| The same payment from the start | Press **restart this payment** under **Start over**. It goes back to `awaiting_payment` with a new quote and the page reloads |
+| The picker again                | Press **new payment** under **Start over**                                                                                    |
+| An offline browser              | Use the browser's own switch: DevTools, Network, Offline                                                                      |
 
 A fault applies to every API request until you switch it back to "normal" or "no delay".
 
-Once a payment is `paid`, `overpaid` or `failed`, the page stops asking the server about it. A status set after that shows only after a reload. To try another sequence, start a new payment.
+Once a payment is `paid`, `overpaid` or `failed`, the page stops asking the server about it. A status set after that shows only after a reload. To try another sequence, use **Start over**: both of its buttons reload the page, and the panel stays open across the reload.
 
 ### With curl
 
@@ -109,6 +111,9 @@ curl -X POST localhost:5173/__mock/settings -H 'content-type: application/json' 
 
 # See the settings and every payment
 curl localhost:5173/__mock/state
+
+# Put a payment back to awaiting_payment with a new quote. An open page needs a reload to forget what it saw.
+curl -X POST localhost:5173/__mock/payments/AQH-100306-PMT/restart
 ```
 
 ### Sequences worth trying

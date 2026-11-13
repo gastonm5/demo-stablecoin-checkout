@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import {
   getMockSettings,
+  restartMockPayment,
   setMockStatus,
   updateMockSettings,
 } from './mockControl'
@@ -96,6 +97,20 @@ test('setMockStatus keeps a reference inside its path segment', async () => {
     '/__mock/payments/..%2Fsettings/status',
   )
   expect(fetchMock.mock.calls[0]?.[1]?.body).toBe('{"status":"paid"}')
+})
+
+test('restartMockPayment posts to the restart for the reference', async () => {
+  fetchMock.mockResolvedValue(json({}))
+  await restartMockPayment('../settings')
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/__mock/payments/..%2Fsettings/restart',
+    expect.objectContaining({
+      method: 'POST',
+      body: '{}',
+      cache: 'no-store',
+      signal: expect.any(AbortSignal),
+    }),
+  )
 })
 
 test('updateMockSettings posts the patch and returns the settings', async () => {

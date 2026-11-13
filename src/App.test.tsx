@@ -30,6 +30,8 @@ const currencies = parseCurrencies(CURRENCIES_JSON)
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/')
+  // The dev panel remembers being open here, and a test that opens it would leave it open for the next.
+  sessionStorage.clear()
   vi.mocked(createPayment).mockReset()
   vi.mocked(getCurrencies).mockReset()
   vi.mocked(getPayment).mockReset()

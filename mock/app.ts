@@ -167,6 +167,12 @@ export function createMockApp(store: MockStore = createStore()): Express {
     res.json(payment)
   })
 
+  control.post('/payments/:reference/restart', (req, res) => {
+    const payment = store.restart(req.params.reference)
+    if (!payment) return notFound(res, req.params.reference)
+    res.json(payment)
+  })
+
   control.post('/settings', (req, res) => {
     const patch: unknown = req.body
     if (

@@ -54,6 +54,9 @@ const setStatus = (reference: string, status: string, confirmations?: number) =>
 
 const configure = (patch: object) => ok(post('/__mock/settings', patch))
 
+const restart = (reference: string) =>
+  ok(fetch(`${url}/__mock/payments/${reference}/restart`, { method: 'POST' }))
+
 const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
 test.each([
@@ -130,6 +133,27 @@ test('a status outside the eight is refused', async () => {
   )
 })
 
+test('a restart after paid starts the same payment again with a new quote', async () => {
+  const created = await ok(fetch(`${url}/api/payments/${ref}`))
+  await setStatus(ref, 'paid')
+  t += 60_000
+  await configure({ quote_lifetime_seconds: 30 })
+  const restarted = await restart(ref)
+  // The whole record, so no field of paid (amount_received, tx_hash, confirmations, settled_at) is left.
+  expect(restarted).toEqual({
+    ...created,
+    quote: { ...created.quote, expires_at: new Date(t + 30_000).toISOString() },
+  })
+  expect(await ok(fetch(`${url}/api/payments/${ref}`))).toEqual(restarted)
+})
+
+test('a restart works from awaiting_payment too', async () => {
+  t += 60_000
+  const restarted = await restart(ref)
+  expect(restarted.status).toBe('awaiting_payment')
+  expect(Date.parse(restarted.quote.expires_at)).toBe(t + 900_000)
+})
+
 test('quote lifetime applies to new quotes', async () => {
   expect(await configure({ quote_lifetime_seconds: 30 })).toEqual({
     ...DEFAULTS,
@@ -189,6 +213,12 @@ test.each([
   [
     'an unknown reference',
     () => post('/__mock/payments/NOPE/status', { status: 'paid' }),
+    404,
+    'payment-not-found',
+  ],
+  [
+    'a restart of an unknown reference',
+    () => post('/__mock/payments/NOPE/restart', {}),
     404,
     'payment-not-found',
   ],

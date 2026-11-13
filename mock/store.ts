@@ -45,6 +45,7 @@ export type MockStore = {
     status: string,
     confirmations?: number,
   ): PaymentRecord | undefined
+  restart(reference: string): PaymentRecord | undefined
   updateSettings(patch: Partial<MockSettings>): MockSettings
   listPayments(): PaymentRecord[]
 }
@@ -204,6 +205,15 @@ export function createStore(clock: () => number = Date.now): MockStore {
         status,
         statusFields(payment.quote, status, confirmations, iso(store.now())),
       )
+    },
+
+    // Not through requote, which refuses anything that has not expired.
+    restart(reference) {
+      const payment = payments.get(reference)
+      if (!payment) return undefined
+      const { crypto_currency, network } = payment.quote
+      const quote = quoteFor(crypto_currency, network)
+      return quote && save({ ...payment, quote }, 'awaiting_payment', {})
     },
 
     updateSettings(patch) {

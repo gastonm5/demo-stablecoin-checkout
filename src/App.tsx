@@ -43,7 +43,7 @@ function Checkout({ checkout }: { checkout: UseCheckoutResult }) {
   )
 }
 
-// The panel sits beside the page in a row, so at desktop width it pushes the card aside instead of covering it.
+// The panel holds its room in a row beside the page, so at desktop width it pushes the card aside instead of covering it.
 function Page() {
   const checkout = useCheckout()
   return (

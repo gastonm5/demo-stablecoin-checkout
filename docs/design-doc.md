@@ -43,7 +43,7 @@ The page has three screens inside one card. The card keeps the same shape throug
 
 ![Pay screen](design/pay-screen-proposal.png)
 
-The drawings are the designs I agreed before the build, and they are kept as agreed. The build differs from them in eight small ways. Two changed while building: the pay screen has no bar under the countdown (section 5), and the dev panel has no live readout (section 8). Six changed when I went over the finished screens: the picker has the same header as the pay screen, with the merchant and the amount, and no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, the failed screen has no line under the card, and the network menu shows the chosen network's name alone (section 11).
+The drawings are the designs I agreed before the build, and they are kept as agreed. The build differs from them in nine small ways. Two changed while building: the pay screen has no bar under the countdown (section 5), and the dev panel has no live readout (section 8). Six changed when I went over the finished screens: the picker has the same header as the pay screen, with the merchant and the amount, and no line about the clock under it, the pay screen has no hint about exchange withdrawal fees, the expired screen has no address row, the failed screen has no line under the card, and the network menu shows the chosen network's name alone (section 11). One was added later: the dev panel has a Start over section and slides open and closed (section 8).
 
 **Choose first, then quote.** The page opens on the picker with nothing selected. No payment exists and no clock runs. Only when the shopper presses "Continue with USDT on Tron" does the page call `POST /api/payments` and show an address.
 
@@ -217,7 +217,8 @@ The folders took this shape in Task 16 of the plan, after the build. Before it, 
 | Whether the picker is open for a new quote, a write in progress and its error | React state in `useCheckout` | It belongs to one screen tree and nothing outside React reads it |
 | Payment reference, and the order id when `?order_id=` is given | The URL | So a refresh resumes. Without the parameter, the order id is the assumed one |
 | The order summary shown before a payment exists | A constant in `src/config/checkout.ts` | It stands for data handed to the page. Apart from its order id, which is sent when a payment is created, it is for display, and the payment's own values replace it once a payment exists |
-| A ticked box, an open dialog, the open dev panel | React state in that component | View state that nothing else reads |
+| A ticked box, an open dialog | React state in that component | View state that nothing else reads |
+| The open dev panel | React state in the panel, copied to `sessionStorage` | So it is still open after the reload its Start over buttons cause |
 | Which screen to show, connection notice, time left | Not stored | Derived on every render |
 
 There is no state library and no state machine library. A client state machine would model transitions the page does not own: the server drives every one of them, and the page only maps the latest answer to a screen.
@@ -462,18 +463,20 @@ The mock is a small Express app mounted inside the dev server, so `npm run dev` 
 | Control | Options |
 |---|---|
 | Set status | Eight buttons, usable in any order, plus a confirmations stepper |
+| Start over | "restart this payment" puts the open payment back to `awaiting_payment` with a new quote and reloads the page. "new payment" reloads to the picker |
 | New quotes last | 30 s, 2 min, 15 min, applied to new quotes |
 | Faults, on every API request | Delay of 3 s or 15 s; HTTP 500; dropped connection. The control endpoints are exempt |
 | Server clock offset | −5 min, 0, +5 min, to see the clock-difference handling without changing the system clock |
 
 The offline notice is tested with the browser's own offline switch.
 
-From 900 px wide, the panel is docked on the right and pushes the card aside instead of covering it, so a reviewer can change a status and watch the page react. On a narrower window it lies over the page. It starts collapsed.
+From 900 px wide, the panel is docked on the right and pushes the card aside instead of covering it, so a reviewer can change a status and watch the page react. On a narrower window it lies over the page. It starts collapsed. It slides open and closed in 200 ms, or at once when the system asks for reduced motion, and it remembers being open for the life of the tab, so it is still open after a reload.
 
 What the build changed from the drawing:
 
 - **No live readout.** The drawing shows the mock's status and time left, refreshed every two seconds. I cut it before the panel was built, because it needed its own polling loop to show what the checkout page beside it already shows. The panel shows the open payment's reference and the statuses the page has seen, taken from the page's own data. It reads the mock's settings once each time it opens, so its buttons match the mock after a reload.
 - **A failed command shows nothing in the panel.** The checkout page beside it already reports a payment the server does not know.
+- **Start over.** Added after the build, at my request. Once a payment is `paid`, `overpaid` or `failed` the page stops polling, and it remembers the statuses it has seen, so a status pressed afterwards could not bring the page back. The buttons reload the page because loading it again is the only thing that clears that memory.
 - **It is in every build's bundle.** The mock is not: it exists only inside Vite's dev and preview servers. A static deployment of the build would show the panel with no API behind it. A real deployment would have neither.
 
 After `paid`, `overpaid` or `failed` the page has stopped asking the server (3.7), so a status set from the panel after that shows only after a reload.

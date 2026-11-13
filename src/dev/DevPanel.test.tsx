@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { mergePayment } from '../hooks/paymentCache'
@@ -7,8 +7,13 @@ import { makePayment, STATE_FIXTURES } from '../test/fixtures'
 import { DevPanel } from './DevPanel'
 import { getMockSettings, updateMockSettings } from './mockControl'
 import type { MockSettings } from './mockControl'
+import { openPicker, reloadPage } from './navigation'
 
 const statusCommand = vi.hoisted(() => ({
+  sent: vi.fn(),
+  answer: (): Promise<void> => Promise.resolve(),
+}))
+const restartCommand = vi.hoisted(() => ({
   sent: vi.fn(),
   answer: (): Promise<void> => Promise.resolve(),
 }))
@@ -20,8 +25,14 @@ vi.mock('./mockControl', () => ({
     statusCommand.sent(...args)
     return statusCommand.answer()
   },
+  restartMockPayment: (...args: unknown[]) => {
+    restartCommand.sent(...args)
+    return restartCommand.answer()
+  },
   updateMockSettings: vi.fn(),
 }))
+
+vi.mock('./navigation', () => ({ reloadPage: vi.fn(), openPicker: vi.fn() }))
 
 const REFERENCE = 'AQH-100306-PMT'
 const STATUSES = [
@@ -58,10 +69,21 @@ beforeEach(() => {
     .mockReturnValue(new Promise(() => {}))
   statusCommand.sent.mockReset()
   statusCommand.answer = () => Promise.resolve()
+  restartCommand.sent.mockReset()
+  restartCommand.answer = () => Promise.resolve()
   vi.mocked(updateMockSettings)
     .mockReset()
     .mockReturnValue(new Promise(() => {}))
+  vi.mocked(reloadPage).mockReset()
+  vi.mocked(openPicker).mockReset()
+  // The panel remembers being open here, and it outlives a test.
+  sessionStorage.clear()
 })
+
+const renderPanel = () =>
+  render(<DevPanel reference={REFERENCE} entry={entryOf('awaiting_payment')} />)
+
+const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)))
 
 const button = (name: string) => screen.getByRole('button', { name })
 
@@ -256,6 +278,109 @@ test('disables the status buttons when there is no payment', async () => {
   expect(statusCommand.sent).not.toHaveBeenCalled()
   // The settings do not belong to a payment.
   expect(button('drop')).toBeEnabled()
+})
+
+test('restart this payment sends the reference, then reloads once the mock answers', async () => {
+  let reply = () => {}
+  restartCommand.answer = () =>
+    new Promise<void>((resolve) => {
+      reply = () => resolve()
+    })
+  const user = await renderOpen(REFERENCE, entryOf('awaiting_payment', 'paid'))
+  await user.click(button('restart this payment'))
+  expect(restartCommand.sent).toHaveBeenCalledExactlyOnceWith(REFERENCE)
+  await settle()
+  expect(reloadPage).not.toHaveBeenCalled()
+  reply()
+  await settle()
+  expect(reloadPage).toHaveBeenCalledOnce()
+})
+
+// Vitest fails the run on an unhandled rejection, so this also proves the failure is handled.
+test('a failed restart does not reload', async () => {
+  restartCommand.answer = () =>
+    Promise.reject(
+      new Error('POST /__mock/payments/AQH-100306-PMT/restart answered 404'),
+    )
+  const user = await renderOpen()
+  await user.click(button('restart this payment'))
+  await settle()
+  expect(restartCommand.sent).toHaveBeenCalledOnce()
+  expect(reloadPage).not.toHaveBeenCalled()
+})
+
+test('new payment goes back to the picker and sends nothing to the mock', async () => {
+  const user = await renderOpen()
+  await user.click(button('new payment'))
+  expect(openPicker).toHaveBeenCalledOnce()
+  expect(restartCommand.sent).not.toHaveBeenCalled()
+  expect(statusCommand.sent).not.toHaveBeenCalled()
+  expect(updateMockSettings).not.toHaveBeenCalled()
+})
+
+test('disables Start over when there is no payment', async () => {
+  const user = await renderOpen(null, undefined)
+  for (const name of ['restart this payment', 'new payment']) {
+    expect(button(name)).toBeDisabled()
+    await user.click(button(name))
+  }
+  expect(restartCommand.sent).not.toHaveBeenCalled()
+  expect(reloadPage).not.toHaveBeenCalled()
+  expect(openPicker).not.toHaveBeenCalled()
+})
+
+test('a panel left open is open again after a remount, and takes no focus', async () => {
+  await renderOpen()
+  cleanup()
+  renderPanel()
+  expect(button('hide')).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'DEV' })).not.toBeInTheDocument()
+  expect(document.body).toHaveFocus()
+})
+
+test('a panel that was closed is collapsed after a remount', async () => {
+  const user = await renderOpen()
+  await user.click(button('hide'))
+  cleanup()
+  renderPanel()
+  expect(button('DEV')).toBeVisible()
+  expect(
+    screen.queryByRole('button', { name: 'underpaid' }),
+  ).not.toBeInTheDocument()
+})
+
+test('a browser that refuses storage gets a panel that starts collapsed and still opens', async () => {
+  const refuse = () => {
+    throw new DOMException('The operation is insecure.', 'SecurityError')
+  }
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(refuse)
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(refuse)
+  await renderOpen()
+  expect(button('hide')).toBeVisible()
+})
+
+test('takes no focus when the page loads collapsed', () => {
+  renderPanel()
+  expect(document.body).toHaveFocus()
+})
+
+test('focus moves to hide on opening and back to the tab on closing', async () => {
+  const user = await renderOpen()
+  expect(button('hide')).toHaveFocus()
+  await user.click(button('hide'))
+  expect(button('DEV')).toHaveFocus()
+})
+
+test('whichever part is not showing is inert', async () => {
+  const user = userEvent.setup()
+  renderPanel()
+  const panel = screen.getByRole('complementary', { hidden: true })
+  const tab = screen.getByRole('button', { name: 'DEV', hidden: true })
+  expect(panel).toHaveAttribute('inert')
+  expect(tab).not.toHaveAttribute('inert')
+  await user.click(tab)
+  expect(panel).not.toHaveAttribute('inert')
+  expect(tab).toHaveAttribute('inert')
 })
 
 test('says how to test offline', async () => {
