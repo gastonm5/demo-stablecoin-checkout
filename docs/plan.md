@@ -2159,6 +2159,232 @@ Added on 13 Nov 2026, after I saw drawings of the options and chose. Nothing her
 
 **What the planning agent recommended and I did not take:** keeping both groups open with no collapsing, and a black Continue button on every network, on the grounds that a red "Continue with USDT on Tron" reads as a delete button.
 
+**What I decided next,** after the planning agent listed five open questions and four costs:
+
+- The pay screen's network banner and QR frame are filled with the chain's colour.
+- Of the two sentences that lived in the right-hand column, only "Your wallet or exchange must be able to send USDC on the Polygon network." stays, under the Continue button. "The amount to send and the address are shown next." goes, and so does the "You are paying with" pill.
+- Ethereum's blue is 3.69:1 under white text, so a filled control on Ethereum uses a blue 11% darker, `#5770d0`, 4.53:1. Every other use keeps `#627EEA`.
+- A chosen currency, which has no chain, is marked in the page's near-black.
+- Each copy button sits under the value it copies, at its left edge, on every width: the phone layout everywhere.
+- A network option shows its fee and its usual time under its name. Once a network is chosen, they are shown under the section. These changes are animated.
+- Solana is its green, `#14F195`, not the purple I gave first, which was close to Polygon's.
+- The card's width is animated between the picker and the payment, not jumped.
+- All of this is built on a branch and merged only after I have tested it. Nothing is pushed.
+
+**What follows from Solana's green,** worked out by the planning agent and not asked of me: white text on `#14F195` is 1.50:1, so text on a Solana fill is the page's near-black, 12.11:1. As a border on white the green is 1.50:1, under the 3:1 a border needs, so Solana's border and radio use a darker green, `#0ea566`, 3.19:1 on white and 3.02:1 on its own tint. The fill, the chip and the tint stay `#14F195`.
+
+**Rules for every task below:**
+
+- Every digit of every amount stays visible and unchanged. Nothing is rounded, shortened or hidden.
+- The address and QR are shown exactly when they are now. Nothing that hides them may be delayed by an animation.
+- Shopper-facing words do not change unless a task says so.
+- The colours of the dev panel are not touched.
+- Tests keep their assertions. Where markup changes how a string must be found, the same fact is asserted another way.
+
+### Task 19: Stop the card clipping, and keep the unit whole
+
+**Files:** `src/components/CheckoutCard.tsx`, `src/components/OrderHeader.tsx`, `src/components/StatusCard.tsx`, `src/components/NetworkBanner.tsx`, `src/components/QrFrame.tsx`, `src/screens/PayScreen.tsx`, `src/screens/PickerScreen.tsx`, and their tests.
+
+- [ ] **The grid.** The card's single column below `md` becomes `minmax(0, 1fr)`, and every flex child that holds text gets `min-width: 0`, so content wraps inside the card instead of being clipped.
+- [ ] **Long words.** Merchant name, order id, network name and the banner and QR frame titles use `overflow-wrap: anywhere`. Nothing is truncated.
+- [ ] **The amount.** In `PayScreen` and `StatusCard`, `break-all` goes. The digits and the unit are separate inline pieces: the unit does not break, the line breaks at the space first, and a run of digits breaks only when it is longer than the line. The size is fluid, `clamp(1.75rem, 7.5vw, 2.5rem)`.
+- [ ] **The header.** Under 480 px the order id and the fiat amount take their own row under the merchant, on one line with the id on the left and the amount on the right. From 480 px they sit on the right as now.
+- [ ] **Tests.** For the pay screen, the waiting screen and the plain expired screen: the amount's text content is exactly the server's string followed by a space and the currency, and the unit is in an element that does not wrap. A long merchant name is rendered in full.
+- [ ] Commit: "Wrap inside the card, and never split a currency code".
+
+### Task 20: Name the colours
+
+**Files:** `src/index.css` and every component and screen that has a colour. Not `src/dev/`.
+
+Tokens in `@theme`, each generating its Tailwind utilities:
+
+| Token | Value | Replaces |
+| --- | --- | --- |
+| `page` | `#f5f5f7` | |
+| `surface` | `#ffffff` | `bg-white` |
+| `surface-sunken` | `#fafbfc` | also `#f6f7f9`, `gray-50` |
+| `surface-inverse` | `#14161a` | |
+| `ink` | `#14161a` | |
+| `ink-muted` | `#4b5563` | `gray-600` |
+| `ink-subtle` | `#6b7280` | `gray-500` |
+| `ink-faint` | `#838a94` | `#9aa1ab`, which was 2.61:1 on white; this is 3.48:1 |
+| `ink-inverse` | `#ffffff` | `text-white` |
+| `ink-inverse-muted` | `#c9ced4` | |
+| `line` | `#dfe3e8` | |
+| `line-strong` | `#cfd4da` | |
+| `line-faint` | `#eef0f2` | |
+| `track` | `#e6e8eb` | |
+| `action` | `#14161a` | |
+| `action-disabled` | `#e5e7eb` | also `#d5d9de`; its text is `ink-muted` |
+| `link` | `#3b5bdb` | also `blue-700`; a disabled link is `ink-subtle` |
+| `focus` | `#3b5bdb` | |
+| `ok` | `#15803d` | |
+| `warn` | `#b45309` | |
+| `warn-surface`, `warn-line`, `warn-ink` | `#fff7e6`, `#f3d999`, `#6b4e00` | also `amber-50`, `amber-300` |
+| `bad` | `#b91c1c` | also `red-700` |
+| `pending` | `#6b7280` | |
+| `network-tron`, `network-ethereum`, `network-polygon`, `network-solana`, `network-other` | `#ff060a`, `#627eea`, `#8247e5`, `#14b8a6`, `#6b7280` | |
+
+- [ ] Network tokens are used only by `NetworkChip`. No action or status style uses one.
+- [ ] After the task, no hex colour and no Tailwind palette colour is left in `src/components` or `src/screens`.
+- [ ] Commit: "Name the colours the checkout uses".
+
+### Task 21: One button, one notice, one set of icons, one scale
+
+**Files:** create `src/components/Button.tsx`, `src/components/Notice.tsx`, `src/components/StatusIcon.tsx`; `src/index.css`; the screens and components that use them.
+
+- [ ] **`Button`**, with `variant: 'primary' | 'secondary' | 'link'` and a `busy` flag, replaces every hand-written button. Primary is the black pill; secondary is the bordered control used by copy and "Try now"; link is the underlined text button. Each has hover, pressed, disabled and busy states. A disabled primary button is `action-disabled` with `ink-muted` text.
+- [ ] **`Notice`** is the one warning box, used by the underpaid banner, the overpaid notice, the dead end and "payment not found".
+- [ ] **`StatusIcon`** draws pending, clock, check and alert as inline SVG in the existing ring, in place of the glyphs `●`, `◷`, `✓` and `!`.
+- [ ] **Type:** `label` 12 px, `small` 14, `body` 15, `lead` 16, `figure` 18, `title` 22, and `amount` from Task 19. Every other size goes.
+- [ ] **Radii:** `card` 22 px, `control` 12 px, and full. Every other radius goes.
+- [ ] Commit: "Share the button, the notice, the status icons and the scales".
+
+### Task 22: A copy button that keeps its size, a strip that keeps its shape, focus you can see
+
+**Files:** `src/components/CopyButton.tsx`, `src/hooks/useCopy.ts` only if needed, `src/components/StatusCard.tsx`, `src/screens/PayScreen.tsx`, `src/index.css`, tests.
+
+- [ ] **Copy.** The button always has the width of its normal label. On success the label inside it reads "Copied". On failure the button keeps its label and the sentence "Copy failed. Select the text and copy it." appears on a line under it, announced as it is now.
+- [ ] **Strip.** The notice takes the space on the left and wraps there; its button and the link stay together on the right. At 1200 px a notice appearing on the pay screen changes the card's height by no more than 24 px.
+- [ ] **Focus.** Every button, link, menu and tick box shows a 2 px `focus` outline, offset 2 px, on keyboard focus. The heading that receives programmatic focus keeps none.
+- [ ] Commit: "Keep the copy button and the strip steady, and show keyboard focus".
+
+### Task 23: One card height on a desktop
+
+**Files:** `src/components/CheckoutCard.tsx`, test.
+
+- [ ] From `md` up the card's two columns have a minimum height of 460 px. Below `md` there is none.
+- [ ] Commit: "Give the card a steady height on wide screens".
+
+### Task 24: A bar under the countdown
+
+This reverses something I dropped. The bar was left out because the API gives a quote's deadline and not its lifetime. It comes back on one condition: the page draws it only when it saw the quote begin.
+
+**Files:** `src/domain/sequence.ts`, `src/domain/screen.ts`, `src/screens/PayScreen.tsx`, their tests, `src/test/fixtures.ts` if needed.
+
+**Interfaces:**
+
+```ts
+// src/domain/sequence.ts
+export type StatusSequence = {
+  // …as now, plus:
+  quoteStartedAt: number | null // device time the page saw the current quote begin; null after a reload, until a new quote
+}
+// startSequence(payment, 'creation', at) sets it to at; startSequence(payment, 'reload', at) sets it to null.
+// recordStatus sets it to at when quote.expires_at changes, and leaves it alone otherwise.
+
+// src/domain/screen.ts — the running pay variant gains:
+lifetimeMs: number | null // the deadline minus quoteStartedAt; null when that is null or not positive
+```
+
+- [ ] Tests first, in `sequence.test.ts` and `screen.test.ts`: creation sets the start; a reload does not; a repeated status keeps it; a new quote resets it; the running screen carries the lifetime, or `null` after a reload.
+- [ ] `PayScreen` draws a thin bar under "Rate held for" when `lifetimeMs` is not `null`: its filled share is `remainingMs / lifetimeMs`, held between 0 and 1. It is decoration (`aria-hidden`); the time beside it is the information. With no lifetime there is no bar and nothing in its place.
+- [ ] The bar disappears with the countdown, at once.
+- [ ] Commit: "Draw the time left as a bar when the page saw the quote begin".
+
+### Task 25: Make a partial payment's new amount hard to miss
+
+**Files:** `src/screens/PayScreen.tsx`, `src/index.css`, test.
+
+- [ ] On `underpaid`, the label "Send the remaining" is set in `warn` and the amount block carries a `warn` rule down its left side. These stay for as long as the status does, so the emphasis does not depend on motion.
+- [ ] When the block first appears it is washed in `warn-surface`, fading over 1.5 s, once. With reduced motion there is no wash.
+- [ ] The words do not change, and the amount is still replaced in a single frame, never counted or tweened.
+- [ ] Commit: "Emphasise the amount still to send after a partial payment".
+
+### Task 26: Motion for a change of screen
+
+**Files:** `src/index.css`, `src/components/CheckoutCard.tsx`, the screens, tests.
+
+- [ ] **Entrances only.** One utility: opacity from 0 and 8 px of rise, 180 ms, `cubic-bezier(.2, 0, 0, 1)`, through `@starting-style`. It is applied to the card's content, not its frame. Nothing has an exit animation.
+- [ ] A change of screen kind plays it once. A poll or a countdown tick that changes nothing plays nothing: a test re-renders the payment view with a new answer of the same status and finds the same DOM node.
+- [ ] When the address must go, it is absent from the DOM in the same render as the status change. The existing tests for that stay.
+- [ ] `prefers-reduced-motion: reduce` makes every transition and animation in the app instant, in one rule.
+- [ ] Commit: "Fade a new screen in, and never animate one out".
+
+### Task 27: Motion for the rest
+
+**Files:** `src/index.css`, `src/screens/PickerScreen.tsx`, `src/screens/WaitingScreen.tsx`, `src/screens/PayScreen.tsx`, `src/components/ConfirmChangeDialog.tsx`, `src/components/CopyButton.tsx`, `src/components/NoticeStrip.tsx`, `src/components/Button.tsx`, tests.
+
+| What | Motion |
+| --- | --- |
+| Picker: the fee line and the "You are paying with" group, when a network is first chosen | The entrance, 160 ms, 6 px |
+| "Still working…", a create or requote error, the copy failure line, a connection notice appearing | Fade in, 150 ms, no movement |
+| The address and QR returning on "still valid" | Fade in, 150 ms, no movement |
+| The confirmations bar | Width moves to the server's value, 300 ms ease-out, in either direction |
+| The countdown bar | Width follows each tick over 1 s, linear |
+| The dialog and its backdrop opening | Fade in 150 ms; the dialog from 0.98 scale |
+| Buttons, the menus and the tick-box-gated controls | Colour, 120 ms |
+
+Immediate, on purpose: any amount; the countdown's digits; the address and QR going; a notice changing or disappearing; the dialog closing; an error replacing a loading line.
+
+- [ ] Commit: "Add the small motions: picker, notices, dialog, bars and buttons".
+
+---
+
+## Task 28: Start over from the dev panel, and a panel that slides
+
+Added on 13 Nov 2026, at my request, after I saw a drawing of the panel with the new section. It is built before Tasks 21 to 27 because I want it for testing them.
+
+**Why.** Once a payment is `paid`, `overpaid` or `failed` the page stops polling, and the page remembers every status it has seen. So a status pressed after that never brings the page back, and the only way out was to edit the URL by hand.
+
+**Files:** `mock/store.ts`, `mock/app.ts`, `mock/control.test.ts`, `src/dev/mockControl.ts`, `src/dev/mockControl.test.ts`, `src/dev/DevPanel.tsx`, `src/dev/DevPanel.test.tsx`, `README.md`, `docs/design-doc.md`, and `src/App.tsx` only if the row around the panel needs it. Nothing in `src/api`, `src/hooks`, `src/domain`, `src/screens` or `src/components`: the app must not learn that the mock exists.
+
+**Interfaces:**
+
+- `MockStore.restart(reference: string): PaymentRecord | undefined`
+- `POST /__mock/payments/:reference/restart`, no body needed: 200 with the payment, or the same 404 the status route gives for an unknown reference.
+- `restartMockPayment(reference: string): Promise<void>` in `src/dev/mockControl.ts`.
+
+### The mock
+
+- [ ] Tests first, in `mock/control.test.ts`: a restart after `paid` answers `awaiting_payment` with the same reference, order and pair; nothing of the old status is left (`amount_received`, `tx_hash`, `confirmations`, `settled_at`); `expires_at` is rebuilt from the mock's clock and the current "New quotes last" setting, shown by changing that setting before the restart; a restart of an unknown reference is a 404; a restart works from `awaiting_payment` too.
+- [ ] `restart` builds the quote the way a new payment does, for the payment's own currency and network, and saves it as `awaiting_payment` with no status fields. It does not go through `requote`, which refuses anything that is not `expired`.
+
+### The panel
+
+- [ ] A section titled "Start over" between "Current payment" and "Set status", with two buttons side by side, `restart this payment` and `new payment`, and under them the line: "restart: same reference, awaiting_payment with a fresh quote, then the page reloads. new: back to the picker." Both buttons are disabled when there is no payment. They look like the panel's other buttons.
+- [ ] `restart this payment` sends the restart. When the mock answers, the page reloads (`window.location.reload()`), because only a reload clears what the page has seen. When the request fails, nothing happens, like a failed status command.
+- [ ] `new payment` loads the page's own path with no query (`window.location.assign(window.location.pathname)`).
+- [ ] jsdom cannot spy on `window.location`. Put the two navigations behind something a test can replace; two functions in a small module in `src/dev`, mocked with `vi.mock`, is enough.
+- [ ] The panel remembers being open in `sessionStorage` under `dev-panel-open`, read when it mounts and written when it opens or closes, so it is still open after either button reloads the page. A browser that refuses storage is ignored: the panel then starts collapsed as it does now.
+- [ ] Tests: the restart button sends the open payment's reference and then reloads; a failed restart does not reload; `new payment` navigates and sends nothing to the mock; both are disabled with no payment; a panel left open is open again after a remount, and one that was closed is not. The existing tests keep their assertions.
+
+### The slide
+
+- [ ] Opening and closing both animate. The panel's width goes between the 34 px tab and 330 px in 200 ms with `cubic-bezier(.2,0,0,1)`. Its content keeps a fixed 330 px width and is clipped, so nothing inside reflows while the width changes. With `prefers-reduced-motion: reduce` there is no transition.
+- [ ] The panel is fixed to the right edge of the window at every width. The row beside the page keeps 34 px for it, and from 900 px wide that reserved width grows to 330 px in step with the panel, so the card is pushed aside as before. Under 900 px the panel lies over the page as before.
+- [ ] The tab and the content are both always in the document, so the one going away can fade while the width changes. Whichever is not showing is `inert` and `aria-hidden`: it cannot be focused, is not announced, and the tests' role queries do not find it.
+- [ ] Focus moves to "hide" when the panel opens and to the tab when it closes, and never when the page loads, including when it loads already open.
+- [ ] Still no request to the mock while collapsed.
+
+### The documents, in the same commit
+
+- [ ] `README.md`, in "With the dev panel": two rows in the table before "An offline browser": "The same payment from the start" (press **restart this payment** under **Start over**; it goes back to `awaiting_payment` with a new quote and the page reloads) and "The picker again" (press **new payment** under **Start over**). The paragraph that ends "To try another sequence, start a new payment." ends instead: "To try another sequence, use **Start over**: both of its buttons reload the page, and the panel stays open across the reload." In "With curl", one more example: `curl -X POST localhost:5173/__mock/payments/AQH-100306-PMT/restart`, with the comment "Put a payment back to awaiting_payment with a new quote. An open page needs a reload to forget what it saw."
+- [ ] `docs/design-doc.md`, section 8: a row in the controls table after "Set status": "Start over" with "\"restart this payment\" puts the open payment back to `awaiting_payment` with a new quote and reloads the page. \"new payment\" reloads to the picker". After "It starts collapsed.": "It slides open and closed in 200 ms, or at once when the system asks for reduced motion, and it remembers being open for the life of the tab, so it is still open after a reload." Under "What the build changed from the drawing", a bullet: "**Start over.** Added after the build, at my request. Once a payment is `paid`, `overpaid` or `failed` the page stops polling, and it remembers the statuses it has seen, so a status pressed afterwards could not bring the page back. The buttons reload the page because loading it again is the only thing that clears that memory."
+- [ ] `docs/design-doc.md`, the paragraph before the first drawing: "eight small ways" becomes "nine small ways", and after the sentence listing the six, one more: "One was added later: the dev panel has a Start over section and slides open and closed (section 8)."
+- [ ] `docs/design-doc.md`, the table of where state lives: the row "A ticked box, an open dialog, the open dev panel" loses the dev panel, and a new row under it reads: "The open dev panel", "React state in the panel, copied to `sessionStorage`", "So it is still open after the reload its Start over buttons cause".
+- [ ] Commit: "Start over from the dev panel, and slide it open and closed".
+
+---
+
+## Tasks 29 to 34: the picker as radio sections, chain colours, and three smaller changes
+
+Added on 13 Nov 2026, after I saw drawings of the options and chose. Nothing here changes a status, a request, an amount or an ADR. No new dependency.
+
+**What I decided:**
+
+- Both pickers become vertical sections of radio buttons that open and close with an animation, on every window width, laid out like the phone drawing. Choosing an option is animated too.
+- A network option shows the network's name only. Its fee and usual time are on a line under the network section once a network is chosen.
+- The picker has no right-hand column. The Continue button sits under the pickers.
+- The pay screen keeps its two columns.
+- The chain colours go into the design system: Ethereum `#627EEA`, Solana `#9945FF`, Polygon `#8247E5`, Tron `#DC062B`.
+- The Continue button takes the chosen chain's colour.
+- "Change currency or network" becomes an outlined button, on the pay screen and on the expired screen.
+- The copy button narrows to fit "Copied" and widens back, animated both ways.
+- Each copy button on the pay screen sits in line with what it copies, the amount or the address, and no longer beside the label or under the amount.
+
+**What the planning agent recommended and I did not take:** keeping both groups open with no collapsing, and a black Continue button on every network, on the grounds that a red "Continue with USDT on Tron" reads as a delete button.
+
 **Not decided yet.** The planning agent's default is in brackets. Nothing is built on a default until I answer.
 
 1. The pay screen's network banner and QR frame: filled with the chain colour, or dark with a chain-coloured edge and chip. [Dark with an edge. Task 32 waits for this.]
@@ -2178,33 +2404,34 @@ Added on 13 Nov 2026, after I saw drawings of the options and chose. Nothing her
 
 **Files:** `src/index.css`, `src/components/NetworkChip.tsx`, create `src/components/networkColours.ts` and its test.
 
-- [ ] `@theme`: `network-ethereum` `#627eea`, `network-solana` `#9945ff`, `network-polygon` `#8247e5`, `network-tron` `#dc062b`, `network-other` `#6b7280` as now. One more, per decision 3: `network-ethereum-fill` `#5770d0`, with a comment giving the two contrast figures.
-- [ ] `networkColours(networkId: string): { chip: string; fill: string; border: string; tint: string; accent: string }` returns whole class names Tailwind can see: the chip's background, the background of a filled control that carries white text, a border, the 10% tint for a chosen option's background, and the radio's accent colour. An id it does not know gets `network-other` in every slot. `fill` is the chain's own colour except for Ethereum.
-- [ ] `NetworkChip` takes its background from it. Nothing else changes in this task.
-- [ ] Test: each of the four ids and an unknown one returns five non-empty classes, and Ethereum's `fill` differs from its `chip`. The built CSS has a rule for every class returned.
-- [ ] Solana's and Polygon's purples are close. The network's name is always beside its colour, so colour is still never the only signal.
-- [ ] Commit: "Name the chain colours once, with a fill that carries white text".
+- [ ] `@theme`: `network-ethereum` `#627eea`, `network-solana` `#14f195`, `network-polygon` `#8247e5`, `network-tron` `#dc062b`, `network-other` `#6b7280` as now. Two more: `network-ethereum-fill` `#5770d0` and `network-solana-line` `#0ea566`, each with a comment giving the contrast figures that made it necessary.
+- [ ] `networkColours(networkId: string): { chip: string; fill: string; onFill: string; border: string; tint: string; accent: string }` returns whole class names Tailwind can see: the chip's background; the background of a filled control; the colour of text on that fill and on the chip; a border; the 10% tint for a chosen option's background; and the radio's accent colour. An id it does not know gets `network-other` in every slot. `fill` is the chain's own colour except for Ethereum. `onFill` is white except for Solana, where it is `ink`. `border` and `accent` are the chain's own colour except for Solana, where they are `network-solana-line`.
+- [ ] `NetworkChip` takes its background and its letter's colour from it. Nothing else changes in this task.
+- [ ] Test: each of the four ids and an unknown one returns six non-empty classes; Ethereum's `fill` differs from its `chip`; Solana's `onFill` is the dark one and its `border` differs from its `chip`. The built CSS has a rule for every class returned.
+- [ ] Commit: "Name the chain colours once, with what each needs to stay readable".
 
 ### Task 30: The picker as two sections of radio buttons
 
 **Files:** `src/screens/PickerScreen.tsx` and its test, a small collapsible section component in `src/components` if it earns one, `src/components/CheckoutCard.tsx`, `src/components/LoadingCard.tsx`, `src/components/Button.tsx`, `src/App.tsx`, `src/App.test.tsx`, `src/index.css`, the documents named at the end. `usePickerChoice` keeps its interface: it already clears the network when the currency changes and fills in a currency's only network.
 
-**The card.** The picker's card is one column, at most 520 px wide, at every window width, with no minimum height. The loading card shown before the picker uses the same narrow card, so the frame does not jump when the list arrives. The pay screen and every status screen keep the 940 px two-column card.
+**The card.** The picker's card is one column, at most 520 px wide, at every window width, with no minimum height. The loading card shown before the picker is one column in the same width. The pay screen and every status screen keep the 940 px two-column card.
 
-**Top to bottom:** the order header; the "payment not found" notice when there is one; "Choose how to pay"; the Currency section; the Network section; the fee line; the Continue button; "Still working…" or the error; the "Back" link when changing an expired quote. The sentences of decision 2 go where it says.
+**The width moves, it does not jump.** The width belongs to one element in `src/App.tsx` that stays mounted around whichever screen is showing: 520 px while there is no payment on screen, 940 px while there is. Its `max-width` moves over 200 ms with `cubic-bezier(.2,0,0,1)`. `CheckoutCard` fills it and no longer sets a width of its own. Nothing moves on the first render. The height is not animated.
+
+**Top to bottom:** the order header; the "payment not found" notice when there is one; "Choose how to pay"; the Currency section; the Network section; the fee line; the Continue button; under it, once a currency and a network are chosen, "Your wallet or exchange must be able to send USDC on the Polygon network."; "Still working…" or the error; the "Back" link when changing an expired quote.
 
 **A section** is a `fieldset` with a `legend` ("Currency", "Network") and has two forms:
 
-- [ ] Open: a column of options. Each is a `label` at least 44 px tall holding a native radio and the option's text: for a currency its code in bold and its name, for a network its chip and its name. No fee, no time.
-- [ ] Closed: one row with the chosen option's text and an outlined "Change" button whose accessible name says which section it changes.
+- [ ] Open: a column of options. Each is a `label` at least 44 px tall holding a native radio, with the currency's code or the network's id as its value, and the option's text: for a currency its code in bold and its name; for a network its chip and its name, and under the name its fee and usual time in small text, in the words the menu's options use today.
+- [ ] Closed: one row with the chosen option's name, without the fee and time, and an outlined "Change" button whose accessible name says which section it changes. The fee line under the Network section carries the chosen network's fee, usual time and confirmations, in the words it uses today.
 - [ ] The Currency section is open while no currency is chosen, and after its "Change" until a currency is chosen again. The Network section is not shown at all until a currency is chosen; then it is open while no network is chosen, and after its "Change". Choosing closes the section. Choosing a currency with one network leaves the Network section closed on that network. Changing the currency opens the Network section with nothing chosen.
-- [ ] A chosen option has a border in its colour and a 10% tint of it behind: the chain's colour for a network, and per decision 4 for a currency. The radio's accent matches.
+- [ ] A chosen option has a border in its colour and a 10% tint of it behind: `border`, `tint` and `accent` from `networkColours` for a network, and `ink` with the sunken surface for a currency.
 
 **Motion.**
 
 - [ ] Choosing: the option's border and background reach their colour over 120 ms. Then the section closes.
 - [ ] Opening and closing: the height moves over 200 ms with `cubic-bezier(.2,0,0,1)`. Both forms are always in the document so each can shrink while the other grows; the one not showing is `inert` and `aria-hidden`.
-- [ ] The fee line appears with the existing 160 ms, 6 px entrance when a network is first chosen, and updates in place when the network changes.
+- [ ] The fee line appears with the existing 160 ms, 6 px entrance when a network is first chosen, and updates in place when the network changes. The fee and time inside the options go away with the closing section, and come back with it on "Change".
 
 **Focus.** A choice made with the keyboard must never leave focus on something hidden.
 
@@ -2216,17 +2443,17 @@ Added on 13 Nov 2026, after I saw drawings of the options and chose. Nothing her
 
 **The button.**
 
-- [ ] `Button` gains one prop for the fill of a primary button. The picker passes `networkColours(network.id).fill` once a currency and a network are chosen; nothing else uses it. Its words do not change ("Continue with USDC on Polygon", "Get a new quote with …", "Working…"). Before both are chosen it is the disabled grey it is now. Hover and pressed states stay visible on every chain colour.
+- [ ] `Button` gains one way to give a primary button a fill and the colour of the text on it. The picker passes `fill` and `onFill` from `networkColours(network.id)` once a currency and a network are chosen; nothing else uses it. Its words do not change ("Continue with USDC on Polygon", "Get a new quote with …", "Working…"). Before both are chosen it is the disabled grey it is now. Hover and pressed states stay visible on every chain colour.
 - [ ] While a create or requote is in flight, the radios and the "Change" buttons are disabled.
 
-**What goes.** The right-hand column and the "You are paying with" pill. The two menus and their chevron.
+**What goes.** The right-hand column, the "You are paying with" pill, and the sentence "The amount to send and the address are shown next." The two menus and their chevron.
 
-**Tests.** The existing picker and app tests drive two menus; they are rewritten to drive the radios and keep what they assert. New ones: which section is open in each state above; a currency with one network; changing the currency clears the network and reopens its section; the hidden form of a section cannot be reached by a role query; focus after each choice and after "Change"; the fee line appears only after a network is chosen and shows that network's fee and time; the button's label and that its fill is the chosen chain's; nothing is chosen or focused on load.
+**Tests.** The existing picker and app tests drive two menus; they are rewritten to drive the radios and keep what they assert. New ones: which section is open in each state above; a currency with one network; changing the currency clears the network and reopens its section; the hidden form of a section cannot be reached by a role query; focus after each choice and after "Change"; each open network option shows its own fee and time; the fee line appears only after a network is chosen and shows that network's fee, time and confirmations; the wallet sentence appears only once both are chosen and names that currency and network; the button's label and that its fill is the chosen chain's; nothing is chosen or focused on load; the width element is 520 px wide without a payment and 940 px with one.
 
 **Documents, in the same commit.**
 
 - [ ] `AGENTS.md`, "Look and motion": "Things may fade in. Nothing is animated out." becomes "Things may fade in. Nothing the server takes away is animated out. The picker's sections open and close with the shopper's own choice." The line about never animating a change of amount or the removal of an address, a QR, a notice or a screen stays.
-- [ ] `docs/design-doc.md`: the paragraph before the first drawing (the picker is now radio sections, not menus, and has no right-hand column); section 7.4 (nothing is preselected, a currency's only network is filled in, the network is named on the button); section 11's "Picker menus" entry, rewritten as "Picker sections"; section 11.1's rows for the picker's motion and for "Buttons and the picker's menus", its sentence that the network colours are used by the chip alone, and its sentence that nothing in the checkout is animated out.
+- [ ] `docs/design-doc.md`: the paragraph before the first drawing (the picker is now radio sections, not menus, has no right-hand column, and its card is narrower than the payment's, with the width animated between them); section 7.4 (nothing is preselected, a currency's only network is filled in, the network is named on the button); section 11's "Picker menus" entry, rewritten as "Picker sections"; section 11.1's rows for the picker's motion and for "Buttons and the picker's menus", its sentence that the network colours are used by the chip alone, and its sentence that nothing in the checkout is animated out.
 - [ ] Commit: "Choose the currency and the network from two sections of radio buttons".
 
 ### Task 31: Outlined buttons for "Change currency or network"
@@ -2239,27 +2466,27 @@ Added on 13 Nov 2026, after I saw drawings of the options and chose. Nothing her
 
 ### Task 32: The chain's colour on the pay screen
 
-Waits for decision 1.
+**Files:** `src/components/NetworkBanner.tsx`, `src/components/QrFrame.tsx`, their tests, `docs/design-doc.md`.
 
-**Files:** `src/components/NetworkBanner.tsx`, `src/components/QrFrame.tsx`, their tests.
+- [ ] The banner is filled with the chain's colour: `fill` behind it and `onFill` for both of its lines. The second line no longer uses the muted inverse colour, which fails on the chain colours.
+- [ ] The QR frame's border and its label bar use `fill`, with `onFill` for the bar's words. The four-module quiet zone inside the frame stays white.
+- [ ] Inside the banner and the bar, the chip is the reverse of the fill so it stays visible: `onFill` behind it and the fill's colour for its letter. `networkColours` gains whatever one slot that needs; no colour is written in the component.
+- [ ] The banner's and the frame's words do not change. A network the page does not know gets the grey `network-other` treatment, readable in the same way.
+- [ ] Tests: each known network and an unknown one gets its own fill class and the matching text class on the banner and on the frame.
+- [ ] `docs/design-doc.md`, section 11.1: the sentence that the network colours are used by the chip alone becomes a list of where they are used, and says they are never used for a status.
+- [ ] Commit: "Fill the pay screen's network banner and QR frame with the chain's colour".
 
-- [ ] The QR frame's border takes the chain's colour in either answer. The four-module quiet zone inside it stays white.
-- [ ] If filled: the banner and the frame's label bar use `fill` with white text, and the chip inside them turns white with the chain's colour for its letter. If dark with an edge: both stay `surface-inverse`, the banner gains a 4 px edge in the chain's colour, and the chip keeps it.
-- [ ] The banner's and the frame's words do not change.
-- [ ] Commit: "Carry the chain's colour onto the pay screen".
+### Task 34: Each copy button under the value it copies
 
-### Task 34: Each copy button beside the value it copies
+Today "Copy amount" sits beside the amount when the two fit on a line and under it when they do not, and "Copy … address" sits on the label's row, above the address. I asked for both to line up with what they copy, and chose the phone's layout for every width. Built before Task 33, which animates the button where this task puts it.
 
-Today "Copy amount" drops under the amount whenever the two do not fit on a line, and "Copy … address" sits on the label's row, above the address. I asked for both to line up with the value they copy. Built before Task 33, which animates the button where this task puts it.
+**Files:** `src/screens/PayScreen.tsx` and its test. The status screens' rows are not changed.
 
-**Files:** `src/screens/PayScreen.tsx` and its test. The status screens' rows already have the button beside the value.
-
-- [ ] The amount: the amount on the left and "Copy amount" at the right end of the same row, centred on the amount. The currency code may move to a second line to make room. The digits may not: an amount's digits are never broken because of the button.
-- [ ] The address: its label on a line of its own; under it the address on the left and "Copy … address" at the right end of the same row, centred on the address, which may take two lines beside the button.
-- [ ] Where a row cannot hold both without breaking the digits, or without putting the address on more than two lines, the button sits directly under the value, at its left edge. That is the layout on a phone.
-- [ ] Nothing is clipped at 320 px with the long names and the 20-digit amount the earlier checks use, and the unit still never splits.
-- [ ] The words, the copied values and the order a keyboard reaches them in do not change.
-- [ ] Commit: "Put each copy button beside the value it copies".
+- [ ] The amount: the amount on a line of its own, and "Copy amount" directly under it, at its left edge. The amount no longer shares a row with anything, so its digits get the whole width.
+- [ ] The address: its label on a line of its own, the address under it, and "Copy … address" directly under the address, at its left edge.
+- [ ] The same at every width. Nothing is clipped at 320 px with the long names and the 20-digit amount the earlier checks use, and the unit still never splits.
+- [ ] The words, the copied values and the order a keyboard reaches them in do not change. On an underpaid payment the amount, its button and the warning rule beside them keep working as one block.
+- [ ] Commit: "Put each copy button under the value it copies".
 
 ### Task 33: A copy button that narrows to "Copied" and widens back
 
@@ -2267,14 +2494,14 @@ This changes something Task 22 fixed. Task 22 made the button keep the width of 
 
 **Files:** `src/components/CopyButton.tsx` and its test, `src/index.css` if it needs a rule, the documents named below.
 
-- [ ] On a successful copy the button's width moves to the width of "Copied" over 180 ms with `cubic-bezier(.2,0,0,1)`, and back the same way when the label returns. The edge it is aligned to stays where it is: the right edge when it sits at the end of a row, the left edge when it sits under the value.
+- [ ] On a successful copy the button's width moves to the width of "Copied" over 180 ms with `cubic-bezier(.2,0,0,1)`, and back the same way when the label returns. Its left edge stays where it is.
 - [ ] The space the button takes in its row never changes: the row is laid out for the normal label throughout. So nothing beside or under the button moves, and the button cannot jump to another line while it is narrow.
 - [ ] No measuring in JavaScript, no timer, no observer. One way that needs none: two one-column grids side by side, each holding an unseen copy of one label, with their single column moving between `1fr` and `0fr` in opposite directions, and the label people see laid over them.
 - [ ] A failed copy is as it is now: the button keeps its label and its width, and the sentence appears under it.
 - [ ] What a screen reader hears does not change.
-- [ ] The labels inside the button no longer wrap. A network name too long for the button is cut with an ellipsis in the button only; it is whole in the address label and in the banner. Nothing may extend past the card.
+- [ ] The labels inside the button no longer wrap. Under its value the button has the row to itself, so every real network's name fits at 320 px. A single-word name of thirty characters or more would be cut with an ellipsis in the button only; it is whole in the address label and in the banner. Nothing may extend past the card.
 - [ ] Tests: the label reads "Copied" after a copy and the normal label after two seconds; both unseen copies are hidden from assistive technology; the failure line is unchanged.
-- [ ] `docs/design-doc.md`: section 11's "Copy buttons" entry and section 11.1's "Things that keep their place" say that the space the button takes is fixed and the button narrows and widens inside it.
+- [ ] `docs/design-doc.md`: section 11's "Copy buttons" entry and section 11.1's "Things that keep their place" say that each button sits under its value, that the space it takes is fixed, and that the button narrows and widens inside it.
 - [ ] Commit: "Narrow the copy button to Copied and widen it back".
 
 ---
@@ -2293,5 +2520,5 @@ This changes something Task 22 fixed. Task 22 made the button keep the width of 
 - **Tasks 19 to 27** follow a review of the rendered page: each is built by an implementer on Opus in a separate worktree, checked by the planning agent with screenshots and measurements at four widths, and reviewed by Codex. Nothing is pushed until I have tested it.
 - **Task 28** adds Start over to the dev panel and makes it slide. It was planned after Task 20 and is built next: one implementer on Opus in the same worktree, checked by the planning agent in a browser, and reviewed by Codex.
 - **From Task 21 on, the tasks ran in lanes,** once I asked whether they could run in parallel. Tasks 28, 21 and 24 were built at the same time, then Tasks 22, 23 with 26, and 25, then Task 27 by itself. Each lane had its own worktree and branch and touched files the others did not, was checked in a browser and reviewed by Codex on its own, and was then merged with a merge commit.
-- **Tasks 29 to 34** were planned after I chose from drawings. Task 29 goes first, because the others use its colours. Then three lanes run side by side in their own worktrees: Task 30; Task 31; and Task 34 followed by Task 33, which share the copy button. Task 32 joins them once I have answered its question. Each is checked in a browser and reviewed by Codex before it is merged.
+- **Tasks 29 to 34** were planned after I chose from drawings, and are built on the branch `picker/radios`, which is merged only after I have tested it. Task 29 goes first, because the others use its colours. Then three lanes run side by side in their own worktrees: Task 30; Tasks 31 and 32; and Task 34 followed by Task 33, which share the copy button. Each is checked in a browser and reviewed by Codex before it is merged.
 - Nothing is pushed until the human says so.
