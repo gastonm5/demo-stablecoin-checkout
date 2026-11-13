@@ -64,6 +64,47 @@ test('says Copied, then goes back to its label', async () => {
   expect(screen.queryByText('Copied', seen)).not.toBeInTheDocument()
 })
 
+// jsdom has no layout and runs no transitions, so these guard the classes that keep the label on one line while the button widens back, not the line itself.
+const ONE_LINE = '[white-space:nowrap]'
+const WRAPS_AFTER_THE_MOVE = [
+  '[white-space:normal]',
+  '[transition-property:white-space]',
+  '[transition-duration:0s]',
+  '[transition-delay:180ms]',
+  '[transition-behavior:allow-discrete]',
+]
+
+const twinLabel = () =>
+  document.querySelector('button[aria-hidden="true"] span')
+
+test('keeps its label on one line while Copied shows', async () => {
+  setClipboard({ writeText: writeText.mockResolvedValue(undefined) })
+  const { button } = await clickCopy()
+  expect(within(button).getByText('Copied')).toHaveClass(ONE_LINE)
+})
+
+test('lets its label wrap again only after the button has widened back', async () => {
+  vi.useFakeTimers()
+  setClipboard({ writeText: writeText.mockResolvedValue(undefined) })
+  const { button } = await clickCopy()
+  act(() => vi.advanceTimersByTime(2_000))
+  const label = within(button).getByText('Copy amount')
+  expect(label).toHaveClass(...WRAPS_AFTER_THE_MOVE)
+  expect(label).not.toHaveClass(ONE_LINE)
+})
+
+test('lets the label in the twin wrap as the idle label does, even while Copied shows', async () => {
+  setClipboard({ writeText: writeText.mockResolvedValue(undefined) })
+  render(<CopyButton value="163.69" label="Copy amount" />)
+  expect(twinLabel()).toHaveTextContent('Copy amount')
+  expect(twinLabel()).not.toHaveClass(ONE_LINE)
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Copy amount' })),
+  )
+  expect(screen.getByRole('button', { name: 'Copied' })).toBeVisible()
+  expect(twinLabel()).not.toHaveClass(ONE_LINE)
+})
+
 test('the twin that holds its space is hidden from assistive technology and takes no focus', () => {
   const { container } = render(
     <CopyButton value="163.69" label="Copy amount" />,

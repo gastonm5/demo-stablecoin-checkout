@@ -9,9 +9,21 @@ const CELL =
 // A percentage and a length interpolate, so the width moves both ways with no measuring. `enabled:` only outranks Button's own transition classes, whatever their order in the CSS, without the !important that would beat the reduced-motion rule; the background stays listed so hover still fades.
 const MOVE =
   'enabled:transition-[width,background-color] enabled:duration-[180ms] ease-[cubic-bezier(.2,0,0,1)]'
+// While the width moves the label stays on one line, clipped by the button, so it shows as the button widens instead of wrapping and snapping back. A transition takes its timing from the state it goes to, so the 180 ms hold sits on the idle label; longhands, so no shorthand resets the discrete behaviour.
+const ONE_LINE = '[white-space:nowrap]'
+const WRAPS_AFTER_THE_MOVE =
+  '[white-space:normal] [transition-property:white-space] [transition-duration:0s] [transition-delay:180ms] [transition-behavior:allow-discrete]'
 
 // The twin and the button draw their insides from here, so the space the twin holds is the idle button's own.
-function Face({ text, live = false }: { text: string; live?: boolean }) {
+function Face({
+  text,
+  live = false,
+  wrap = '',
+}: {
+  text: string
+  live?: boolean
+  wrap?: string
+}) {
   return (
     <>
       <svg
@@ -27,7 +39,7 @@ function Face({ text, live = false }: { text: string; live?: boolean }) {
       </svg>
       <span
         aria-live={live ? 'polite' : undefined}
-        className="min-w-0 wrap-anywhere"
+        className={`min-w-0 wrap-anywhere ${wrap}`}
       >
         {text}
       </span>
@@ -64,7 +76,11 @@ export function CopyButton({
         onClick={copy}
         className={`${CELL} ${MOVE} h-0 min-h-full overflow-hidden ${align === 'end' ? 'justify-self-end' : 'justify-self-start'} ${copied ? 'w-[6.75rem] min-w-min' : 'w-full'}`}
       >
-        <Face text={copied ? COPIED : label} live />
+        <Face
+          text={copied ? COPIED : label}
+          live
+          wrap={copied ? ONE_LINE : WRAPS_AFTER_THE_MOVE}
+        />
       </Button>
       {/* There before a failure, so the sentence is announced; it wraps inside the button's width instead of widening it. */}
       <span

@@ -576,7 +576,7 @@ Three pieces are reused across screens: `Button` (a pill for the main action, bl
 | A new screen's content, in its one or two columns | Fades in and rises 8 px, 180 ms. The strip under it does not move |
 | The card's width, between the picker and a payment | The most it can be moves between 520 and 940 px over 200 ms. A narrower window gets a narrower card |
 | A picker section opening or closing | Its height moves over 200 ms, and a chosen option takes its colour over 120 ms |
-| A copy button after a successful copy | Narrows to "Copied" and widens back, 180 ms each way |
+| A copy button after a successful copy | Narrows to "Copied" and widens back, 180 ms each way. Its label stays on one line while it moves, and shows as the button widens |
 | The picker's fee line, each time the Network section closes on a network, and the wallet sentence, when a network is first chosen | Fade in and rise 6 px, 160 ms |
 | "Still working…", a create or requote error, the copy failure line, a connection notice, and the address and QR coming back | Fades in, 150 ms |
 | The confirmations bar | Moves to the server's count over 300 ms, in either direction |
