@@ -1,7 +1,6 @@
 import { useId } from 'react'
 import { useModalDialog } from '../hooks/useModalDialog'
-
-const button = 'rounded-full px-5 py-3 text-[15px] font-bold'
+import { Button } from './Button'
 
 export function ConfirmChangeDialog({
   open,
@@ -25,35 +24,26 @@ export function ConfirmChangeDialog({
         event.preventDefault()
         onCancel()
       }}
-      className="fixed inset-0 z-10 m-auto h-fit w-[440px] max-w-[calc(100%-32px)] rounded-[22px] border border-line bg-surface p-6 text-ink backdrop:bg-surface-inverse/45"
+      className="fixed inset-0 z-10 m-auto h-fit w-[440px] max-w-[calc(100%-32px)] rounded-card border border-line bg-surface p-6 text-ink backdrop:bg-surface-inverse/45"
     >
       <h2
         id={`${id}-title`}
-        className="text-[22px] font-extrabold tracking-[-.01em]"
+        className="text-title font-extrabold tracking-[-.01em]"
       >
         Have you already sent a payment?
       </h2>
-      <p id={`${id}-body`} className="mt-2 text-[14.5px] text-ink-muted">
+      <p id={`${id}-body`} className="mt-2 text-small text-ink-muted">
         Only change if you have not sent anything. A payment sent to the current
         address after you change will not be tracked on this page.
       </p>
       <div className="mt-5 flex flex-wrap gap-3">
         {/* Staying is the safe answer. showModal() focuses the first button, and autoFocus does the same without it. */}
-        <button
-          type="button"
-          autoFocus
-          onClick={onCancel}
-          className={`${button} bg-action text-ink-inverse`}
-        >
+        <Button variant="primary" autoFocus onClick={onCancel}>
           Stay on this payment
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          className={`${button} border border-line-strong`}
-        >
+        </Button>
+        <Button variant="secondary" onClick={onConfirm}>
           I haven't sent anything, change
-        </button>
+        </Button>
       </div>
     </dialog>
   )

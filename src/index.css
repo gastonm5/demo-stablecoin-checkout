@@ -31,6 +31,17 @@
   --color-network-polygon: #8247e5;
   --color-network-solana: #14b8a6;
   --color-network-other: #6b7280;
+
+  /* Size only: line height comes from the card unless an element sets its own. */
+  --text-label: 0.75rem;
+  --text-small: 0.875rem;
+  --text-body: 0.9375rem;
+  --text-lead: 1rem;
+  --text-figure: 1.125rem;
+  --text-title: 1.375rem;
+
+  --radius-card: 22px;
+  --radius-control: 12px;
 }
 
 @utility text-amount {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Connection } from '../domain/screen'
+import { Button } from './Button'
 
 const dot = 'mr-2 inline-block size-[9px] rounded-full bg-warn'
 
@@ -25,13 +26,13 @@ export function connectionNotice(
         <strong>We can't reach the payment service.</strong> This page may be
         out of date until we reconnect. Retrying.
       </span>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         onClick={onTryNow}
-        className="rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-[13px] font-semibold whitespace-nowrap hover:bg-surface-sunken"
+        className="whitespace-nowrap"
       >
         Try now
-      </button>
+      </Button>
     </>
   )
 }

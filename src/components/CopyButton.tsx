@@ -1,4 +1,5 @@
 import { useCopy } from '../hooks/useCopy'
+import { Button } from './Button'
 
 const FEEDBACK = {
   copied: 'Copied',
@@ -8,10 +9,10 @@ const FEEDBACK = {
 export function CopyButton({ value, label }: { value: string; label: string }) {
   const { state, copy } = useCopy(value)
   return (
-    <button
-      type="button"
+    <Button
+      variant="secondary"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-surface-sunken max-w-full"
+      className="inline-flex max-w-full items-center gap-1.5 text-left"
     >
       <svg
         aria-hidden="true"
@@ -27,6 +28,6 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
       <span aria-live="polite" className="min-w-0 wrap-anywhere">
         {state === 'idle' ? label : FEEDBACK[state]}
       </span>
-    </button>
+    </Button>
   )
 }

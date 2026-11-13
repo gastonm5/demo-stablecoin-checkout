@@ -3,7 +3,9 @@ import type { ReactNode, Ref } from 'react'
 import { formatDateTime } from '../domain/format'
 import type { Screen } from '../domain/screen'
 import type { SequenceEntry } from '../domain/sequence'
-import { BODY, NOTICE, Row, StatusCard, WARN } from '../components/StatusCard'
+import { Button } from '../components/Button'
+import { Notice } from '../components/Notice'
+import { BODY, Row, StatusCard, WARN } from '../components/StatusCard'
 import { headline } from './statusText'
 
 export function ExpiredScreen({
@@ -68,9 +70,9 @@ export function ExpiredScreen({
             : 'We saw a payment before it expired.'}{' '}
           <strong>Do not send again.</strong>
         </p>
-        <p className={NOTICE}>
+        <Notice className="text-left">
           {`This page can't complete this payment or tell you what happens to the ${received ? sum(received) : 'funds'} you sent. Contact ${merchant.name} and quote reference ${payment.payment_reference}.`}
-        </p>
+        </Notice>
       </StatusCard>
     )
   }
@@ -87,14 +89,14 @@ export function ExpiredScreen({
       }
       icon="clock"
       link={
-        <button
-          type="button"
+        <Button
+          variant="link"
           disabled={locked}
           onClick={onChange}
-          className="whitespace-nowrap text-link underline disabled:cursor-not-allowed disabled:text-ink-subtle disabled:no-underline"
+          className="whitespace-nowrap"
         >
           Change currency or network
-        </button>
+        </Button>
       }
     >
       <p className={BODY}>
@@ -106,7 +108,7 @@ export function ExpiredScreen({
           {`If you sent any funds for this payment, do not get a new quote. Contact ${merchant.name}.`}
         </p>
       )}
-      <label className="flex items-center gap-2 text-[14.5px] font-semibold">
+      <label className="flex items-center gap-2 text-small font-semibold">
         <input
           type="checkbox"
           checked={ticked}
@@ -115,16 +117,16 @@ export function ExpiredScreen({
         />
         I have not sent a payment
       </label>
-      <button
-        type="button"
-        disabled={locked}
+      <Button
+        variant="primary"
+        busy={requoting}
+        disabled={!ticked}
         onClick={onRequote}
-        className="rounded-full bg-action px-5 py-[13px] text-[15px] font-bold text-ink-inverse disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-ink-muted"
       >
         {requoting ? 'Working…' : 'Get a new quote'}
-      </button>
+      </Button>
       {error != null && (
-        <p role="alert" className="text-sm font-semibold text-bad">
+        <p role="alert" className="text-small font-semibold text-bad">
           We couldn't get a new quote. Try again.
         </p>
       )}
