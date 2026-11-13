@@ -2,13 +2,31 @@ import { expect, test } from 'vitest'
 import { networkColours } from './networkColours'
 
 test.each(['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'])(
-  'gives %s a class for each of the six slots',
+  'gives %s a class for each of the seven slots',
   (networkId) => {
     const colours = networkColours(networkId)
     expect(Object.keys(colours).sort()).toEqual(
-      ['accent', 'border', 'chip', 'fill', 'onFill', 'tint'].sort(),
+      [
+        'accent',
+        'border',
+        'chip',
+        'chipOnFill',
+        'fill',
+        'onFill',
+        'tint',
+      ].sort(),
     )
     for (const value of Object.values(colours)) expect(value).not.toBe('')
+  },
+)
+
+test.each(['tron', 'ethereum', 'polygon', 'solana', 'bitcoin'])(
+  'reverses the fill for a %s chip on it: the text colour behind, the fill colour for the letter',
+  (networkId) => {
+    const { chipOnFill, fill, onFill } = networkColours(networkId)
+    expect(chipOnFill).toBe(
+      `${onFill.replace('text-', 'bg-')} ${fill.replace('bg-', 'text-')}`,
+    )
   },
 )
 
